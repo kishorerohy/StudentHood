@@ -17,3 +17,200 @@
 .faq-item[open] summary::after{content:"−"}
 .faq-item p{margin:0;padding:0 20px 20px;color:var(--muted);line-height:1.75}
 .info-callout{margin:24px 0;padding:18px 20px;border:1px solid var(--border);border-radius:16px;background:rgba(123,92,255,.08)}
+
+/* StudentHood homepage mock phones: screen-only layout */
+.phone-stage{
+  min-height:640px;
+}
+
+.phone{
+  position:absolute;
+  width:300px;
+  padding:0;
+  border:1px solid #394453;
+  border-radius:35px;
+  background:#0d1117;
+  box-shadow:0 30px 80px rgba(0,0,0,.46);
+  overflow:hidden;
+}
+
+.phone.one{
+  left:6%;
+  top:0;
+  transform:rotate(-2deg);
+}
+
+.phone.two{
+  right:0;
+  top:78px;
+  width:275px;
+  transform:rotate(3deg);
+}
+
+.phone .screen{
+  position:relative;
+  border-radius:34px;
+  overflow:hidden;
+  background:linear-gradient(180deg,#0b1016 0%,#0d1117 100%);
+  min-height:555px;
+}
+
+.phone-status{
+  position:relative;
+  height:48px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 17px;
+  color:#fff;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:-.01em;
+  z-index:5;
+}
+
+.phone-time{
+  min-width:38px;
+}
+
+.dynamic-island{
+  position:absolute;
+  top:10px;
+  left:50%;
+  transform:translateX(-50%);
+  width:88px;
+  height:27px;
+  border-radius:18px;
+  background:#020306;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.025);
+}
+
+.dynamic-island i{
+  position:absolute;
+  right:10px;
+  top:9px;
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#071324;
+  box-shadow:0 0 5px rgba(35,102,255,.18);
+}
+
+.phone-indicators{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  height:16px;
+}
+
+.signal{
+  height:12px;
+  display:flex;
+  align-items:flex-end;
+  gap:2px;
+}
+
+.signal i{
+  display:block;
+  width:2px;
+  border-radius:2px;
+  background:#fff;
+}
+
+.signal i:nth-child(1){height:4px}
+.signal i:nth-child(2){height:6px}
+.signal i:nth-child(3){height:8px}
+.signal i:nth-child(4){height:11px}
+
+.wifi{
+  position:relative;
+  width:14px;
+  height:11px;
+  display:block;
+  overflow:hidden;
+}
+
+.wifi:before,
+.wifi:after,
+.wifi i{
+  content:"";
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  border:2px solid #fff;
+  border-left-color:transparent;
+  border-right-color:transparent;
+  border-bottom-color:transparent;
+  border-radius:50%;
+}
+
+.wifi:before{
+  width:14px;
+  height:14px;
+  top:1px;
+}
+
+.wifi:after{
+  width:9px;
+  height:9px;
+  top:5px;
+}
+
+.wifi i{
+  width:3px;
+  height:3px;
+  top:9px;
+  border-width:2px;
+}
+
+.battery{
+  position:relative;
+  display:block;
+  width:19px;
+  height:9px;
+  border:1.5px solid rgba(255,255,255,.88);
+  border-radius:3px;
+}
+
+.battery:after{
+  content:"";
+  position:absolute;
+  right:-3px;
+  top:2px;
+  width:2px;
+  height:4px;
+  border-radius:0 2px 2px 0;
+  background:rgba(255,255,255,.72);
+}
+
+.battery i{
+  position:absolute;
+  inset:1.5px;
+  border-radius:1px;
+  background:#fff;
+}
+
+.phone .screen-head{
+  padding:5px 20px 14px;
+  font-weight:800;
+}
+
+.phone .stories{
+  padding-top:0;
+}
+
+/* Preserve the existing responsive placements with the cleaner screen-only shell */
+@media(max-width:760px){
+  .phone.one{left:0;width:270px}
+  .phone.two{right:-25px;width:235px}
+  .dynamic-island{width:78px;height:24px;top:11px}
+  .phone-status{padding:0 14px}
+}
+
+@media(max-width:520px){
+  .phone.one{width:245px}
+  .phone.two{width:210px;top:95px}
+  .dynamic-island{width:70px;height:22px;top:12px}
+  .phone-status{font-size:10px;padding:0 12px}
+  .phone-indicators{gap:5px}
+}
