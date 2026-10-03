@@ -215,33 +215,36 @@
   .phone-indicators{gap:5px}
 }
 
-/* StudentHood mobile hero refinement: keep floating screens proportional and inside viewport */
+/* StudentHood mobile hero refinement: clean, contained and professional on phones */
 @media(max-width:760px){
   html,body{overflow-x:hidden}
   .hero{padding:52px 0 42px}
-  .hero-grid{gap:28px}
+  .hero-grid{gap:26px}
+  .proof{flex-wrap:wrap}
   .phone-stage{
     width:100%;
     max-width:430px;
-    min-height:470px;
-    margin:6px auto 0;
+    min-height:680px;
+    margin:12px auto 8px;
     overflow:visible;
+    position:relative;
   }
   .phone{
     border-radius:30px;
     box-shadow:0 22px 55px rgba(0,0,0,.38);
+    transform:none !important;
   }
   .phone.one{
-    width:min(56vw,220px);
-    left:3%;
-    top:4px;
-    transform:rotate(-1deg);
+    width:min(58vw,230px);
+    left:0;
+    top:18px;
+    z-index:1;
   }
   .phone.two{
     width:min(48vw,188px);
-    right:2%;
-    top:88px;
-    transform:rotate(2deg);
+    right:0;
+    top:182px;
+    z-index:2;
   }
   .phone .screen{
     min-height:0;
@@ -307,13 +310,15 @@
   .ping-float{
     left:50%;
     transform:translateX(-50%);
-    bottom:2px;
-    width:min(78vw,285px);
-    padding:10px 13px;
-    border-radius:14px;
+    bottom:28px;
+    width:min(78vw,300px);
+    padding:11px 14px;
+    border-radius:15px;
     font-size:11px;
+    z-index:3;
   }
   .ping-float small{font-size:9px}
+  .trust{margin-top:6px}
 }
 
 @media(max-width:520px){
@@ -322,23 +327,23 @@
   .hero-grid{gap:22px}
   .hero h1{font-size:clamp(40px,12vw,48px)}
   .lead{font-size:16px;line-height:1.55}
-  .hero-ctas{gap:10px;margin-top:24px}
+  .hero-ctas{gap:10px;margin-top:24px;flex-wrap:wrap}
   .proof{margin-top:22px;gap:12px;font-size:11px}
   .avatars img{width:34px;height:34px}
   .phone-stage{
-    min-height:430px;
-    max-width:390px;
-    margin-top:8px;
+    min-height:620px;
+    max-width:360px;
+    margin-top:10px;
   }
   .phone.one{
-    width:min(54vw,205px);
-    left:2%;
-    top:0;
+    width:min(59vw,215px);
+    left:0;
+    top:14px;
   }
   .phone.two{
-    width:min(45vw,172px);
-    right:1%;
-    top:82px;
+    width:min(49vw,182px);
+    right:0;
+    top:170px;
   }
   .phone-status{height:37px;padding:0 10px;font-size:8.5px}
   .dynamic-island{width:60px;height:20px;top:9px}
@@ -356,16 +361,17 @@
   .nearby-item{font-size:7.5px;padding:5px;margin:5px 0}
   .nearby-item img{width:34px;height:28px}
   .ping-float{
-    width:min(76vw,270px);
-    bottom:4px;
+    width:min(78vw,285px);
+    bottom:24px;
     padding:9px 12px;
     font-size:10px;
   }
 }
 
 @media(max-width:380px){
-  .phone-stage{min-height:400px}
-  .phone.one{width:198px;left:-2px}
-  .phone.two{width:164px;right:-2px;top:78px}
-  .ping-float{width:255px}
+  .phone-stage{min-height:590px}
+  .phone.one{width:min(58vw,205px);left:-2px}
+  .phone.two{width:min(48vw,170px);right:-2px;top:168px}
+  .ping-float{width:min(272px,calc(100% - 20px));bottom:22px}
 }
+
