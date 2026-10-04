@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Authentication Preview | StudentHood</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/studenthood-tab-v3-64.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/studenthood-tab-v3-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/studenthood-touch-v3.png">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="styles.css">
+<style>
+  body{min-height:100vh;padding:44px 20px 70px;background:radial-gradient(circle at 50% 0%,rgba(132,92,255,.18),transparent 28%),#080a0f}
+  .auth-preview{width:min(1000px,100%);margin:auto}
+  .preview-brand{display:flex;justify-content:center;margin:10px 0 28px}
+  .preview-brand img{width:min(260px,72vw);height:auto}
+  .preview-note{text-align:center;color:#9299a8;font-size:13px;margin:0 auto 28px;max-width:680px}
+  .auth-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  .auth-card{background:#0f131a;border:1px solid #242a35;border-radius:24px;padding:28px;box-shadow:0 28px 80px rgba(0,0,0,.32)}
+  .auth-card h1{font-size:30px;line-height:1.05;margin:8px 0}
+  .auth-card .sub{color:#9299a8;margin:0 0 22px;font-size:14px}
+  .auth-card .field{display:block;margin:14px 0}
+  .auth-card .field span{display:block;font-size:12px;color:#b8bfcb;font-weight:700;margin-bottom:7px}
+  .auth-card .field input{width:100%;background:#0a0d12;color:white;border:1px solid #2b3340;border-radius:13px;padding:13px 14px;outline:none}
+  .auth-card .field input:focus{border-color:#845cff}
+  .auth-primary{width:100%;margin-top:8px}
+  .divider{display:flex;align-items:center;gap:12px;color:#777f8d;font-size:12px;margin:22px 0}
+  .divider:before,.divider:after{content:"";height:1px;background:#242a35;flex:1}
+  .provider-stack{display:grid;gap:10px}
+  .google-provider{height:48px;width:100%;display:flex;align-items:center;justify-content:center;position:relative;background:#fff;border:1px solid #747775;border-radius:12px;color:#1f1f1f;font-family:"Google Sans",Roboto,Arial,sans-serif;font-size:14px;font-weight:600;cursor:default}
+  .google-provider img{position:absolute;left:14px;width:20px;height:20px;object-fit:contain;background:#fff}
+  .apple-provider{height:48px;width:100%;object-fit:fill;display:block;border-radius:12px}
+  .legal{color:#737b88;font-size:11px;line-height:1.55;margin:16px 0 0;text-align:center}
+  .legal a{color:#b8bfcb;text-decoration:underline}
+  .switch{font-size:13px;color:#9ba3b0;text-align:center;margin-top:18px}
+  .switch strong{color:white}
+  .forgot{display:block;text-align:right;font-size:12px;color:#b7a6ff;margin-top:-4px;margin-bottom:10px}
+  .provider-source{margin-top:24px;padding-top:18px;border-top:1px solid #242a35;color:#777f8d;font-size:11px;line-height:1.5;text-align:center}
+  @media(max-width:760px){.auth-grid{grid-template-columns:1fr}.auth-card{padding:22px}}
+</style>
+</head>
+<body>
+<main class="auth-preview">
+  <a class="preview-brand" href="index.html" aria-label="StudentHood home"><img src="assets/studenthood-logo.png" alt="StudentHood"></a>
+  <p class="preview-note">Authentication design preview only. This page is not linked from the public website and is blocked from search indexing.</p>
+
+  <section class="auth-grid">
+    <article class="auth-card">
+      <div class="eyebrow">JOIN THE HOOD</div>
+      <h1>Join StudentHood</h1>
+      <p class="sub">Create your account and start building your student world.</p>
+
+      <label class="field"><span>Full name</span><input type="text" placeholder="Your name" disabled></label>
+      <label class="field"><span>Email</span><input type="email" placeholder="you@example.com" disabled></label>
+      <label class="field"><span>Password</span><input type="password" placeholder="Create a password" disabled></label>
+      <button class="btn gradient auth-primary" type="button" disabled>Create account</button>
+
+      <div class="divider">or</div>
+      <div class="provider-stack">
+        <div class="google-provider" aria-label="Continue with Google">
+          <img src="https://developers.google.com/identity/images/g-logo.png" alt="" aria-hidden="true">
+          <span>Continue with Google</span>
+        </div>
+        <img class="apple-provider"
+          src="https://appleid.cdn-apple.com/appleid/button?height=48&width=375&color=white&border=true&type=continue&border_radius=12&scale=2&locale=en_US"
+          alt="Continue with Apple">
+      </div>
+
+      <p class="legal">By creating an account, you agree to StudentHood's <a href="terms.html">Terms of Service</a> and acknowledge the <a href="privacy.html">Privacy Policy</a>.</p>
+      <p class="switch">Already have an account? <strong>Sign in</strong></p>
+    </article>
+
+    <article class="auth-card">
+      <div class="eyebrow">WELCOME BACK</div>
+      <h1>Sign in to StudentHood</h1>
+      <p class="sub">Pick up where you left off.</p>
+
+      <label class="field"><span>Email</span><input type="email" placeholder="you@example.com" disabled></label>
+      <label class="field"><span>Password</span><input type="password" placeholder="Your password" disabled></label>
+      <span class="forgot">Forgot password?</span>
+      <button class="btn gradient auth-primary" type="button" disabled>Sign in</button>
+
+      <div class="divider">or</div>
+      <div class="provider-stack">
+        <div class="google-provider" aria-label="Sign in with Google">
+          <img src="https://developers.google.com/identity/images/g-logo.png" alt="" aria-hidden="true">
+          <span>Sign in with Google</span>
+        </div>
+        <img class="apple-provider"
+          src="https://appleid.cdn-apple.com/appleid/button?height=48&width=375&color=white&border=true&type=sign-in&border_radius=12&scale=2&locale=en_US"
+          alt="Sign in with Apple">
+      </div>
+
+      <p class="switch">New to StudentHood? <strong>Join StudentHood</strong></p>
+    </article>
+  </section>
+
+  <p class="provider-source">Google mark: official Google-hosted identity asset. Apple button: rendered directly by Apple's official Sign in with Apple CDN. Production Google authentication will use Google Identity Services.</p>
+</main>
+</body>
+</html>
