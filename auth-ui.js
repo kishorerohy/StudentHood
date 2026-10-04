@@ -99,16 +99,11 @@ $('#resetPasswordBtn')?.addEventListener('click',async()=>{
   }
 });
 
-$$('[data-provider]').forEach(button=>{
+$('[data-provider]').forEach(button=>{
   button.addEventListener('click',()=>{
     const provider=button.dataset.provider;
     const status=button.closest('#join') ? signupStatus : signinStatus;
-
-    try{
-      const redirectTo=new URL('index.html?auth=signin',location.href).href;
-      window.location.assign(getOAuthUrl(provider,redirectTo));
-    }catch(error){
-      setStatus(status,error.message||'Could not start social sign-in.','error');
-    }
+    const label=provider==='google'?'Google':'Apple';
+    setStatus(status,`${label} sign-in is being connected. Email registration and sign-in are available now.`);
   });
 });
