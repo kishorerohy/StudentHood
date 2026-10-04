@@ -22,3 +22,21 @@ Use `src/localization.js` for locale-aware dates, times, numbers and currency fo
 ## Legal/compliance
 
 The product links to the live Safety, Privacy and Terms pages. Country-specific age, consumer, privacy, content, employment/Gig, tax, payment and marketplace requirements still require market-by-market legal review before launch. UI code alone cannot certify worldwide legal compliance.
+
+
+## Teen Mode
+
+The native app uses `src/safety.js` to read the same server-enforced safety policy as the web experience.
+
+For under-18 accounts where local law permits access:
+
+- private profile defaults
+- no precise-location exposure
+- personalized advertising disabled
+- teen-safe recommendations
+- adult/explicit content excluded by database policy
+- new Pings limited to approved Peeps
+- adult discovery of teen profiles blocked unless already approved Peeps
+- quiet hours from 19:00 to 07:00 in the locked account time zone
+
+Country-specific minimum-age and guardian-consent requirements override the general Teen Mode rule. The server policy is authoritative; native UI checks are supplementary.
