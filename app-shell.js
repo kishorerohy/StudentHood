@@ -1,5 +1,5 @@
 import {getSavedSession} from './auth.js?v=20261004-google-oauth';
-import {getMyProfile} from './profile.js?v=20261005-campus-1';
+import {getMyProfile,getAccessPolicy} from './profile.js?v=20261005-youth-1';
 
 const activeSession=getSavedSession();
 if(!activeSession?.access_token){
@@ -183,6 +183,16 @@ async function hydrateUser(){
       return;
     }
     if(profile?.campus_name)$('#campusName').textContent=profile.campus_name;
+
+    const policy=await getAccessPolicy();
+    if(!policy?.app_access){
+      const reason=encodeURIComponent(policy?.reason||'safety_restriction');
+      location.replace('safety-gate.html?reason='+reason);
+      return;
+    }
+    if(policy?.youth_account){
+      document.documentElement.dataset.safetyMode='teen';
+    }
   }catch{
     location.replace('index.html?auth=signin');
   }
