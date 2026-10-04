@@ -375,3 +375,55 @@
   .ping-float{width:min(272px,calc(100% - 20px));bottom:22px}
 }
 
+
+
+/* StudentHood approved authentication modals */
+.auth-modal{padding:22px;overflow:auto;align-items:flex-start}
+.auth-modal.open{display:flex}
+.auth-modal-card{position:relative;width:min(620px,100%);margin:auto;background:linear-gradient(180deg,#0f141c 0%,#0c1017 100%);border:1px solid #2b3441;border-radius:28px;padding:34px 34px 30px;box-shadow:0 34px 100px rgba(0,0,0,.58)}
+.auth-close{position:absolute;right:18px;top:16px;z-index:2}
+.auth-brand{display:flex;justify-content:center;padding:2px 56px 22px}
+.auth-brand img{display:block;width:min(220px,72%);height:auto}
+.auth-heading{text-align:center;margin:0 auto 24px;max-width:470px}
+.auth-heading .eyebrow{margin-bottom:8px}
+.auth-heading h3{margin:0;font-size:30px;line-height:1.1;letter-spacing:-.025em}
+.auth-heading p{margin:10px auto 0;color:#9299a8;font-size:15px;line-height:1.55;max-width:430px}
+.auth-form{display:block}
+.auth-field{display:block;margin:0 0 15px}
+.auth-field>span:first-child{display:block;margin:0 0 7px;color:#d7dce5;font-size:13px;font-weight:750}
+.auth-input{height:56px;display:flex;align-items:center;gap:12px;border:1px solid #2b3441;background:#0a0e14;border-radius:15px;padding:0 15px;transition:border-color .18s,box-shadow .18s}
+.auth-input:focus-within{border-color:#6f63d9;box-shadow:0 0 0 3px rgba(132,92,255,.10)}
+.auth-input svg{width:21px;height:21px;fill:none;stroke:#8f99aa;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.auth-input input{width:100%;height:100%;padding:0;border:0;outline:0;background:transparent;color:#f6f7fb;font-size:15px}
+.auth-input input::placeholder{color:#646d7b}
+.auth-submit{height:56px;margin-top:7px;padding:0 20px;border-radius:15px;display:flex;align-items:center;justify-content:center;gap:14px;font-size:15px}
+.auth-submit span:last-child{position:absolute;margin-left:min(470px,74vw);font-size:22px;font-weight:400}
+.auth-divider{display:flex;align-items:center;gap:16px;margin:22px 0;color:#8d95a3;font-size:12px;text-transform:lowercase;white-space:nowrap}
+.auth-divider:before,.auth-divider:after{content:"";height:1px;background:#2a313c;flex:1}
+.provider-stack{display:grid;gap:12px}
+.provider-btn,.apple-provider-shell{height:52px;width:100%;border-radius:13px}
+.provider-btn{border:1px solid #d4d6d9;background:#fff;color:#1f1f1f;display:flex;align-items:center;justify-content:center;position:relative;font-family:Roboto,Arial,sans-serif;font-size:15px;font-weight:600;cursor:pointer}
+.provider-btn img{position:absolute;left:18px;width:22px;height:22px;object-fit:contain}
+.apple-provider-shell{padding:0;border:0;background:transparent;overflow:hidden;cursor:pointer}
+.apple-provider-shell img{display:block;width:100%;height:52px;object-fit:fill}
+.auth-legal{margin:20px auto 0;max-width:500px;text-align:center;color:#7f8795;font-size:11px;line-height:1.65}
+.auth-legal a{color:#c8ced8;text-decoration:underline;text-underline-offset:2px}
+.auth-switch{margin:22px 0 0;text-align:center;color:#9aa2af;font-size:13px}
+.auth-switch button,.auth-forgot{border:0;background:none;padding:0;color:#a88cff;font:inherit;font-weight:750;cursor:pointer}
+.auth-forgot{display:block;margin:-3px 0 10px auto;font-size:12px}
+.auth-status{min-height:18px;margin:10px 0 -2px;text-align:center;color:#9da5b2;font-size:12px}
+.auth-status.ok{color:#72dca6}.auth-status.error{color:#ff8baa}
+@media(max-width:620px){
+  .auth-modal{padding:12px}
+  .auth-modal-card{border-radius:23px;padding:28px 20px 24px}
+  .auth-brand{padding:0 48px 18px}
+  .auth-brand img{width:min(200px,76%)}
+  .auth-heading{margin-bottom:21px}
+  .auth-heading h3{font-size:27px}
+  .auth-heading p{font-size:14px}
+  .auth-input{height:54px}
+  .auth-submit{height:54px}
+  .auth-submit span:last-child{right:34px;position:absolute;margin:0}
+  .provider-btn,.apple-provider-shell,.apple-provider-shell img{height:50px}
+  .provider-btn{font-size:14px}
+}
