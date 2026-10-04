@@ -23,6 +23,7 @@
     "expo-linking": "~8.0.8",
     "expo-localization": "~17.0.7",
     "expo-web-browser": "~15.0.7",
-    "react-native-url-polyfill": "^2.0.0"
+    "react-native-url-polyfill": "^2.0.0",
+    "@react-native-community/datetimepicker": "8.4.4"
   }
 }
