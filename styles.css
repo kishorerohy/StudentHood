@@ -475,3 +475,11 @@
   .auth-submit{height:47px}
   .provider-btn,.apple-provider-shell,.apple-provider-shell #appleid-signin{height:45px}
 }
+
+
+/* StudentHood isolated Apple renderer fix */
+.apple-provider-shell{position:relative!important;padding:0!important;overflow:hidden!important;background:#fff!important;border:1px solid #d4d6d9!important}
+.apple-provider-frame{display:block;width:100%;height:46px;border:0;margin:0;padding:0;background:#fff;pointer-events:none}
+@media(max-width:760px){
+  .apple-provider-frame{height:45px}
+}
