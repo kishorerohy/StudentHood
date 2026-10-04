@@ -187,7 +187,7 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,them
         onIndex(next);
       }
     }
-  }),[index,scenes]),[index,scenes]);
+  }),[index,scenes,onIndex,onProfile]);
 
   const scene=scenes[index];
   if(!scene) return null;
