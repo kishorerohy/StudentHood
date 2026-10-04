@@ -5,7 +5,7 @@ import {
   getOAuthUrl,
   saveSession,
   consumeOAuthSessionFromUrl
-} from './auth.js';
+} from './auth.js?v=20261004-google-oauth';
 
 const $=(s)=>document.querySelector(s);
 const $$=(s)=>document.querySelectorAll(s);
