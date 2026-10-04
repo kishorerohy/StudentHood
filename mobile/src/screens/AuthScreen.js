@@ -207,7 +207,7 @@ export default function AuthScreen({theme}){
       {!!error&&<Text style={[styles.status,{color:theme.danger}]}>{error}</Text>}
       {!!status&&<Text style={[styles.status,{color:theme.success}]}>{status}</Text>}
 
-      <Pressable onPress={submit} disabled={busy} style={[styles.primary,{backgroundColor:theme.accent,opacity:busy?.65:1}]}>
+      <Pressable onPress={submit} disabled={busy} style={[styles.primary,{backgroundColor:theme.accent,opacity:busy?0.65:1}]}>
         {busy?<ActivityIndicator color="#fff"/>:<Text style={styles.primaryText}>{mode==='signin'?'Sign in':'Create account'}</Text>}
       </Pressable>
 
