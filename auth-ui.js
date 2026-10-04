@@ -5,7 +5,7 @@ import {
   getOAuthUrl,
   saveSession,
   consumeOAuthSessionFromUrl
-} from './auth.js?v=20261004-google-oauth';
+} from './auth.js?v=20261005-dob-1';
 
 const $=(s)=>document.querySelector(s);
 const $$=(s)=>document.querySelectorAll(s);
@@ -30,6 +30,7 @@ signupForm?.addEventListener('submit',async e=>{
   try{
     const result=await signUpWithEmail({
       fullName:data.get('fullName'),
+      dateOfBirth:data.get('dateOfBirth'),
       email:data.get('email'),
       password:data.get('password'),
       redirectTo:new URL('index.html?auth=signin&verified=1',location.href).href
