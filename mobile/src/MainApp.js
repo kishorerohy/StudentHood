@@ -11,7 +11,7 @@ import ScenesScreen from './screens/ScenesScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import CreateSceneSheet from './components/CreateSceneSheet';
 
-const LOGO=require('../../assets/studenthood-logo.png');
+const LOGO=require('../assets/studenthood-logo.png');
 
 export default function MainApp({theme}){
   const {profile,safety}=useSession();
