@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>StudentHood Auth Refined Preview</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/studenthood-tab-v3-64.png">
+<link rel="stylesheet" href="styles.css?v=auth-refined-2">
+<style>
+body{margin:0;min-height:100vh;background:#080a0f;color:#f6f7fb;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.preview-nav{height:68px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(8,10,15,.94);display:flex;align-items:center}
+.preview-nav-in{width:min(1180px,calc(100% - 40px));margin:auto;display:flex;align-items:center;gap:28px}
+.preview-nav .brand{margin-right:auto;display:flex;align-items:center}
+.preview-nav .brand img{width:178px;display:block}
+.preview-links{display:flex;gap:24px;color:#aab2bf;font-size:13px;font-weight:600}
+.preview-actions{display:flex;gap:8px}
+.preview-actions .btn{height:38px;padding:0 14px;border-radius:10px;font-size:13px;line-height:1;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.preview-actions .login{min-width:70px}
+.preview-actions .signup{min-width:76px}
+.preview-stage{min-height:calc(100vh - 68px);padding:28px 16px;display:grid;place-items:center;background:radial-gradient(circle at 50% 5%,rgba(132,92,255,.12),transparent 28%)}
+.auth-card{position:relative;width:min(560px,100%);background:linear-gradient(180deg,#10151d,#0c1017);border:1px solid #2a3340;border-radius:24px;padding:24px 30px 26px;box-shadow:0 30px 90px rgba(0,0,0,.55)}
+.close{position:absolute;right:17px;top:15px;border:0;background:none;color:#7d8795;font-size:25px;line-height:1}
+.auth-brand{display:flex;justify-content:center;margin:0 0 4px}
+.auth-brand img{display:block;width:166px;height:auto}
+.auth-heading{text-align:center;margin:0 auto 18px;max-width:430px}
+.auth-heading .eyebrow{margin:0 0 3px;font-size:10.5px;letter-spacing:.145em;color:#ab95ff;font-weight:900}
+.auth-heading h1{margin:0;font-size:27px;line-height:1.08;letter-spacing:-.025em}
+.auth-heading p{margin:7px auto 0;color:#9299a8;font-size:13.5px;line-height:1.45;max-width:410px}
+.field{display:block;margin:0 0 12px}
+.field>span:first-child{display:block;margin-bottom:6px;font-size:12.5px;color:#d8dde6;font-weight:750}
+.input-shell{height:51px;border:1px solid #2b3441;border-radius:13px;background:#0a0e14;display:flex;align-items:center;gap:11px;padding:0 14px}
+.input-shell svg{width:19px;height:19px;fill:none;stroke:#8b95a5;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.input-shell input{flex:1;height:100%;border:0;outline:0;background:transparent;color:white;font-size:14px}
+.input-shell input::placeholder{color:#68717f}
+.create-btn{height:51px;width:100%;margin-top:5px;border:0;border-radius:13px;background:linear-gradient(100deg,#7454ff,#ff5d9e);color:white;font-size:14.5px;font-weight:750;position:relative}
+.create-btn .arrow{position:absolute;right:18px;font-size:20px;font-weight:400}
+.divider{display:flex;align-items:center;gap:14px;margin:18px 0;color:#8b94a2;font-size:11.5px}
+.divider:before,.divider:after{content:"";height:1px;background:#2a313c;flex:1}
+.providers{display:grid;gap:10px}
+.google-btn,.apple-btn-wrap{height:48px;width:100%;border-radius:11px}
+.google-btn{border:1px solid #d4d6d9;background:#fff;color:#1f1f1f;position:relative;display:flex;align-items:center;justify-content:center;font-family:Roboto,Arial,sans-serif;font-size:14px;font-weight:600}
+.google-btn img{position:absolute;left:17px;width:20px;height:20px;object-fit:contain}
+.apple-btn-wrap{border:1px solid #d4d6d9;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.apple-btn-wrap img{display:block;width:340px;max-width:94%;height:44px;object-fit:contain}
+.legal{margin:16px auto 0;max-width:470px;text-align:center;color:#7f8795;font-size:10.5px;line-height:1.55}
+.legal a{color:#cbd1db;text-decoration:underline;text-underline-offset:2px}
+.switch{margin:18px 0 0;text-align:center;color:#9aa2af;font-size:12.5px}
+.switch strong{color:#a88cff}
+@media(max-width:760px){
+  .preview-links{display:none}
+  .preview-nav-in{width:min(100% - 24px,1180px)}
+  .preview-nav .brand img{width:155px}
+  .preview-actions .btn{height:36px;padding:0 11px;font-size:12px}
+  .auth-card{padding:22px 18px 23px;border-radius:21px}
+  .auth-brand img{width:152px}
+  .auth-heading h1{font-size:25px}
+  .auth-heading p{font-size:13px}
+}
+</style>
+</head>
+<body>
+<header class="preview-nav">
+  <div class="preview-nav-in">
+    <a class="brand" href="#"><img src="assets/studenthood-logo.png" alt="StudentHood"></a>
+    <nav class="preview-links"><span>Home</span><span>Features</span><span>Safety</span><span>About</span></nav>
+    <div class="preview-actions">
+      <button class="btn login" type="button">Log in</button>
+      <button class="btn primary signup" type="button">Sign up</button>
+    </div>
+  </div>
+</header>
+<main class="preview-stage">
+  <section class="auth-card">
+    <button class="close" type="button">×</button>
+
+    <div class="auth-brand"><img src="assets/studenthood-logo.png" alt="StudentHood"></div>
+
+    <div class="auth-heading">
+      <div class="eyebrow">JOIN THE HOOD</div>
+      <h1>Join StudentHood</h1>
+      <p>Join a global community of students, start building, and unlock opportunities.</p>
+    </div>
+
+    <label class="field"><span>Full name</span><span class="input-shell"><svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg><input placeholder="Your name" disabled></span></label>
+    <label class="field"><span>Email</span><span class="input-shell"><svg viewBox="0 0 24 24"><path d="M3 6h18v12H3zM3 7l9 7 9-7"/></svg><input placeholder="you@example.com" disabled></span></label>
+    <label class="field"><span>Password</span><span class="input-shell"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><input placeholder="Create a password" disabled></span></label>
+
+    <button class="create-btn" type="button">Create account <span class="arrow">→</span></button>
+
+    <div class="divider">or continue with</div>
+
+    <div class="providers">
+      <div class="google-btn"><img src="https://developers.google.com/identity/images/g-logo.png" alt=""><span>Continue with Google</span></div>
+      <div class="apple-btn-wrap"><img src="https://appleid.cdn-apple.com/appleid/button?height=44&width=340&color=white&border=false&type=continue&border_radius=10&scale=2&locale=en_US" alt="Continue with Apple"></div>
+    </div>
+
+    <p class="legal">By creating an account, you agree to StudentHood's <a href="terms.html">Terms of Service</a> and acknowledge the <a href="privacy.html">Privacy Policy</a>.</p>
+    <p class="switch">Already have an account? <strong>Log in</strong></p>
+  </section>
+</main>
+</body>
+</html>
