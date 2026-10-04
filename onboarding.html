@@ -40,7 +40,22 @@
           <label>
             <span>Date of birth</span>
             <input id="dateOfBirth" name="dateOfBirth" required type="date" autocomplete="bday">
-            <small>Used for age eligibility and safety. Your full date of birth is private and will not appear on your profile.</small>
+            <small>Used for age eligibility and safety. Your full date of birth is private and will not appear on your profile. Under-18 accounts use teen safety mode and pause at 7:00 PM local time.</small>
+          </label>
+
+          <label>
+            <span>Country or region</span>
+            <select id="countryCode" name="countryCode" required>
+              <option value="">Select your country or region</option>
+            </select>
+            <small>We use this only to apply the correct age, safety and legal protections.</small>
+          </label>
+
+          <label>
+            <span>Time zone</span>
+            <input id="timeZoneDisplay" type="text" readonly aria-describedby="timeZoneHelp">
+            <input id="timeZone" name="timeZone" type="hidden">
+            <small id="timeZoneHelp">Detected from this device for under-18 quiet hours. It is locked after setup to prevent bypassing the limit.</small>
           </label>
 
           <label>
@@ -84,6 +99,6 @@
     </section>
   </main>
 
-  <script type="module" src="onboarding.js?v=20261005-dob-1"></script>
+  <script type="module" src="onboarding.js?v=20261005-youth-1"></script>
 </body>
 </html>
