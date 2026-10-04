@@ -1,5 +1,10 @@
-import {getSavedSession,clearSavedSession} from './auth.js?v=20261004-google-oauth';
-import {getMyProfile} from './profile.js?v=20261004-1';
+import {getSavedSession} from './auth.js?v=20261004-google-oauth';
+import {getMyProfile} from './profile.js?v=20261005-campus-1';
+
+const activeSession=getSavedSession();
+if(!activeSession?.access_token){
+  location.replace('index.html?auth=signin');
+}
 
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>[...r.querySelectorAll(s)];
@@ -173,7 +178,13 @@ async function hydrateUser(){
   if(!session?.access_token)return;
   try{
     const profile=await getMyProfile();
-    if(profile?.city)$('#campusName').textContent=profile.city;
-  }catch{}
+    if(!profile?.onboarding_completed){
+      location.replace('onboarding.html');
+      return;
+    }
+    if(profile?.campus_name)$('#campusName').textContent=profile.campus_name;
+  }catch{
+    location.replace('index.html?auth=signin');
+  }
 }
 hydrateUser();
