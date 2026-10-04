@@ -109,28 +109,34 @@ $('[data-provider]').forEach(button=>{
 });
 
 
-function placeAppleButton(context){
-  const appleButton=document.getElementById('appleid-signin');
-  const host=document.querySelector(`.apple-provider-host[data-auth-context="${context}"]`);
-  if(appleButton&&host&&!host.contains(appleButton)) host.appendChild(appleButton);
+
+
+function ensureAppleFrame(context){
+  const frame=document.querySelector(`[data-apple-frame="${context}"]`);
+  if(frame && !frame.getAttribute('src')){
+    frame.setAttribute('src','apple-auth-button.html?v=1');
+  }
 }
 
 $$('[data-modal]').forEach(trigger=>{
   trigger.addEventListener('click',()=>{
     const target=trigger.dataset.modal;
-    if(target==='join'||target==='signin') setTimeout(()=>placeAppleButton(target),0);
+    if(target==='join'||target==='signin'){
+      setTimeout(()=>ensureAppleFrame(target),0);
+    }
   });
 });
 
 $$('[data-modal-switch]').forEach(trigger=>{
   trigger.addEventListener('click',()=>{
     const target=trigger.dataset.modalSwitch;
-    if(target==='join'||target==='signin') setTimeout(()=>placeAppleButton(target),0);
+    if(target==='join'||target==='signin'){
+      setTimeout(()=>ensureAppleFrame(target),0);
+    }
   });
 });
 
-window.addEventListener('DOMContentLoaded',()=>{
-  const target=new URLSearchParams(location.search).get('auth');
-  if(target==='signin') placeAppleButton('signin');
-  else placeAppleButton('join');
-},{once:true});
+const initialAuthTarget=new URLSearchParams(location.search).get('auth');
+if(initialAuthTarget==='join'||initialAuthTarget==='signin'){
+  setTimeout(()=>ensureAppleFrame(initialAuthTarget),0);
+}
