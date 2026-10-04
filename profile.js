@@ -1,4 +1,4 @@
-import { getSavedSession } from './auth.js?v=20261004-google-oauth';
+import { getSavedSession } from './auth.js?v=20261005-dob-1';
 
 const SUPABASE_URL='https://tkznlyoflopxxnkthjtb.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_DiolULbdNTpIDst11yfc-A_tmNCjCmV';
