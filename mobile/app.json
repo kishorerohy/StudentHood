@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "StudentHood",
+    "slug": "studenthood",
+    "scheme": "studenthood",
+    "version": "0.1.0",
+    "orientation": "default",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.studenthood.app"
+    },
+    "android": {
+      "package": "com.studenthood.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0D0F"
+      }
+    },
+    "plugins": [],
+    "extra": {
+      "privacyUrl": "https://kishorerohy.github.io/StudentHood/privacy.html",
+      "termsUrl": "https://kishorerohy.github.io/StudentHood/terms.html",
+      "safetyUrl": "https://kishorerohy.github.io/StudentHood/safety.html"
+    }
+  }
+}
