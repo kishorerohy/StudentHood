@@ -43,6 +43,12 @@
           </label>
 
           <label>
+            <span>Campus or institution</span>
+            <input id="campusName" name="campusName" required maxlength="160" autocomplete="organization" placeholder="Your university or campus">
+            <small>This helps StudentHood show campus-relevant Scenes, Hangs, Crews and Gigs.</small>
+          </label>
+
+          <label>
             <span>Bio</span>
             <textarea id="bio" name="bio" maxlength="280" rows="4" placeholder="A little about you"></textarea>
             <small><span id="bioCount">0</span>/280</small>
@@ -56,7 +62,7 @@
 
           <p id="profileStatus" class="onboarding-status" aria-live="polite"></p>
 
-          <button id="saveProfileBtn" class="btn gradient full onboarding-submit" type="submit">
+          <button id="saveProfileBtn" class="btn primary full onboarding-submit" type="submit">
             <span>Finish profile</span><span aria-hidden="true">→</span>
           </button>
         </form>
@@ -67,11 +73,11 @@
         <div class="eyebrow">PROFILE READY</div>
         <h1>You’re in.</h1>
         <p id="doneCopy">Your StudentHood profile is ready.</p>
-        <a class="btn gradient full onboarding-submit" href="app.html">Enter StudentHood</a>
+        <a class="btn primary full onboarding-submit" href="app.html">Enter StudentHood</a>
       </div>
     </section>
   </main>
 
-  <script type="module" src="onboarding.js?v=20261004-1"></script>
+  <script type="module" src="onboarding.js?v=20261005-campus-1"></script>
 </body>
 </html>
