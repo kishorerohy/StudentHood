@@ -18,6 +18,11 @@ function setStatus(el,message,type=''){
 
 const signupForm=$('#signupForm');
 const signupStatus=$('#signupStatus');
+const dateOfBirthInput=signupForm?.querySelector('input[name="dateOfBirth"]');
+if(dateOfBirthInput){
+  dateOfBirthInput.max=new Date().toISOString().slice(0,10);
+  dateOfBirthInput.min='1900-01-01';
+}
 
 signupForm?.addEventListener('submit',async e=>{
   e.preventDefault();
