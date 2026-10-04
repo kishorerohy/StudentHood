@@ -1,5 +1,5 @@
 import { getSavedSession } from './auth.js?v=20261004-google-oauth';
-import { getMyProfile, completeMyProfile } from './profile.js?v=20261005-campus-1';
+import { getMyProfile, completeMyProfile } from './profile.js?v=20261005-dob-1';
 
 const form=document.querySelector('#profileForm');
 const formView=document.querySelector('#onboardingFormView');
@@ -45,6 +45,8 @@ bio?.addEventListener('input',()=>{
 
     document.querySelector('#fullName').value=profile.full_name||session.user?.user_metadata?.full_name||session.user?.user_metadata?.name||'';
     document.querySelector('#username').value=profile.username||'';
+    document.querySelector('#dateOfBirth').value=profile.date_of_birth||'';
+    document.querySelector('#dateOfBirth').max=new Date().toISOString().slice(0,10);
     document.querySelector('#city').value=profile.city||'';
     document.querySelector('#campusName').value=profile.campus_name||'';
     document.querySelector('#bio').value=profile.bio||'';
@@ -60,6 +62,7 @@ form?.addEventListener('submit',async event=>{
 
   const fullName=document.querySelector('#fullName').value.trim();
   const username=document.querySelector('#username').value.trim().toLowerCase();
+  const dateOfBirth=document.querySelector('#dateOfBirth').value.trim();
   const city=document.querySelector('#city').value.trim();
   const campusName=document.querySelector('#campusName').value.trim();
   const bioValue=document.querySelector('#bio').value.trim();
@@ -85,6 +88,7 @@ form?.addEventListener('submit',async event=>{
     const profile=await completeMyProfile({
       fullName,
       username,
+      dateOfBirth,
       city,
       campusName,
       bio:bioValue,
