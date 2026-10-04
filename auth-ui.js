@@ -38,6 +38,7 @@ signupForm?.addEventListener('submit',async e=>{
     if(result.access_token){
       saveSession(result);
       setStatus(signupStatus,'Account created successfully.','ok');
+      location.assign('onboarding.html');
     }else{
       setStatus(signupStatus,'Account created. Check your email to verify your address.','ok');
     }
@@ -66,9 +67,7 @@ signinForm?.addEventListener('submit',async e=>{
     });
     saveSession(result);
     setStatus(signinStatus,'Signed in successfully.','ok');
-
-    // Do not route into app.html yet. That page remains a temporary,
-    // unapproved signed-in UI and stays noindexed.
+    location.assign('onboarding.html');
   }catch(error){
     setStatus(signinStatus,error.message||'Could not sign you in.','error');
   }finally{
@@ -129,9 +128,8 @@ $$('[data-provider]').forEach(button=>{
     const session=await consumeOAuthSessionFromUrl();
     if(!session) return;
 
-    document.querySelector('[data-modal="signin"]')?.click();
-    setStatus(signinStatus,'Signed in with Google successfully.','ok');
     history.replaceState(null,'',location.pathname);
+    location.replace('onboarding.html');
   }catch(error){
     document.querySelector('[data-modal="signin"]')?.click();
     setStatus(signinStatus,error.message||'Google sign-in could not be completed.','error');
