@@ -1,5 +1,5 @@
 const $=(s)=>document.querySelector(s);
-const $=(s)=>document.querySelectorAll(s);
+const $$=(s)=>document.querySelectorAll(s);
 
 function syncPageTitle(){
   document.title=window.location.hash==='#features'
