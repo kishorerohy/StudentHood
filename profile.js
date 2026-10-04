@@ -44,13 +44,33 @@ async function rest(path, options={}){
 export async function getMyProfile(){
   const session=requireSession();
   const rows=await rest(
-    `profiles?id=eq.${encodeURIComponent(session.user.id)}&select=id,full_name,username,date_of_birth,city,campus_name,locale,country_code,preferred_currency,bio,interests,onboarding_completed,created_at,updated_at`
+    `profiles?id=eq.${encodeURIComponent(session.user.id)}&select=id,full_name,username,date_of_birth,city,campus_name,locale,country_code,preferred_currency,time_zone,age_assurance_status,guardian_consent_status,bio,interests,onboarding_completed,created_at,updated_at`
   );
   return Array.isArray(rows)?rows[0]||null:null;
 }
 
-export async function completeMyProfile({fullName,username,dateOfBirth,city,campusName,bio,interests}){
+export async function initializeSafetyProfile({dateOfBirth,countryCode,timeZone}){
+  return rest('rpc/initialize_safety_profile',{
+    method:'POST',
+    body:JSON.stringify({
+      p_date_of_birth:String(dateOfBirth||'').trim(),
+      p_country_code:String(countryCode||'').trim().toUpperCase(),
+      p_time_zone:String(timeZone||'').trim()
+    })
+  });
+}
+
+export async function getAccessPolicy(){
+  return rest('rpc/studenthood_access_policy',{
+    method:'POST',
+    body:'{}'
+  });
+}
+
+export async function completeMyProfile({fullName,username,dateOfBirth,countryCode,timeZone,city,campusName,bio,interests}){
   const session=requireSession();
+
+  await initializeSafetyProfile({dateOfBirth,countryCode,timeZone});
 
   const normalizedUsername=String(username||'').trim().toLowerCase();
   const normalizedInterests=(Array.isArray(interests)?interests:[])
@@ -61,7 +81,6 @@ export async function completeMyProfile({fullName,username,dateOfBirth,city,camp
   const payload={
     full_name:String(fullName||'').trim(),
     username:normalizedUsername,
-    date_of_birth:String(dateOfBirth||'').trim()||null,
     city:String(city||'').trim()||null,
     campus_name:String(campusName||'').trim()||null,
     locale:(navigator.language||null),
@@ -71,7 +90,7 @@ export async function completeMyProfile({fullName,username,dateOfBirth,city,camp
   };
 
   const rows=await rest(
-    `profiles?id=eq.${encodeURIComponent(session.user.id)}&select=id,full_name,username,date_of_birth,city,campus_name,locale,bio,interests,onboarding_completed,updated_at`,
+    `profiles?id=eq.${encodeURIComponent(session.user.id)}&select=id,full_name,username,date_of_birth,country_code,time_zone,guardian_consent_status,city,campus_name,locale,bio,interests,onboarding_completed,updated_at`,
     {
       method:'PATCH',
       headers:{Prefer:'return=representation'},
