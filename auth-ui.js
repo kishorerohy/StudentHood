@@ -3,7 +3,8 @@ import {
   signInWithEmail,
   requestPasswordReset,
   getOAuthUrl,
-  saveSession
+  saveSession,
+  consumeOAuthSessionFromUrl
 } from './auth.js';
 
 const $=(s)=>document.querySelector(s);
@@ -103,11 +104,36 @@ $('[data-provider]').forEach(button=>{
   button.addEventListener('click',()=>{
     const provider=button.dataset.provider;
     const status=button.closest('#join') ? signupStatus : signinStatus;
-    const label=provider==='google'?'Google':'Apple';
-    setStatus(status,`${label} sign-in is being connected. Email registration and sign-in are available now.`);
+
+    if(provider==='google'){
+      const redirectTo=new URL('index.html?oauth=1',location.href).href;
+      setStatus(status,'Opening Google sign-in...');
+      window.location.assign(getOAuthUrl('google',redirectTo));
+      return;
+    }
+
+    setStatus(status,'Apple sign-in is being connected. Email and Google sign-in are available now.');
   });
 });
 
+(async function handleOAuthReturn(){
+  const query=new URLSearchParams(location.search);
+  const hasOAuthReturn=
+    query.get('oauth')==='1' ||
+    location.hash.includes('access_token=') ||
+    location.hash.includes('error=');
 
+  if(!hasOAuthReturn) return;
 
+  try{
+    const session=await consumeOAuthSessionFromUrl();
+    if(!session) return;
 
+    document.querySelector('[data-modal="signin"]')?.click();
+    setStatus(signinStatus,'Signed in with Google successfully.','ok');
+    history.replaceState(null,'',location.pathname);
+  }catch(error){
+    document.querySelector('[data-modal="signin"]')?.click();
+    setStatus(signinStatus,error.message||'Google sign-in could not be completed.','error');
+  }
+})();
