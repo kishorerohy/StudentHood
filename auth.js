@@ -62,7 +62,6 @@ export function getOAuthUrl(provider,redirectTo){
   return url.toString();
 }
 
-
 export function saveSession(session){
   if(!session?.access_token||!session?.refresh_token) return;
   sessionStorage.setItem('studenthood_session',JSON.stringify({
@@ -71,6 +70,47 @@ export function saveSession(session){
     expires_at:session.expires_at||null,
     user:session.user||null
   }));
+}
+
+export async function consumeOAuthSessionFromUrl(){
+  const hashParams=new URLSearchParams(location.hash.startsWith('#')?location.hash.slice(1):location.hash);
+  const queryParams=new URLSearchParams(location.search);
+
+  const oauthError=
+    hashParams.get('error_description')||
+    hashParams.get('error')||
+    queryParams.get('error_description')||
+    queryParams.get('error');
+
+  if(oauthError) throw new Error(oauthError);
+
+  const accessToken=hashParams.get('access_token');
+  const refreshToken=hashParams.get('refresh_token');
+
+  if(!accessToken||!refreshToken) return null;
+
+  let user=null;
+  try{
+    user=await request('user',{
+      method:'GET',
+      headers:{Authorization:`Bearer ${accessToken}`}
+    });
+  }catch{}
+
+  const session={
+    access_token:accessToken,
+    refresh_token:refreshToken,
+    expires_at:hashParams.get('expires_at')?Number(hashParams.get('expires_at')):null,
+    user
+  };
+
+  saveSession(session);
+
+  if(location.hash){
+    history.replaceState(null,'',`${location.pathname}${location.search}`);
+  }
+
+  return session;
 }
 
 export function getSavedSession(){
