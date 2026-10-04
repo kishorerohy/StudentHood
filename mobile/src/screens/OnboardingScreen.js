@@ -11,7 +11,7 @@ import {localeRegion} from '../countries';
 import {completeProfile} from '../api';
 import {useSession} from '../session';
 
-const LOGO=require('../../assets/studenthood-logo.png');
+const LOGO=require('../../../assets/studenthood-logo.png');
 
 function iso(date){
   return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
