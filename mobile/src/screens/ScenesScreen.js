@@ -8,7 +8,7 @@ import {fetchScenes,toggleSceneLike} from '../scenes';
 
 const FILTERS=['For you','Viral','Nearby','Campus','Live now'];
 
-export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenCreate}){
+export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenCreate,reloadKey=0}){
   const [filter,setFilter]=useState('For you');
   const [items,setItems]=useState([]);
   const [loading,setLoading]=useState(true);
@@ -30,7 +30,7 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
     }
   },[filter]);
 
-  useEffect(()=>{load(filter)},[filter]);
+  useEffect(()=>{load(filter)},[filter,reloadKey]);
 
   async function like(sceneId){
     try{
