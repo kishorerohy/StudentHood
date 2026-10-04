@@ -36,7 +36,7 @@
   .switch{font-size:13px;color:#9ba3b0;text-align:center;margin-top:18px}
   .switch strong{color:white}
   .forgot{display:block;text-align:right;font-size:12px;color:#b7a6ff;margin-top:-4px;margin-bottom:10px}
-  .provider-source{margin-top:24px;padding-top:18px;border-top:1px solid #242a35;color:#777f8d;font-size:11px;line-height:1.5;text-align:center}
+  .auth-status{min-height:20px;margin:10px 0 0;font-size:12px;color:#a9b0bc;text-align:center}.auth-status.ok{color:#72dca6}.auth-status.error{color:#ff8baa}.reset-link{background:none;border:0;padding:0;cursor:pointer}.provider-source{margin-top:24px;padding-top:18px;border-top:1px solid #242a35;color:#777f8d;font-size:11px;line-height:1.5;text-align:center}
   @media(max-width:760px){.auth-grid{grid-template-columns:1fr}.auth-card{padding:22px}}
 </style>
 </head>
@@ -51,10 +51,10 @@
       <h1>Join StudentHood</h1>
       <p class="sub">Create your account and start building your student world.</p>
 
-      <label class="field"><span>Full name</span><input type="text" placeholder="Your name" disabled></label>
-      <label class="field"><span>Email</span><input type="email" placeholder="you@example.com" disabled></label>
-      <label class="field"><span>Password</span><input type="password" placeholder="Create a password" disabled></label>
-      <button class="btn gradient auth-primary" type="button" disabled>Create account</button>
+      <form id="signupForm"><label class="field"><span>Full name</span><input name="fullName" type="text" placeholder="Your name" autocomplete="name" required></label>
+      <label class="field"><span>Email</span><input name="email" type="email" placeholder="you@example.com" autocomplete="email" required></label>
+      <label class="field"><span>Password</span><input name="password" type="password" placeholder="Create a password" autocomplete="new-password" minlength="8" required></label>
+      <button class="btn gradient auth-primary" type="submit">Create account</button><p class="auth-status" id="signupStatus" aria-live="polite"></p></form>
 
       <div class="divider">or</div>
       <div class="provider-stack">
@@ -76,10 +76,10 @@
       <h1>Sign in to StudentHood</h1>
       <p class="sub">Pick up where you left off.</p>
 
-      <label class="field"><span>Email</span><input type="email" placeholder="you@example.com" disabled></label>
-      <label class="field"><span>Password</span><input type="password" placeholder="Your password" disabled></label>
-      <span class="forgot">Forgot password?</span>
-      <button class="btn gradient auth-primary" type="button" disabled>Sign in</button>
+      <form id="signinFormPreview"><label class="field"><span>Email</span><input name="email" type="email" placeholder="you@example.com" autocomplete="email" required></label>
+      <label class="field"><span>Password</span><input name="password" type="password" placeholder="Your password" autocomplete="current-password" required></label>
+      <button class="forgot reset-link" type="button" id="resetPasswordBtn">Forgot password?</button>
+      <button class="btn gradient auth-primary" type="submit">Sign in</button><p class="auth-status" id="signinStatus" aria-live="polite"></p></form>
 
       <div class="divider">or</div>
       <div class="provider-stack">
@@ -98,5 +98,68 @@
 
   <p class="provider-source">Google mark: official Google-hosted identity asset. Apple button: rendered directly by Apple's official Sign in with Apple CDN. Production Google authentication will use Google Identity Services.</p>
 </main>
+<script type="module">
+import {signUpWithEmail,signInWithEmail,requestPasswordReset,saveSession} from './auth.js';
+
+const signupForm=document.getElementById('signupForm');
+const signupStatus=document.getElementById('signupStatus');
+const signinForm=document.getElementById('signinFormPreview');
+const signinStatus=document.getElementById('signinStatus');
+const resetBtn=document.getElementById('resetPasswordBtn');
+
+function setStatus(el,message,type=''){
+  el.textContent=message;
+  el.className='auth-status'+(type?' '+type:'');
+}
+
+signupForm?.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const btn=signupForm.querySelector('button[type="submit"]');
+  const data=new FormData(signupForm);
+  btn.disabled=true;
+  setStatus(signupStatus,'Creating your account...');
+  try{
+    const result=await signUpWithEmail({
+      fullName:data.get('fullName'),
+      email:data.get('email'),
+      password:data.get('password'),
+      redirectTo:location.origin+location.pathname+'?verified=1'
+    });
+    if(result.access_token) saveSession(result);
+    setStatus(signupStatus,result.access_token
+      ? 'Account created successfully.'
+      : 'Account created. Check your email to verify your address.','ok');
+  }catch(error){
+    setStatus(signupStatus,error.message||'Could not create your account.','error');
+  }finally{btn.disabled=false;}
+});
+
+signinForm?.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const btn=signinForm.querySelector('button[type="submit"]');
+  const data=new FormData(signinForm);
+  btn.disabled=true;
+  setStatus(signinStatus,'Signing you in...');
+  try{
+    const result=await signInWithEmail({email:data.get('email'),password:data.get('password')});
+    saveSession(result);
+    setStatus(signinStatus,'Signed in successfully. The real StudentHood app UI will be connected after approval.','ok');
+  }catch(error){
+    setStatus(signinStatus,error.message||'Could not sign you in.','error');
+  }finally{btn.disabled=false;}
+});
+
+resetBtn?.addEventListener('click',async()=>{
+  const email=signinForm?.querySelector('input[name="email"]')?.value?.trim();
+  if(!email){setStatus(signinStatus,'Enter your email first.','error');return;}
+  resetBtn.disabled=true;
+  try{
+    await requestPasswordReset({email,redirectTo:location.origin+location.pathname+'?reset=1'});
+    setStatus(signinStatus,'Password reset email sent.','ok');
+  }catch(error){
+    setStatus(signinStatus,error.message||'Could not send the reset email.','error');
+  }finally{resetBtn.disabled=false;}
+});
+</script>
 </body>
 </html>
