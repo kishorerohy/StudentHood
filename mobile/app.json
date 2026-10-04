@@ -14,7 +14,7 @@
       "package": "com.studenthood.app",
       "adaptiveIcon": {
         "backgroundColor": "#0B0D0F",
-        "foregroundImage": "../assets/studenthood-app-icon-1024.png"
+        "foregroundImage": "assets/studenthood-app-icon-1024.png"
       }
     },
     "plugins": [],
@@ -23,6 +23,6 @@
       "termsUrl": "https://kishorerohy.github.io/StudentHood/terms.html",
       "safetyUrl": "https://kishorerohy.github.io/StudentHood/safety.html"
     },
-    "icon": "../assets/studenthood-app-icon-1024.png"
+    "icon": "assets/studenthood-app-icon-1024.png"
   }
 }
