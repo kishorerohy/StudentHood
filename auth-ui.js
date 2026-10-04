@@ -107,3 +107,30 @@ $('[data-provider]').forEach(button=>{
     setStatus(status,`${label} sign-in is being connected. Email registration and sign-in are available now.`);
   });
 });
+
+
+function placeAppleButton(context){
+  const appleButton=document.getElementById('appleid-signin');
+  const host=document.querySelector(`.apple-provider-host[data-auth-context="${context}"]`);
+  if(appleButton&&host&&!host.contains(appleButton)) host.appendChild(appleButton);
+}
+
+$$('[data-modal]').forEach(trigger=>{
+  trigger.addEventListener('click',()=>{
+    const target=trigger.dataset.modal;
+    if(target==='join'||target==='signin') setTimeout(()=>placeAppleButton(target),0);
+  });
+});
+
+$$('[data-modal-switch]').forEach(trigger=>{
+  trigger.addEventListener('click',()=>{
+    const target=trigger.dataset.modalSwitch;
+    if(target==='join'||target==='signin') setTimeout(()=>placeAppleButton(target),0);
+  });
+});
+
+window.addEventListener('DOMContentLoaded',()=>{
+  const target=new URLSearchParams(location.search).get('auth');
+  if(target==='signin') placeAppleButton('signin');
+  else placeAppleButton('join');
+},{once:true});
