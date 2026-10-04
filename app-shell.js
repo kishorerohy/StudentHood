@@ -173,6 +173,23 @@ document.addEventListener('keydown',e=>{
   }
 });
 
+async function enforceAccessPolicy(){
+  try{
+    const policy=await getAccessPolicy();
+    if(!policy?.app_access){
+      const reason=encodeURIComponent(policy?.reason||'safety_restriction');
+      location.replace('safety-gate.html?reason='+reason);
+      return false;
+    }
+    if(policy?.youth_account){
+      document.documentElement.dataset.safetyMode='teen';
+    }
+    return true;
+  }catch{
+    return false;
+  }
+}
+
 async function hydrateUser(){
   const session=getSavedSession();
   if(!session?.access_token)return;
@@ -184,15 +201,8 @@ async function hydrateUser(){
     }
     if(profile?.campus_name)$('#campusName').textContent=profile.campus_name;
 
-    const policy=await getAccessPolicy();
-    if(!policy?.app_access){
-      const reason=encodeURIComponent(policy?.reason||'safety_restriction');
-      location.replace('safety-gate.html?reason='+reason);
-      return;
-    }
-    if(policy?.youth_account){
-      document.documentElement.dataset.safetyMode='teen';
-    }
+    if(!(await enforceAccessPolicy())) return;
+    setInterval(enforceAccessPolicy,60000);
   }catch{
     location.replace('index.html?auth=signin');
   }
