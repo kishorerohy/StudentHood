@@ -18,7 +18,7 @@ import {Feather} from '@expo/vector-icons';
 import {countryOptions,localeRegion} from '../countries';
 import {requestPasswordReset,signInWithEmail,signUpWithEmail,startGoogleAuth} from '../auth';
 
-const LOGO=require('../../../assets/studenthood-logo.png');
+const LOGO=require('../../assets/studenthood-logo.png');
 
 function toIsoDate(date){
   const y=date.getFullYear();
