@@ -1,5 +1,5 @@
 import { getSavedSession } from './auth.js?v=20261004-google-oauth';
-import { getMyProfile, completeMyProfile } from './profile.js?v=20261004-1';
+import { getMyProfile, completeMyProfile } from './profile.js?v=20261005-campus-1';
 
 const form=document.querySelector('#profileForm');
 const formView=document.querySelector('#onboardingFormView');
@@ -46,6 +46,7 @@ bio?.addEventListener('input',()=>{
     document.querySelector('#fullName').value=profile.full_name||session.user?.user_metadata?.full_name||session.user?.user_metadata?.name||'';
     document.querySelector('#username').value=profile.username||'';
     document.querySelector('#city').value=profile.city||'';
+    document.querySelector('#campusName').value=profile.campus_name||'';
     document.querySelector('#bio').value=profile.bio||'';
     bioCount.textContent=String((profile.bio||'').length);
     document.querySelector('#interests').value=(profile.interests||[]).join(', ');
@@ -60,6 +61,7 @@ form?.addEventListener('submit',async event=>{
   const fullName=document.querySelector('#fullName').value.trim();
   const username=document.querySelector('#username').value.trim().toLowerCase();
   const city=document.querySelector('#city').value.trim();
+  const campusName=document.querySelector('#campusName').value.trim();
   const bioValue=document.querySelector('#bio').value.trim();
   const interests=document.querySelector('#interests').value
     .split(',')
@@ -84,6 +86,7 @@ form?.addEventListener('submit',async event=>{
       fullName,
       username,
       city,
+      campusName,
       bio:bioValue,
       interests
     });
