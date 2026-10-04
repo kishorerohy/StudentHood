@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" sizes="64x64" href="assets/studenthood-tab-v3-64.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/studenthood-touch-v3.png">
   <link rel="manifest" href="site.webmanifest?v=4">
-  <link rel="stylesheet" href="app-shell.css?v=20261005-1">
+  <link rel="stylesheet" href="app-shell.css?v=20261005-youth-4">
 </head>
 <body>
   <div class="app-frame">
@@ -46,10 +46,16 @@
             <p class="campus-kicker">YOUR CAMPUS, RIGHT NOW</p>
             <h1 id="pageTitle">Scenes</h1>
           </div>
-          <button class="campus-pill" type="button" id="campusButton">
+          <div class="intro-actions">
+      <span class="teen-mode-badge" id="teenModeBadge" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.7 1.7 3.6-3.7"/></svg>
+        Teen Mode
+      </span>
+      <button class="campus-pill" type="button" id="campusButton">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.1 6-11A6 6 0 1 0 6 10c0 5.9 6 11 6 11Z"/><circle cx="12" cy="10" r="2"/></svg>
             <span id="campusName">Your campus</span>
           </button>
+        </div>
         </div>
 
         <section class="pulse-strip" aria-labelledby="pulseTitle">
@@ -290,6 +296,6 @@
     </div>
   </section>
 
-  <script type="module" src="app-shell.js?v=20261005-youth-3"></script>
+  <script type="module" src="app-shell.js?v=20261005-youth-4"></script>
 </body>
 </html>
