@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Set up your profile | StudentHood</title>
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="icon" type="image/png" sizes="64x64" href="assets/studenthood-tab-v3-64.png">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="onboarding.css?v=20261004-1">
+</head>
+<body class="onboarding-body">
+  <main class="onboarding-shell">
+    <section class="onboarding-card" aria-labelledby="onboarding-title">
+      <a class="onboarding-logo" href="index.html" aria-label="StudentHood home">
+        <img src="assets/studenthood-logo.png" alt="StudentHood">
+      </a>
+
+      <div id="onboardingFormView">
+        <div class="onboarding-progress"><span></span></div>
+        <div class="eyebrow">YOUR STUDENTHOOD</div>
+        <h1 id="onboarding-title">Set up your profile</h1>
+        <p class="onboarding-intro">A few details now. You can change them later.</p>
+
+        <form id="profileForm" class="onboarding-form">
+          <label>
+            <span>Full name</span>
+            <input id="fullName" name="fullName" required maxlength="100" autocomplete="name" placeholder="Your name">
+          </label>
+
+          <label>
+            <span>Username</span>
+            <div class="username-wrap">
+              <span>@</span>
+              <input id="username" name="username" required minlength="3" maxlength="24" pattern="[a-z0-9_]{3,24}" autocapitalize="none" autocomplete="username" placeholder="yourname">
+            </div>
+            <small>3 to 24 characters. Lowercase letters, numbers and underscores only.</small>
+          </label>
+
+          <label>
+            <span>City</span>
+            <input id="city" name="city" maxlength="80" autocomplete="address-level2" placeholder="Where are you based?">
+          </label>
+
+          <label>
+            <span>Bio</span>
+            <textarea id="bio" name="bio" maxlength="280" rows="4" placeholder="A little about you"></textarea>
+            <small><span id="bioCount">0</span>/280</small>
+          </label>
+
+          <label>
+            <span>Interests</span>
+            <input id="interests" name="interests" placeholder="Photography, football, coding, food">
+            <small>Add up to 12 interests, separated by commas.</small>
+          </label>
+
+          <p id="profileStatus" class="onboarding-status" aria-live="polite"></p>
+
+          <button id="saveProfileBtn" class="btn gradient full onboarding-submit" type="submit">
+            <span>Finish profile</span><span aria-hidden="true">→</span>
+          </button>
+        </form>
+      </div>
+
+      <div id="onboardingDoneView" class="onboarding-done" hidden>
+        <div class="done-mark">✓</div>
+        <div class="eyebrow">PROFILE READY</div>
+        <h1>You’re in.</h1>
+        <p id="doneCopy">Your StudentHood profile is ready.</p>
+        <a class="btn gradient full onboarding-submit" href="index.html">Back to StudentHood</a>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="onboarding.js?v=20261004-1"></script>
+</body>
+</html>
