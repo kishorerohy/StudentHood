@@ -100,7 +100,7 @@ $('#resetPasswordBtn')?.addEventListener('click',async()=>{
   }
 });
 
-$('[data-provider]').forEach(button=>{
+$$('[data-provider]').forEach(button=>{
   button.addEventListener('click',()=>{
     const provider=button.dataset.provider;
     const status=button.closest('#join') ? signupStatus : signinStatus;
