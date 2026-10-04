@@ -100,3 +100,25 @@ export async function completeMyProfile({fullName,username,dateOfBirth,countryCo
 
   return Array.isArray(rows)?rows[0]||null:null;
 }
+
+
+export async function getEffectiveSafety(){
+  return rest('rpc/studenthood_effective_safety',{
+    method:'POST',
+    body:'{}'
+  });
+}
+
+export async function canDiscoverProfile(targetUserId){
+  return rest('rpc/studenthood_can_discover_profile',{
+    method:'POST',
+    body:JSON.stringify({p_target_user:String(targetUserId||'')})
+  });
+}
+
+export async function canPingUser(targetUserId){
+  return rest('rpc/studenthood_can_ping',{
+    method:'POST',
+    body:JSON.stringify({p_target_user:String(targetUserId||'')})
+  });
+}
