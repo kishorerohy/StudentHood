@@ -1,5 +1,5 @@
 import {getSavedSession} from './auth.js?v=20261004-google-oauth';
-import {getMyProfile,getAccessPolicy} from './profile.js?v=20261005-youth-1';
+import {getMyProfile,getAccessPolicy,getEffectiveSafety} from './profile.js?v=20261005-youth-1';
 
 const activeSession=getSavedSession();
 if(!activeSession?.access_token){
@@ -202,6 +202,13 @@ async function hydrateUser(){
     if(profile?.campus_name)$('#campusName').textContent=profile.campus_name;
 
     if(!(await enforceAccessPolicy())) return;
+
+    const safety=await getEffectiveSafety();
+    if(safety?.youth_account){
+      $('#teenModeBadge').hidden=false;
+      document.documentElement.dataset.safetyMode='teen';
+    }
+
     setInterval(enforceAccessPolicy,60000);
   }catch{
     location.replace('index.html?auth=signin');
