@@ -111,32 +111,3 @@ $('[data-provider]').forEach(button=>{
 
 
 
-function ensureAppleFrame(context){
-  const frame=document.querySelector(`[data-apple-frame="${context}"]`);
-  if(frame && !frame.getAttribute('src')){
-    frame.setAttribute('src','apple-auth-button.html?v=1');
-  }
-}
-
-$$('[data-modal]').forEach(trigger=>{
-  trigger.addEventListener('click',()=>{
-    const target=trigger.dataset.modal;
-    if(target==='join'||target==='signin'){
-      setTimeout(()=>ensureAppleFrame(target),0);
-    }
-  });
-});
-
-$$('[data-modal-switch]').forEach(trigger=>{
-  trigger.addEventListener('click',()=>{
-    const target=trigger.dataset.modalSwitch;
-    if(target==='join'||target==='signin'){
-      setTimeout(()=>ensureAppleFrame(target),0);
-    }
-  });
-});
-
-const initialAuthTarget=new URLSearchParams(location.search).get('auth');
-if(initialAuthTarget==='join'||initialAuthTarget==='signin'){
-  setTimeout(()=>ensureAppleFrame(initialAuthTarget),0);
-}
