@@ -39,7 +39,7 @@ bio?.addEventListener('input',()=>{
     }
 
     if(profile.onboarding_completed){
-      showDone('Your StudentHood profile is already set up.');
+      location.replace('app.html');
       return;
     }
 
