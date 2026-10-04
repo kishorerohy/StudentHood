@@ -1,10 +1,7 @@
 .onboarding-body{
   margin:0;
   min-height:100vh;
-  background:
-    radial-gradient(circle at 20% 0%,rgba(102,72,255,.18),transparent 34%),
-    radial-gradient(circle at 100% 10%,rgba(255,71,148,.16),transparent 32%),
-    #05070c;
+  background:#05070c;
   color:#fff;
 }
 .onboarding-shell{
@@ -41,7 +38,7 @@
   display:block;
   width:100%;
   height:100%;
-  background:linear-gradient(90deg,#4f6cff,#aa63ff,#ff4f91);
+  background:#f08a72;
 }
 .onboarding-card h1{
   font-size:clamp(34px,6vw,52px);
@@ -67,6 +64,7 @@
   line-height:1.4;
 }
 .onboarding-form input,
+.onboarding-form select,
 .onboarding-form textarea{
   width:100%;
   box-sizing:border-box;
@@ -80,6 +78,7 @@
 }
 .onboarding-form textarea{resize:vertical;min-height:112px}
 .onboarding-form input:focus,
+.onboarding-form select:focus,
 .onboarding-form textarea:focus{
   border-color:rgba(151,109,255,.9);
   box-shadow:0 0 0 3px rgba(108,78,255,.14);
@@ -126,10 +125,12 @@
   display:grid;place-items:center;
   margin:0 auto 20px;
   font-size:38px;font-weight:900;
-  background:linear-gradient(135deg,#526eff,#b15cff,#ff4f91);
+  background:#f08a72;
 }
 .onboarding-done p{color:rgba(255,255,255,.68);margin:0 auto 28px;max-width:430px}
 @media(max-width:640px){
   .onboarding-shell{padding:14px}
   .onboarding-card{padding:24px 18px;border-radius:22px}
 }
+
+.onboarding-form select{appearance:none;background-image:none}
