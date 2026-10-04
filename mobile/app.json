@@ -17,7 +17,15 @@
         "foregroundImage": "assets/studenthood-app-icon-1024.png"
       }
     },
-    "plugins": [],
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "StudentHood uses your photo library only when you choose a photo or video for a Scene.",
+          "cameraPermission": "StudentHood uses your camera only when you choose to create a photo or video."
+        }
+      ]
+    ],
     "extra": {
       "privacyUrl": "https://kishorerohy.github.io/StudentHood/privacy.html",
       "termsUrl": "https://kishorerohy.github.io/StudentHood/terms.html",
