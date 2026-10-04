@@ -24,14 +24,14 @@ async function request(path, options={}){
   return data;
 }
 
-export async function signUpWithEmail({fullName,email,password,redirectTo}){
+export async function signUpWithEmail({fullName,dateOfBirth,email,password,redirectTo}){
   const suffix=redirectTo?`?redirect_to=${encodeURIComponent(redirectTo)}`:'';
   return request(`signup${suffix}`,{
     method:'POST',
     body:JSON.stringify({
       email:String(email||'').trim().toLowerCase(),
       password,
-      data:{full_name:String(fullName||'').trim()}
+      data:{full_name:String(fullName||'').trim(),date_of_birth:String(dateOfBirth||'').trim()||null}
     })
   });
 }
