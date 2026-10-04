@@ -135,7 +135,7 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
       index={viewerIndex??0}
       onIndex={setViewerIndex}
       onClose={()=>setViewerIndex(null)}
-      onProfile={scene=>{setViewerIndex(null);onOpenProfile?.(scene.author_id)}}
+      onProfile={scene=>onOpenProfile?.(scene.author_id)}
       onLike={scene=>like(scene.id)}
       theme={theme}
     />
