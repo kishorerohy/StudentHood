@@ -67,65 +67,23 @@ document.addEventListener('keydown',e=>{
   }
 });
 
-$('#waitlistForm')?.addEventListener('submit',async e=>{
-  e.preventDefault();
 
-  const form=e.currentTarget;
-  const btn=form.querySelector('button[type="submit"],button');
-  const note=form.querySelector('.fine');
-  const formData=new FormData(form);
+const authParam=new URLSearchParams(window.location.search).get('auth');
+if(authParam==='join'||authParam==='signin'){
+  window.addEventListener('DOMContentLoaded',()=>{
+    const trigger=document.querySelector(`[data-modal="${authParam}"]`);
+    openModal(authParam,trigger||document.activeElement);
+  },{once:true});
+}
 
-  const name=String(formData.get('name')||'').trim();
-  const email=String(formData.get('email')||'').trim().toLowerCase();
-  const cityValue=String(formData.get('city')||'').trim();
-  const city=cityValue||null;
-
-  if(!name || !email){
-    if(note) note.textContent='Please enter your name and email.';
-    return;
-  }
-
-  const originalText=btn.textContent;
-  btn.disabled=true;
-  btn.textContent='Joining...';
-
-  try{
-    const response=await fetch('https://tkznlyoflopxxnkthjtb.supabase.co/rest/v1/waitlist',{
-      method:'POST',
-      headers:{
-        'apikey':'sb_publishable_DiolULbdNTpIDst11yfc-A_tmNCjCmV',
-        'Content-Type':'application/json',
-        'Prefer':'return=minimal'
-      },
-      body:JSON.stringify({name,email,city})
-    });
-
-    if(response.ok){
-      btn.textContent='You’re on the list ✓';
-      if(note) note.textContent='Thanks for joining StudentHood. We’ll keep you posted on launch updates.';
-      form.querySelectorAll('input').forEach(input=>input.disabled=true);
-      return;
+$$('[data-modal-switch]').forEach(button=>{
+  button.addEventListener('click',()=>{
+    const current=button.closest('.modal');
+    const target=button.dataset.modalSwitch;
+    if(current){
+      current.classList.remove('open');
+      current.setAttribute('aria-hidden','true');
     }
-
-    let errorBody={};
-    try{ errorBody=await response.json(); }catch{}
-
-    if(response.status===409 || errorBody.code==='23505'){
-      btn.textContent='You’re already on the list ✓';
-      if(note) note.textContent='That email is already registered for StudentHood launch updates.';
-      return;
-    }
-
-    throw new Error(errorBody.message||'Waitlist submission failed');
-  }catch(error){
-    console.error('Waitlist submission error:',error);
-    btn.disabled=false;
-    btn.textContent=originalText;
-    if(note) note.textContent='We couldn’t add you right now. Please try again.';
-  }
-});
-
-$('#signinForm')?.addEventListener('submit',e=>{
-  e.preventDefault();
-  alert('Authentication will be connected in the next build step.');
+    openModal(target,button);
+  });
 });
