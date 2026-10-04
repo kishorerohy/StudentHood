@@ -122,3 +122,11 @@ export async function canPingUser(targetUserId){
     body:JSON.stringify({p_target_user:String(targetUserId||'')})
   });
 }
+
+
+export async function getProfileCard(targetUserId){
+  return rest('rpc/studenthood_profile_card',{
+    method:'POST',
+    body:JSON.stringify({p_target_user:String(targetUserId||'')})
+  });
+}
