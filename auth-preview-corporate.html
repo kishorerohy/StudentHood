@@ -45,8 +45,8 @@ html,body{margin:0;min-height:100%;background:#080a0f;color:#f6f7fb;font-family:
 .google-inner img{width:19px;height:19px;object-fit:contain;display:block;flex:0 0 19px}
 .google-inner span{display:block}
 .apple-btn{overflow:hidden;padding:0;border:1px solid #d4d6d9;background:#fff}
-.apple-inner{display:inline-flex;align-items:center;justify-content:center;gap:10px}
-.apple-inner img{display:block;width:auto;height:19px;object-fit:contain;flex:0 0 auto}
+.apple-official-wrap{height:46px;display:flex;align-items:center;justify-content:center}
+.apple-official-wrap #appleid-signin{width:100%;height:46px}
 .auth-legal{margin:15px auto 0;max-width:450px;text-align:center;color:#7f8795;font-size:10px;line-height:1.5}
 .auth-legal a{color:#cbd1db;text-decoration:underline;text-underline-offset:2px}
 .auth-switch{margin:16px 0 0;text-align:center;color:#9aa2af;font-size:12px}
@@ -104,7 +104,7 @@ html,body{margin:0;min-height:100%;background:#080a0f;color:#f6f7fb;font-family:
 
     <div class="providers">
       <div class="google-btn"><span class="google-inner"><img src="https://developers.google.com/identity/images/g-logo.png" alt=""><span>Continue with Google</span></span></div>
-      <div class="apple-btn" aria-label="Continue with Apple"><span class="apple-inner"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACsAAAA2CAYAAABeFWCFAAAEC0lEQVR4nO3ZT2hcVRTH8U/GpLGtBpVqCcZYKkSpNlUENxUX4lqoWO1KERcKrgQXrpW6KoIQ9/7BpQvFlYuCoFAK/ulCpN0U/NcUhVLSkOZfx8V5l3mZeW/em7RvJgt/cHlp5913v/fcP+fcc/lflRrH5KCVxhoA6dfW3TiME7iOd7E6RIZamsRx/Ip2Vj7BrhEyFeoOfC4A17GUPd9Ea4RcPdqLLwToMjbFsLfx3Ai5enQbFgTYis7wrwvwmdGh9ep5YcV1HdBk1fftoCkwKRbTZlba2XMZizgwMrICHdWxYipXsucrI+QqVJqryaLJuqeEQ9hR+sFWq67gLbHodpTGcUYsrPNij33yVnx4u+52TFisSC08LZzBL7hU8O5Y7nljkEbraBxTeEL49/3Can/jd7HKy+CJ4Z/CQTyEWdGZCZzFb/hDTJdtawLP6rjLorKItzGH22212l4cwQe43OcbbfyEl7NODKz78FnuY1eFX18WFlgW21HeO32Dd/Bi1oHvcr+tZt9I9Vdy37mae+80Dg0COodzWeUlHU+UtqB8Wc0aXC74LV9/s6Tk3fBS9vdlzNcBncE/en16EWgReLLWiq2utk5JXm5TrIfDebDuDXq3iDP34ZrB58/NxqctMe9b2MhKqd7QGbpuS9ax7M2W5KK/xL39QKf0H7qmYVO7F/BIP1B4vavSMGHXc6UyKB/DzxVQTcKmhfyhGo7qrhpATcGm7y7i8X6QKVp/WLWPbiqyT+1eFPO1EuBQgzB1dU5FbJAAH+369zCV9vrkMUuV4O5pFKee1lQsrgS72TxLqdKcnah6sdX1HKX2V72QIGtH6w0otT2n5jT4saviMJXanBenkFIl2L8axemvcRFdHcQzdSrMGk6wUubBUuD+rRph6aTyk8CwgFPbtVKh6bzUfdwYNvAiXlCx2F7LXk4h4qiA2+JYdUKfVNNM9uKK4UPmS4prr+BkxtVj5ZT2KTp5jsLCaYRPyW528hN5Ax9l/7dWZv4hqaWz/36v5EbnTtGjVb351VEstj/xQL4HeV0TKfRdWc9G5YY3BNunIuFRqlmxyLrvA4a5wFKi5EhVr8ZEvqqtPCXUZEnT7z01wkYiI3O+q/KwrNoWlyezdUCTjorMzIpmt7H8bU7KNB4bBJSY4CdzPW76KJ6suoA9g8ISKaXT6jmJZJm0OFImcbVG3QR6FtPbAU06oHOHVbQ75O9jq4CKoNM3F/FUP5C6dwrz+BoP2rr33tAJNi7iK7E4LmQA94vjynE8lr23ZuvZryXuE14Vkd8t2dun8bFey5zBS9nvu/UaYFKkL4+J+7Huu9yFrEOVMeygV0t7hLWmxZD+K66OUnq9qq0pcVexT4zIJeFSrw/IsfP1HwxzayvO49zvAAAAAElFTkSuQmCC" alt="" aria-hidden="true"><span>Continue with Apple</span></span></div>
+      <div class="apple-btn apple-official-wrap" aria-label="Continue with Apple"><div id="appleid-signin" data-color="white" data-border="false" data-type="continue" data-mode="center-align" data-border-radius="11" data-width="100%" data-height="46"></div></div>
     </div>
 
     <p class="auth-legal">By creating an account, you agree to StudentHood's <a href="terms.html">Terms of Service</a> and acknowledge the <a href="privacy.html">Privacy Policy</a>.</p>
@@ -112,5 +112,6 @@ html,body{margin:0;min-height:100%;background:#080a0f;color:#f6f7fb;font-family:
   </section>
 </main>
 </div>
+<script src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"></script>
 </body>
 </html>
