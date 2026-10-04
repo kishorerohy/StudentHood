@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Authentication Preview | StudentHood</title>
+<title>Authentication Refinement Preview | StudentHood</title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" type="image/png" sizes="64x64" href="assets/studenthood-tab-v3-64.png">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/studenthood-tab-v3-32.png">
@@ -11,155 +11,99 @@
 <meta name="theme-color" content="#000000">
 <link rel="stylesheet" href="styles.css">
 <style>
-  body{min-height:100vh;padding:44px 20px 70px;background:radial-gradient(circle at 50% 0%,rgba(132,92,255,.18),transparent 28%),#080a0f}
-  .auth-preview{width:min(1000px,100%);margin:auto}
-  .preview-brand{display:flex;justify-content:center;margin:10px 0 28px}
-  .preview-brand img{width:min(260px,72vw);height:auto}
-  .preview-note{text-align:center;color:#9299a8;font-size:13px;margin:0 auto 28px;max-width:680px}
-  .auth-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
-  .auth-card{background:#0f131a;border:1px solid #242a35;border-radius:24px;padding:28px;box-shadow:0 28px 80px rgba(0,0,0,.32)}
-  .auth-card h1{font-size:30px;line-height:1.05;margin:8px 0}
-  .auth-card .sub{color:#9299a8;margin:0 0 22px;font-size:14px}
-  .auth-card .field{display:block;margin:14px 0}
-  .auth-card .field span{display:block;font-size:12px;color:#b8bfcb;font-weight:700;margin-bottom:7px}
-  .auth-card .field input{width:100%;background:#0a0d12;color:white;border:1px solid #2b3340;border-radius:13px;padding:13px 14px;outline:none}
-  .auth-card .field input:focus{border-color:#845cff}
-  .auth-primary{width:100%;margin-top:8px}
-  .divider{display:flex;align-items:center;gap:12px;color:#777f8d;font-size:12px;margin:22px 0}
-  .divider:before,.divider:after{content:"";height:1px;background:#242a35;flex:1}
-  .provider-stack{display:grid;gap:10px}
-  .google-provider{height:48px;width:100%;display:flex;align-items:center;justify-content:center;position:relative;background:#fff;border:1px solid #747775;border-radius:12px;color:#1f1f1f;font-family:"Google Sans",Roboto,Arial,sans-serif;font-size:14px;font-weight:600;cursor:default}
-  .google-provider img{position:absolute;left:14px;width:20px;height:20px;object-fit:contain;background:#fff}
-  .apple-provider{height:48px;width:100%;object-fit:fill;display:block;border-radius:12px}
-  .legal{color:#737b88;font-size:11px;line-height:1.55;margin:16px 0 0;text-align:center}
-  .legal a{color:#b8bfcb;text-decoration:underline}
-  .switch{font-size:13px;color:#9ba3b0;text-align:center;margin-top:18px}
-  .switch strong{color:white}
-  .forgot{display:block;text-align:right;font-size:12px;color:#b7a6ff;margin-top:-4px;margin-bottom:10px}
-  .auth-status{min-height:20px;margin:10px 0 0;font-size:12px;color:#a9b0bc;text-align:center}.auth-status.ok{color:#72dca6}.auth-status.error{color:#ff8baa}.reset-link{background:none;border:0;padding:0;cursor:pointer}.provider-source{margin-top:24px;padding-top:18px;border-top:1px solid #242a35;color:#777f8d;font-size:11px;line-height:1.5;text-align:center}
-  @media(max-width:760px){.auth-grid{grid-template-columns:1fr}.auth-card{padding:22px}}
+  body{margin:0;min-height:100vh;background:radial-gradient(circle at 78% 8%,rgba(132,92,255,.16),transparent 24%),#080a0f;color:#f6f7fb;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  .preview-nav{position:sticky;top:0;z-index:10;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(8,10,15,.92);backdrop-filter:blur(18px)}
+  .preview-nav-in{width:min(1180px,calc(100% - 40px));height:72px;margin:auto;display:flex;align-items:center;gap:30px}
+  .preview-nav .brand{margin-right:auto}
+  .preview-nav .brand img{width:188px}
+  .preview-links{display:flex;gap:25px;color:#aab2bf;font-size:13px;font-weight:650}
+  .preview-actions{display:flex;gap:8px}
+  .preview-actions .btn{padding:9px 14px;border-radius:11px;font-size:13px;line-height:1.1;min-width:72px}
+  .preview-actions .signup{min-width:82px}
+  .preview-stage{min-height:calc(100vh - 72px);display:grid;place-items:center;padding:28px 18px;background:rgba(0,0,0,.42)}
+  .auth-card{position:relative;width:min(600px,100%);background:linear-gradient(180deg,#0f141c 0%,#0c1017 100%);border:1px solid #2b3441;border-radius:26px;padding:28px 34px 28px;box-shadow:0 34px 100px rgba(0,0,0,.58)}
+  .auth-close{position:absolute;top:16px;right:18px;border:0;background:none;color:#7f8997;font-size:26px;line-height:1;cursor:default}
+  .auth-brand{display:flex;justify-content:center;padding:0 52px 10px}
+  .auth-brand img{width:min(202px,68%);height:auto;display:block}
+  .auth-heading{text-align:center;margin:0 auto 20px;max-width:460px}
+  .auth-heading .eyebrow{margin:0 0 5px;font-size:11px;letter-spacing:.14em}
+  .auth-heading h1{margin:0;font-size:29px;line-height:1.1;letter-spacing:-.026em}
+  .auth-heading p{margin:9px auto 0;color:#9299a8;font-size:14px;line-height:1.5;max-width:430px}
+  .field{display:block;margin:0 0 13px}
+  .field>span:first-child{display:block;color:#d7dce5;font-size:13px;font-weight:750;margin-bottom:6px}
+  .input-shell{height:54px;display:flex;align-items:center;gap:12px;border:1px solid #2b3441;background:#0a0e14;border-radius:14px;padding:0 15px}
+  .input-shell svg{width:20px;height:20px;fill:none;stroke:#8994a5;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+  .input-shell input{width:100%;height:100%;border:0;outline:0;background:transparent;color:white;font-size:14px}
+  .input-shell input::placeholder{color:#666f7c}
+  .create-btn{height:54px;width:100%;margin-top:6px;border:0;border-radius:14px;background:linear-gradient(100deg,#7454ff,#ff5d9e);color:white;font-size:15px;font-weight:750;display:flex;align-items:center;justify-content:center;position:relative}
+  .create-btn i{font-style:normal;position:absolute;right:18px;font-size:21px;font-weight:400}
+  .divider{display:flex;align-items:center;gap:16px;color:#8d95a3;font-size:12px;margin:20px 0}
+  .divider:before,.divider:after{content:"";height:1px;flex:1;background:#2a313c}
+  .providers{display:grid;gap:11px}
+  .google-btn,.apple-shell{height:50px;width:100%;border-radius:12px}
+  .google-btn{border:1px solid #d4d6d9;background:#fff;color:#1f1f1f;display:flex;align-items:center;justify-content:center;position:relative;font-family:Roboto,Arial,sans-serif;font-size:15px;font-weight:600}
+  .google-btn img{position:absolute;left:20px;width:21px;height:21px;object-fit:contain}
+  .apple-shell{border:1px solid #d4d6d9;background:#fff;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .apple-shell img{display:block;width:375px;max-width:100%;height:48px;object-fit:contain}
+  .legal{margin:18px auto 0;max-width:500px;text-align:center;color:#7f8795;font-size:11px;line-height:1.6}
+  .legal a{color:#c8ced8;text-decoration:underline;text-underline-offset:2px}
+  .switch{margin:20px 0 0;text-align:center;color:#9aa2af;font-size:13px}
+  .switch strong{color:#a88cff}
+  @media(max-width:760px){
+    .preview-links{display:none}
+    .preview-nav-in{height:68px;width:min(100% - 28px,1180px)}
+    .preview-nav .brand img{width:165px}
+    .preview-actions .btn{padding:8px 11px;min-width:62px;font-size:12px}
+    .preview-actions .signup{min-width:70px}
+    .auth-card{padding:26px 20px 24px;border-radius:22px}
+    .auth-brand{padding-bottom:8px}
+    .auth-brand img{width:min(190px,72%)}
+    .auth-heading h1{font-size:27px}
+  }
 </style>
 </head>
 <body>
-<main class="auth-preview">
-  <a class="preview-brand" href="index.html" aria-label="StudentHood home"><img src="assets/studenthood-logo.png" alt="StudentHood"></a>
-  <p class="preview-note">Authentication design preview only. This page is not linked from the public website and is blocked from search indexing.</p>
+<header class="preview-nav">
+  <div class="preview-nav-in">
+    <a class="brand" href="index.html"><img src="assets/studenthood-logo.png" alt="StudentHood"></a>
+    <nav class="preview-links"><span>Home</span><span>Features</span><span>Safety</span><span>About</span></nav>
+    <div class="preview-actions">
+      <button class="btn" type="button">Log in</button>
+      <button class="btn primary signup" type="button">Sign up</button>
+    </div>
+  </div>
+</header>
 
-  <section class="auth-grid">
-    <article class="auth-card">
+<main class="preview-stage">
+  <section class="auth-card" aria-label="StudentHood sign up preview">
+    <button class="auth-close" type="button" aria-label="Close">×</button>
+
+    <div class="auth-brand">
+      <img src="assets/studenthood-logo.png" alt="StudentHood">
+    </div>
+
+    <div class="auth-heading">
       <div class="eyebrow">JOIN THE HOOD</div>
       <h1>Join StudentHood</h1>
-      <p class="sub">Create your account and start building your student world.</p>
+      <p>Join a global community of students, start building, and unlock opportunities.</p>
+    </div>
 
-      <form id="signupForm"><label class="field"><span>Full name</span><input name="fullName" type="text" placeholder="Your name" autocomplete="name" required></label>
-      <label class="field"><span>Email</span><input name="email" type="email" placeholder="you@example.com" autocomplete="email" required></label>
-      <label class="field"><span>Password</span><input name="password" type="password" placeholder="Create a password" autocomplete="new-password" minlength="8" required></label>
-      <button class="btn gradient auth-primary" type="submit">Create account</button><p class="auth-status" id="signupStatus" aria-live="polite"></p></form>
+    <label class="field"><span>Full name</span><span class="input-shell"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg><input placeholder="Your name" disabled></span></label>
+    <label class="field"><span>Email</span><span class="input-shell"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v12H3zM3 7l9 7 9-7"/></svg><input placeholder="you@example.com" disabled></span></label>
+    <label class="field"><span>Password</span><span class="input-shell"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><input placeholder="Create a password" disabled></span></label>
 
-      <div class="divider">or</div>
-      <div class="provider-stack">
-        <div class="google-provider" aria-label="Continue with Google">
-          <img src="https://developers.google.com/identity/images/g-logo.png" alt="" aria-hidden="true">
-          <span>Continue with Google</span>
-        </div>
-        <img class="apple-provider"
-          src="https://appleid.cdn-apple.com/appleid/button?height=48&width=375&color=white&border=true&type=continue&border_radius=12&scale=2&locale=en_US"
-          alt="Continue with Apple">
-      </div>
+    <button class="create-btn" type="button">Create account <i>→</i></button>
 
-      <p class="legal">By creating an account, you agree to StudentHood's <a href="terms.html">Terms of Service</a> and acknowledge the <a href="privacy.html">Privacy Policy</a>.</p>
-      <p class="switch">Already have an account? <strong>Sign in</strong></p>
-    </article>
+    <div class="divider">or continue with</div>
 
-    <article class="auth-card">
-      <div class="eyebrow">WELCOME BACK</div>
-      <h1>Sign in to StudentHood</h1>
-      <p class="sub">Pick up where you left off.</p>
+    <div class="providers">
+      <div class="google-btn"><img src="https://developers.google.com/identity/images/g-logo.png" alt="" aria-hidden="true"><span>Continue with Google</span></div>
+      <div class="apple-shell"><img src="https://appleid.cdn-apple.com/appleid/button?height=48&width=375&color=white&border=true&type=continue&border_radius=12&scale=2&locale=en_US" alt="Continue with Apple"></div>
+    </div>
 
-      <form id="signinFormPreview"><label class="field"><span>Email</span><input name="email" type="email" placeholder="you@example.com" autocomplete="email" required></label>
-      <label class="field"><span>Password</span><input name="password" type="password" placeholder="Your password" autocomplete="current-password" required></label>
-      <button class="forgot reset-link" type="button" id="resetPasswordBtn">Forgot password?</button>
-      <button class="btn gradient auth-primary" type="submit">Sign in</button><p class="auth-status" id="signinStatus" aria-live="polite"></p></form>
-
-      <div class="divider">or</div>
-      <div class="provider-stack">
-        <div class="google-provider" aria-label="Sign in with Google">
-          <img src="https://developers.google.com/identity/images/g-logo.png" alt="" aria-hidden="true">
-          <span>Sign in with Google</span>
-        </div>
-        <img class="apple-provider"
-          src="https://appleid.cdn-apple.com/appleid/button?height=48&width=375&color=white&border=true&type=sign-in&border_radius=12&scale=2&locale=en_US"
-          alt="Sign in with Apple">
-      </div>
-
-      <p class="switch">New to StudentHood? <strong>Join StudentHood</strong></p>
-    </article>
+    <p class="legal">By creating an account, you agree to StudentHood's <a href="terms.html">Terms of Service</a> and acknowledge the <a href="privacy.html">Privacy Policy</a>.</p>
+    <p class="switch">Already have an account? <strong>Log in</strong></p>
   </section>
-
-  <p class="provider-source">Google mark: official Google-hosted identity asset. Apple button: rendered directly by Apple's official Sign in with Apple CDN. Production Google authentication will use Google Identity Services.</p>
 </main>
-<script type="module">
-import {signUpWithEmail,signInWithEmail,requestPasswordReset,saveSession} from './auth.js';
-
-const signupForm=document.getElementById('signupForm');
-const signupStatus=document.getElementById('signupStatus');
-const signinForm=document.getElementById('signinFormPreview');
-const signinStatus=document.getElementById('signinStatus');
-const resetBtn=document.getElementById('resetPasswordBtn');
-
-function setStatus(el,message,type=''){
-  el.textContent=message;
-  el.className='auth-status'+(type?' '+type:'');
-}
-
-signupForm?.addEventListener('submit',async e=>{
-  e.preventDefault();
-  const btn=signupForm.querySelector('button[type="submit"]');
-  const data=new FormData(signupForm);
-  btn.disabled=true;
-  setStatus(signupStatus,'Creating your account...');
-  try{
-    const result=await signUpWithEmail({
-      fullName:data.get('fullName'),
-      email:data.get('email'),
-      password:data.get('password'),
-      redirectTo:location.origin+location.pathname+'?verified=1'
-    });
-    if(result.access_token) saveSession(result);
-    setStatus(signupStatus,result.access_token
-      ? 'Account created successfully.'
-      : 'Account created. Check your email to verify your address.','ok');
-  }catch(error){
-    setStatus(signupStatus,error.message||'Could not create your account.','error');
-  }finally{btn.disabled=false;}
-});
-
-signinForm?.addEventListener('submit',async e=>{
-  e.preventDefault();
-  const btn=signinForm.querySelector('button[type="submit"]');
-  const data=new FormData(signinForm);
-  btn.disabled=true;
-  setStatus(signinStatus,'Signing you in...');
-  try{
-    const result=await signInWithEmail({email:data.get('email'),password:data.get('password')});
-    saveSession(result);
-    setStatus(signinStatus,'Signed in successfully. The real StudentHood app UI will be connected after approval.','ok');
-  }catch(error){
-    setStatus(signinStatus,error.message||'Could not sign you in.','error');
-  }finally{btn.disabled=false;}
-});
-
-resetBtn?.addEventListener('click',async()=>{
-  const email=signinForm?.querySelector('input[name="email"]')?.value?.trim();
-  if(!email){setStatus(signinStatus,'Enter your email first.','error');return;}
-  resetBtn.disabled=true;
-  try{
-    await requestPasswordReset({email,redirectTo:location.origin+location.pathname+'?reset=1'});
-    setStatus(signinStatus,'Password reset email sent.','ok');
-  }catch(error){
-    setStatus(signinStatus,error.message||'Could not send the reset email.','error');
-  }finally{resetBtn.disabled=false;}
-});
-</script>
 </body>
 </html>
