@@ -109,3 +109,9 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid color
 }
 @media(max-width:420px){.app-wordmark img{width:132px}.icon-action{width:34px;height:34px}.icon-action svg{width:20px;height:20px}.top-island{gap:1px}.scene-filters{margin-right:-12px}.campus-now-grid{margin-right:-12px}.scene-media>img{height:58dvh}.text-scene{padding:22px}.text-scene h3{font-size:24px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+.intro-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+.teen-mode-badge{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 10px;font-size:10px;font-weight:800;color:var(--text)}
+.teen-mode-badge svg{width:15px;height:15px;fill:none;stroke:var(--accent);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+html[data-safety-mode="teen"] .now-card[data-filter-shortcut="nearby"] .now-card-copy small::after{content:" · approximate only";color:var(--accent)}
+html[data-safety-mode="teen"] .safety-card::before{content:"Teen protections active";display:block;margin-bottom:8px;font-size:10px;font-weight:900;letter-spacing:.08em;color:var(--accent);text-transform:uppercase}
+@media(max-width:720px){.intro-actions{gap:6px}.teen-mode-badge{padding:7px 9px}.page-intro{align-items:flex-start}}
