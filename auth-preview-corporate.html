@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>StudentHood Auth Corporate Preview</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/studenthood-tab-v3-64.png">
+<link rel="stylesheet" href="styles.css?v=auth-corporate-v3">
+<style>
+html,body{margin:0;min-height:100%;background:#080a0f;color:#f6f7fb;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.preview-site{min-height:100vh;background:radial-gradient(circle at 78% 8%,rgba(132,92,255,.15),transparent 24%),radial-gradient(circle at 92% 14%,rgba(255,93,158,.10),transparent 19%),#080a0f}
+.preview-header{height:70px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(8,10,15,.92);display:flex;align-items:center}
+.preview-header-in{width:min(1180px,calc(100% - 40px));margin:auto;display:flex;align-items:center;gap:28px}
+.preview-header .brand{display:flex;align-items:center;margin-right:auto}
+.preview-header .brand img{display:block;width:176px;height:auto}
+.preview-links{display:flex;align-items:center;gap:24px;color:#aab2bf;font-size:13px;font-weight:600}
+.preview-actions{display:flex;align-items:center;gap:8px}
+.preview-actions .btn{height:38px;padding:0 14px;border-radius:10px;font-size:12.5px;line-height:1;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.preview-actions .login{min-width:68px}
+.preview-actions .signup{min-width:74px}
+.preview-backdrop{min-height:calc(100vh - 70px);padding:24px 16px 56px;background:rgba(0,0,0,.56);display:flex;align-items:flex-start;justify-content:center}
+.auth-card{position:relative;width:min(540px,100%);background:linear-gradient(180deg,#10151d 0%,#0c1017 100%);border:1px solid #2a3340;border-radius:23px;padding:22px 28px 24px;box-shadow:0 30px 90px rgba(0,0,0,.58)}
+.auth-close{position:absolute;right:16px;top:14px;border:0;background:none;color:#7f8997;font-size:25px;line-height:1;cursor:default}
+.auth-brand{display:flex;justify-content:center;margin:0 0 3px;padding:0 46px}
+.auth-brand img{display:block;width:148px;height:auto}
+.auth-heading{text-align:center;margin:0 auto 16px;max-width:420px}
+.auth-heading .eyebrow{margin:0 0 2px;color:#ab95ff;font-size:10px;font-weight:900;letter-spacing:.145em}
+.auth-heading h1{margin:0;font-size:25px;line-height:1.08;letter-spacing:-.024em}
+.auth-heading p{margin:6px auto 0;max-width:390px;color:#9299a8;font-size:13px;line-height:1.45}
+.auth-field{display:block;margin:0 0 11px}
+.auth-field>span:first-child{display:block;margin:0 0 5px;color:#d8dde6;font-size:12px;font-weight:750}
+.auth-input{height:49px;display:flex;align-items:center;gap:10px;border:1px solid #2b3441;background:#0a0e14;border-radius:13px;padding:0 13px}
+.auth-input svg{width:18px;height:18px;flex:0 0 auto;fill:none;stroke:#8b95a5;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.auth-input input,.auth-field input{appearance:none;-webkit-appearance:none;width:100%;height:100%;min-height:0;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;outline:0!important;background:transparent!important;color:#f6f7fb!important;font-size:13.5px!important;line-height:1.2!important;box-shadow:none!important}
+.auth-input input::placeholder{color:#68717f;opacity:1}
+.create-btn{height:49px;width:100%;margin-top:4px;border:0;border-radius:13px;background:linear-gradient(100deg,#7454ff,#ff5d9e);color:#fff;font-size:14px;font-weight:750;position:relative}
+.create-btn .arrow{position:absolute;right:17px;font-size:19px;font-weight:400}
+.auth-divider{display:flex;align-items:center;gap:13px;margin:17px 0;color:#8b94a2;font-size:11px}
+.auth-divider:before,.auth-divider:after{content:"";height:1px;background:#2a313c;flex:1}
+.providers{display:grid;gap:9px}
+.google-btn,.apple-btn{height:46px;width:100%;border:1px solid #d4d6d9;border-radius:11px;background:#fff;color:#1f1f1f}
+.google-btn{display:flex;align-items:center;justify-content:center;font-family:Roboto,Arial,sans-serif;font-size:13.5px;font-weight:600}
+.google-inner{display:flex;align-items:center;justify-content:center;gap:11px}
+.google-inner img{width:19px;height:19px;object-fit:contain;display:block}
+.apple-btn{display:flex;align-items:center;justify-content:center;overflow:hidden}
+.apple-btn img{display:block;width:294px;max-width:90%;height:40px;object-fit:contain}
+.auth-legal{margin:15px auto 0;max-width:450px;text-align:center;color:#7f8795;font-size:10px;line-height:1.5}
+.auth-legal a{color:#cbd1db;text-decoration:underline;text-underline-offset:2px}
+.auth-switch{margin:16px 0 0;text-align:center;color:#9aa2af;font-size:12px}
+.auth-switch strong{color:#a88cff}
+@media(max-width:760px){
+  .preview-header-in{width:min(100% - 22px,1180px);gap:10px}
+  .preview-links{display:none}
+  .preview-header .brand img{width:150px}
+  .preview-actions{gap:6px}
+  .preview-actions .btn{height:34px;padding:0 10px;font-size:11.5px;min-width:auto}
+  .preview-backdrop{padding:16px 10px 44px}
+  .auth-card{padding:20px 17px 22px;border-radius:20px}
+  .auth-brand img{width:138px}
+  .auth-heading{margin-bottom:14px}
+  .auth-heading h1{font-size:23px}
+  .auth-heading p{font-size:12.5px}
+  .auth-input{height:47px}
+  .create-btn{height:47px}
+  .google-btn,.apple-btn{height:45px}
+  .apple-btn img{width:282px;height:39px}
+}
+</style>
+</head>
+<body>
+<div class="preview-site">
+<header class="preview-header">
+  <div class="preview-header-in">
+    <a class="brand" href="#"><img src="assets/studenthood-logo.png" alt="StudentHood"></a>
+    <nav class="preview-links"><span>Home</span><span>Features</span><span>Safety</span><span>About</span></nav>
+    <div class="preview-actions">
+      <button class="btn login" type="button">Log in</button>
+      <button class="btn primary signup" type="button">Sign up</button>
+    </div>
+  </div>
+</header>
+
+<main class="preview-backdrop">
+  <section class="auth-card" aria-label="StudentHood sign up preview">
+    <button class="auth-close" type="button" aria-label="Close">×</button>
+
+    <div class="auth-brand"><img src="assets/studenthood-logo.png" alt="StudentHood"></div>
+
+    <div class="auth-heading">
+      <div class="eyebrow">JOIN THE HOOD</div>
+      <h1>Join StudentHood</h1>
+      <p>Join a global community of students, start building, and unlock opportunities.</p>
+    </div>
+
+    <label class="auth-field"><span>Full name</span><span class="auth-input"><svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg><input placeholder="Your name" disabled></span></label>
+    <label class="auth-field"><span>Email</span><span class="auth-input"><svg viewBox="0 0 24 24"><path d="M3 6h18v12H3zM3 7l9 7 9-7"/></svg><input placeholder="you@example.com" disabled></span></label>
+    <label class="auth-field"><span>Password</span><span class="auth-input"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><input placeholder="Create a password" disabled></span></label>
+
+    <button class="create-btn" type="button">Create account <span class="arrow">→</span></button>
+
+    <div class="auth-divider">or continue with</div>
+
+    <div class="providers">
+      <div class="google-btn"><span class="google-inner"><img src="https://developers.google.com/identity/images/g-logo.png" alt=""><span>Continue with Google</span></span></div>
+      <div class="apple-btn"><img src="https://appleid.cdn-apple.com/appleid/button?height=40&width=294&color=white&border=false&type=continue&border_radius=10&scale=2&locale=en_US" alt="Continue with Apple"></div>
+    </div>
+
+    <p class="auth-legal">By creating an account, you agree to StudentHood's <a href="terms.html">Terms of Service</a> and acknowledge the <a href="privacy.html">Privacy Policy</a>.</p>
+    <p class="auth-switch">Already have an account? <strong>Log in</strong></p>
+  </section>
+</main>
+</div>
+</body>
+</html>
