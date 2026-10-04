@@ -61,3 +61,25 @@ export function getOAuthUrl(provider,redirectTo){
   if(redirectTo) url.searchParams.set('redirect_to',redirectTo);
   return url.toString();
 }
+
+
+export function saveSession(session){
+  if(!session?.access_token||!session?.refresh_token) return;
+  sessionStorage.setItem('studenthood_session',JSON.stringify({
+    access_token:session.access_token,
+    refresh_token:session.refresh_token,
+    expires_at:session.expires_at||null,
+    user:session.user||null
+  }));
+}
+
+export function getSavedSession(){
+  try{
+    const raw=sessionStorage.getItem('studenthood_session');
+    return raw?JSON.parse(raw):null;
+  }catch{return null;}
+}
+
+export function clearSavedSession(){
+  sessionStorage.removeItem('studenthood_session');
+}
