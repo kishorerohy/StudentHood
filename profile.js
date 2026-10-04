@@ -44,12 +44,12 @@ async function rest(path, options={}){
 export async function getMyProfile(){
   const session=requireSession();
   const rows=await rest(
-    `profiles?id=eq.${encodeURIComponent(session.user.id)}&select=id,full_name,username,city,campus_name,locale,country_code,preferred_currency,bio,interests,onboarding_completed,created_at,updated_at`
+    `profiles?id=eq.${encodeURIComponent(session.user.id)}&select=id,full_name,username,date_of_birth,city,campus_name,locale,country_code,preferred_currency,bio,interests,onboarding_completed,created_at,updated_at`
   );
   return Array.isArray(rows)?rows[0]||null:null;
 }
 
-export async function completeMyProfile({fullName,username,city,campusName,bio,interests}){
+export async function completeMyProfile({fullName,username,dateOfBirth,city,campusName,bio,interests}){
   const session=requireSession();
 
   const normalizedUsername=String(username||'').trim().toLowerCase();
@@ -61,6 +61,7 @@ export async function completeMyProfile({fullName,username,city,campusName,bio,i
   const payload={
     full_name:String(fullName||'').trim(),
     username:normalizedUsername,
+    date_of_birth:String(dateOfBirth||'').trim()||null,
     city:String(city||'').trim()||null,
     campus_name:String(campusName||'').trim()||null,
     locale:(navigator.language||null),
@@ -70,7 +71,7 @@ export async function completeMyProfile({fullName,username,city,campusName,bio,i
   };
 
   const rows=await rest(
-    `profiles?id=eq.${encodeURIComponent(session.user.id)}&select=id,full_name,username,city,campus_name,locale,bio,interests,onboarding_completed,updated_at`,
+    `profiles?id=eq.${encodeURIComponent(session.user.id)}&select=id,full_name,username,date_of_birth,city,campus_name,locale,bio,interests,onboarding_completed,updated_at`,
     {
       method:'PATCH',
       headers:{Prefer:'return=representation'},
