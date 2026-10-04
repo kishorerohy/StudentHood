@@ -14,6 +14,7 @@ export function SessionProvider({children}){
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState('');
   const recheckTimer=useRef(null);
+  const sessionRef=useRef(null);
 
   const clearRecheck=useCallback(()=>{
     if(recheckTimer.current){
@@ -72,6 +73,7 @@ export function SessionProvider({children}){
         if(!mounted) return;
         const next=data?.session||null;
         setSession(next);
+      sessionRef.current=next;
         if(next) await refreshAccount(next);
       }catch(e){
         if(mounted) setError(e?.message||'Could not restore your session.');
@@ -83,6 +85,7 @@ export function SessionProvider({children}){
     const {data:{subscription}}=supabase.auth.onAuthStateChange(async(_event,next)=>{
       if(!mounted) return;
       setSession(next);
+      sessionRef.current=next;
       setError('');
       if(next){
         try{await refreshAccount(next)}catch(e){setError(e?.message||'Could not load your StudentHood account.')}
@@ -96,8 +99,9 @@ export function SessionProvider({children}){
     });
 
     const appSub=AppState.addEventListener('change',async state=>{
-      if(state==='active'&&session?.access_token){
-        try{await refreshAccount(session)}catch{}
+      const current=sessionRef.current;
+      if(state==='active'&&current?.access_token){
+        try{await refreshAccount(current)}catch{}
       }
     });
 
