@@ -1,4 +1,4 @@
-import React,{useMemo,useState} from 'react';
+import React,{useState} from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -11,59 +11,20 @@ import {
   TextInput,
   View
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import * as Localization from 'expo-localization';
 import {Feather} from '@expo/vector-icons';
-import {localeRegion} from '../countries';
 import {requestPasswordReset,signInWithEmail,signUpWithEmail,startGoogleAuth} from '../auth';
-import CountryPicker from '../components/CountryPicker';
 
 const LOGO_DARK=require('../../assets/studenthood-logo.png');
 const LOGO_LIGHT=require('../../assets/studenthood-logo-light.png');
 
-function toIsoDate(date){
-  const y=date.getFullYear();
-  const m=String(date.getMonth()+1).padStart(2,'0');
-  const d=String(date.getDate()).padStart(2,'0');
-  return `${y}-${m}-${d}`;
-}
-
-function ageFromDob(iso){
-  const parts=String(iso||'').split('-').map(Number);
-  if(parts.length!==3||parts.some(Number.isNaN)) return null;
-  const [y,m,d]=parts;
-  const now=new Date();
-  let age=now.getFullYear()-y;
-  if(now.getMonth()+1<m||(now.getMonth()+1===m&&now.getDate()<d)) age--;
-  return age;
-}
-
-function signupDecision(dob,country){
-  const age=ageFromDob(dob);
-  if(age===null||age<0) return {allowed:false,message:'Choose a valid date of birth.'};
-  if(country==='AU'&&age<16) return {allowed:false,message:'StudentHood cannot create an under-16 account in Australia under the current social-media age restriction.'};
-  if(country==='IN'&&age<18) return {allowed:false,message:'A parent or guardian must be verified before an under-18 StudentHood account can be activated in India.'};
-  if(country==='US'&&age<13) return {allowed:false,message:'A parent or guardian must be verified before this account can be activated.'};
-  return {allowed:true,age};
-}
-
-
 export default function AuthScreen({theme}){
-  const locale=Localization.getLocales?.()[0];
-  const defaultCountry=locale?.regionCode||localeRegion(locale?.languageTag||'en');
   const [mode,setMode]=useState('signin');
   const [fullName,setFullName]=useState('');
   const [email,setEmail]=useState('');
   const [password,setPassword]=useState('');
-  const [dob,setDob]=useState('');
-  const [dobDate,setDobDate]=useState(new Date(2005,0,1));
-  const [showDate,setShowDate]=useState(false);
-  const [country,setCountry]=useState(defaultCountry||'');
   const [status,setStatus]=useState('');
   const [error,setError]=useState('');
   const [busy,setBusy]=useState(false);
-
-  const timeZone=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
 
   async function submit(){
     setError('');
@@ -72,15 +33,9 @@ export default function AuthScreen({theme}){
     try{
       if(mode==='signup'){
         if(!fullName.trim()) throw new Error('Add your full name.');
-        if(!dob) throw new Error('Add your date of birth.');
-        if(!country) throw new Error('Choose your country or region.');
-        const decision=signupDecision(dob,country);
-        if(!decision.allowed) throw new Error(decision.message);
         if(password.length<8) throw new Error('Use at least 8 characters for your password.');
 
-        const result=await signUpWithEmail({
-          fullName,email,password,dateOfBirth:dob,countryCode:country,timeZone
-        });
+        const result=await signUpWithEmail({fullName,email,password});
 
         if(result?.session){
           setStatus('Account created. Setting up your StudentHood now.');
@@ -103,14 +58,7 @@ export default function AuthScreen({theme}){
     setStatus('');
     setBusy(true);
     try{
-      let pending=null;
-      if(mode==='signup'){
-        if(!dob||!country) throw new Error('Add your date of birth and country before continuing with Google.');
-        const decision=signupDecision(dob,country);
-        if(!decision.allowed) throw new Error(decision.message);
-        pending={dateOfBirth:dob,countryCode:country,timeZone};
-      }
-      await startGoogleAuth(pending);
+      await startGoogleAuth();
     }catch(e){
       setError(e?.message||'Google sign-in could not be completed.');
     }finally{
@@ -149,7 +97,7 @@ export default function AuthScreen({theme}){
         <Text style={[styles.kicker,{color:theme.accent}]}>YOUR CAMPUS. YOUR PEOPLE.</Text>
         <Text style={[styles.title,{color:theme.text}]}>{mode==='signin'?'Welcome back':'Join StudentHood'}</Text>
         <Text style={[styles.subtitle,{color:theme.muted}]}>
-          {mode==='signin'?'Sign in to get back to your campus.':'Create your account with age-appropriate safety built in.'}
+          {mode==='signin'?'Sign in to get back to your campus.':'Create your account. Age and regional safety setup comes next.'}
         </Text>
 
         <View style={[styles.modeSwitch,{backgroundColor:theme.surface2}]}>
@@ -158,16 +106,7 @@ export default function AuthScreen({theme}){
           </Pressable>)}
         </View>
 
-        {mode==='signup'&&<>
-          <Input icon="user" placeholder="Full name" value={fullName} onChangeText={setFullName} theme={theme} autoCapitalize="words"/>
-          <Pressable onPress={()=>setShowDate(true)} style={[styles.inputShell,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
-            <Feather name="calendar" size={18} color={theme.muted}/>
-            <Text style={[styles.inputText,{color:dob?theme.text:theme.muted}]}>{dob||'Date of birth'}</Text>
-            <Feather name="chevron-down" size={18} color={theme.muted}/>
-          </Pressable>
-          <CountryPicker theme={theme} value={country} onChange={setCountry}/>
-          <Text style={[styles.helper,{color:theme.muted}]}>DOB and country are private. They are used for age, safety and regional rules.</Text>
-        </>}
+        {mode==='signup'&&<Input icon="user" placeholder="Full name" value={fullName} onChangeText={setFullName} theme={theme} autoCapitalize="words"/>}
 
         <Input icon="mail" placeholder="Email" value={email} onChangeText={setEmail} theme={theme} keyboardType="email-address" autoCapitalize="none" autoComplete="email"/>
         <Input icon="lock" placeholder="Password" value={password} onChangeText={setPassword} theme={theme} secureTextEntry autoCapitalize="none"/>
@@ -192,19 +131,6 @@ export default function AuthScreen({theme}){
       </View>
     </ScrollView>
 
-    {showDate&&<DateTimePicker
-      value={dobDate}
-      mode="date"
-      display={Platform.OS==='ios'?'spinner':'default'}
-      maximumDate={new Date()}
-      minimumDate={new Date(1900,0,1)}
-      onChange={(event,date)=>{
-        if(Platform.OS==='android') setShowDate(false);
-        if(event.type==='dismissed') return;
-        if(date){setDobDate(date);setDob(toIsoDate(date));}
-      }}
-    />}
-    {showDate&&Platform.OS==='ios'&&<Pressable onPress={()=>setShowDate(false)} style={[styles.dateDone,{backgroundColor:theme.accent}]}><Text style={styles.primaryText}>Done</Text></Pressable>}
   </KeyboardAvoidingView>;
 }
 
@@ -230,8 +156,6 @@ const styles=StyleSheet.create({
   modeText:{fontSize:12,fontWeight:'800'},
   inputShell:{height:52,borderWidth:1,borderRadius:15,flexDirection:'row',alignItems:'center',gap:10,paddingHorizontal:14,marginTop:10},
   input:{flex:1,fontSize:14},
-  inputText:{flex:1,fontSize:14},
-  helper:{fontSize:10,lineHeight:15,marginTop:7,paddingHorizontal:3},
   forgot:{fontSize:11,fontWeight:'800',alignSelf:'flex-end',marginTop:10},
   status:{fontSize:11,lineHeight:16,marginTop:10},
   primary:{height:52,borderRadius:15,alignItems:'center',justifyContent:'center',marginTop:14},
@@ -243,14 +167,5 @@ const styles=StyleSheet.create({
   googleG:{fontSize:17,fontWeight:'900'},
   providerText:{fontSize:13,fontWeight:'800'},
   legal:{fontSize:9,lineHeight:14,textAlign:'center',marginTop:14},
-  countryModal:{flex:1,paddingTop:18,paddingHorizontal:16},
-  modalTop:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:14},
-  modalTitle:{fontSize:24,fontWeight:'800',letterSpacing:-.5},
-  iconButton:{width:38,height:38,borderRadius:19,alignItems:'center',justifyContent:'center'},
-  searchBox:{height:48,borderWidth:1,borderRadius:14,flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:12,marginBottom:8},
-  searchInput:{flex:1},
-  countryRow:{height:52,borderBottomWidth:StyleSheet.hairlineWidth,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
-  countryName:{fontSize:14,fontWeight:'600'},
-  countryCode:{fontSize:11,fontWeight:'700'},
   dateDone:{position:'absolute',bottom:20,right:20,left:20,height:46,borderRadius:14,alignItems:'center',justifyContent:'center'}
 });
