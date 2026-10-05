@@ -1,10 +1,9 @@
 import React,{useMemo,useState} from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Image,
   KeyboardAvoidingView,
-  Modal,
+  ScrollView,
   Platform,
   Pressable,
   StyleSheet,
@@ -15,8 +14,9 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Localization from 'expo-localization';
 import {Feather} from '@expo/vector-icons';
-import {countryOptions,localeRegion} from '../countries';
+import {localeRegion} from '../countries';
 import {requestPasswordReset,signInWithEmail,signUpWithEmail,startGoogleAuth} from '../auth';
+import CountryPicker from '../components/CountryPicker';
 
 const LOGO=require('../../assets/studenthood-logo.png');
 
@@ -46,45 +46,6 @@ function signupDecision(dob,country){
   return {allowed:true,age};
 }
 
-function CountryPicker({theme,value,onChange}){
-  const [open,setOpen]=useState(false);
-  const [query,setQuery]=useState('');
-  const locale=Localization.getLocales?.()[0]?.languageTag||'en';
-  const options=useMemo(()=>countryOptions(locale),[locale]);
-  const filtered=options.filter(x=>x.name.toLowerCase().includes(query.toLowerCase())||x.code.toLowerCase().includes(query.toLowerCase()));
-  const selected=options.find(x=>x.code===value);
-
-  return <>
-    <Pressable onPress={()=>setOpen(true)} style={[styles.inputShell,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
-      <Feather name="globe" size={18} color={theme.muted}/>
-      <Text style={[styles.inputText,{color:selected?theme.text:theme.muted}]}>{selected?selected.name:'Country or region'}</Text>
-      <Feather name="chevron-down" size={18} color={theme.muted}/>
-    </Pressable>
-    <Modal visible={open} animationType="slide" presentationStyle="pageSheet" onRequestClose={()=>setOpen(false)}>
-      <View style={[styles.countryModal,{backgroundColor:theme.bg}]}>
-        <View style={styles.modalTop}>
-          <Text style={[styles.modalTitle,{color:theme.text}]}>Country or region</Text>
-          <Pressable onPress={()=>setOpen(false)} style={[styles.iconButton,{backgroundColor:theme.surface}]}>
-            <Feather name="x" size={20} color={theme.text}/>
-          </Pressable>
-        </View>
-        <View style={[styles.searchBox,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-          <Feather name="search" size={17} color={theme.muted}/>
-          <TextInput value={query} onChangeText={setQuery} autoFocus placeholder="Search countries" placeholderTextColor={theme.muted} style={[styles.searchInput,{color:theme.text}]}/>
-        </View>
-        <FlatList
-          data={filtered}
-          keyExtractor={item=>item.code}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({item})=><Pressable onPress={()=>{onChange(item.code);setOpen(false);setQuery('')}} style={[styles.countryRow,{borderBottomColor:theme.line}]}>
-            <Text style={[styles.countryName,{color:theme.text}]}>{item.name}</Text>
-            <Text style={[styles.countryCode,{color:theme.muted}]}>{item.code}</Text>
-          </Pressable>}
-        />
-      </View>
-    </Modal>
-  </>;
-}
 
 export default function AuthScreen({theme}){
   const locale=Localization.getLocales?.()[0];
@@ -174,52 +135,61 @@ export default function AuthScreen({theme}){
   }
 
   return <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':undefined} style={[styles.root,{backgroundColor:theme.bg}]}>
-    <View style={[styles.card,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-      <Image source={LOGO} style={styles.logo} resizeMode="contain"/>
-      <Text style={[styles.kicker,{color:theme.accent}]}>YOUR CAMPUS. YOUR PEOPLE.</Text>
-      <Text style={[styles.title,{color:theme.text}]}>{mode==='signin'?'Welcome back':'Join StudentHood'}</Text>
-      <Text style={[styles.subtitle,{color:theme.muted}]}>
-        {mode==='signin'?'Sign in to get back to your campus.':'Create your account with age-appropriate safety built in.'}
-      </Text>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={[styles.scrollContent,mode==='signin'&&styles.scrollContentCentered]}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={Platform.OS==='ios'?'interactive':'on-drag'}
+      showsVerticalScrollIndicator={false}
+      overScrollMode="never"
+    >
+      <View style={[styles.card,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+        <Image source={LOGO} style={styles.logo} resizeMode="contain"/>
+        <Text style={[styles.kicker,{color:theme.accent}]}>YOUR CAMPUS. YOUR PEOPLE.</Text>
+        <Text style={[styles.title,{color:theme.text}]}>{mode==='signin'?'Welcome back':'Join StudentHood'}</Text>
+        <Text style={[styles.subtitle,{color:theme.muted}]}>
+          {mode==='signin'?'Sign in to get back to your campus.':'Create your account with age-appropriate safety built in.'}
+        </Text>
 
-      <View style={[styles.modeSwitch,{backgroundColor:theme.surface2}]}>
-        {['signin','signup'].map(item=><Pressable key={item} onPress={()=>{setMode(item);setError('');setStatus('')}} style={[styles.modeButton,mode===item&&{backgroundColor:theme.surface}]}>
-          <Text style={[styles.modeText,{color:mode===item?theme.text:theme.muted}]}>{item==='signin'?'Sign in':'Sign up'}</Text>
-        </Pressable>)}
-      </View>
+        <View style={[styles.modeSwitch,{backgroundColor:theme.surface2}]}>
+          {['signin','signup'].map(item=><Pressable key={item} onPress={()=>{setMode(item);setError('');setStatus('')}} style={[styles.modeButton,mode===item&&{backgroundColor:theme.surface}]}>
+            <Text style={[styles.modeText,{color:mode===item?theme.text:theme.muted}]}>{item==='signin'?'Sign in':'Sign up'}</Text>
+          </Pressable>)}
+        </View>
 
-      {mode==='signup'&&<>
-        <Input icon="user" placeholder="Full name" value={fullName} onChangeText={setFullName} theme={theme} autoCapitalize="words"/>
-        <Pressable onPress={()=>setShowDate(true)} style={[styles.inputShell,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
-          <Feather name="calendar" size={18} color={theme.muted}/>
-          <Text style={[styles.inputText,{color:dob?theme.text:theme.muted}]}>{dob||'Date of birth'}</Text>
-          <Feather name="chevron-down" size={18} color={theme.muted}/>
+        {mode==='signup'&&<>
+          <Input icon="user" placeholder="Full name" value={fullName} onChangeText={setFullName} theme={theme} autoCapitalize="words"/>
+          <Pressable onPress={()=>setShowDate(true)} style={[styles.inputShell,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
+            <Feather name="calendar" size={18} color={theme.muted}/>
+            <Text style={[styles.inputText,{color:dob?theme.text:theme.muted}]}>{dob||'Date of birth'}</Text>
+            <Feather name="chevron-down" size={18} color={theme.muted}/>
+          </Pressable>
+          <CountryPicker theme={theme} value={country} onChange={setCountry}/>
+          <Text style={[styles.helper,{color:theme.muted}]}>DOB and country are private. They are used for age, safety and regional rules.</Text>
+        </>}
+
+        <Input icon="mail" placeholder="Email" value={email} onChangeText={setEmail} theme={theme} keyboardType="email-address" autoCapitalize="none" autoComplete="email"/>
+        <Input icon="lock" placeholder="Password" value={password} onChangeText={setPassword} theme={theme} secureTextEntry autoCapitalize="none"/>
+
+        {mode==='signin'&&<Pressable onPress={resetPassword} disabled={busy}><Text style={[styles.forgot,{color:theme.accent}]}>Forgot password?</Text></Pressable>}
+
+        {!!error&&<Text style={[styles.status,{color:theme.danger}]}>{error}</Text>}
+        {!!status&&<Text style={[styles.status,{color:theme.success}]}>{status}</Text>}
+
+        <Pressable onPress={submit} disabled={busy} style={[styles.primary,{backgroundColor:theme.accent,opacity:busy?0.65:1}]}>
+          {busy?<ActivityIndicator color="#fff"/>:<Text style={styles.primaryText}>{mode==='signin'?'Sign in':'Create account'}</Text>}
         </Pressable>
-        <CountryPicker theme={theme} value={country} onChange={setCountry}/>
-        <Text style={[styles.helper,{color:theme.muted}]}>DOB and country are private. They are used for age, safety and regional rules.</Text>
-      </>}
 
-      <Input icon="mail" placeholder="Email" value={email} onChangeText={setEmail} theme={theme} keyboardType="email-address" autoCapitalize="none" autoComplete="email"/>
-      <Input icon="lock" placeholder="Password" value={password} onChangeText={setPassword} theme={theme} secureTextEntry autoCapitalize="none"/>
+        <View style={styles.orRow}><View style={[styles.line,{backgroundColor:theme.line}]}/><Text style={[styles.or,{color:theme.muted}]}>or</Text><View style={[styles.line,{backgroundColor:theme.line}]}/></View>
 
-      {mode==='signin'&&<Pressable onPress={resetPassword} disabled={busy}><Text style={[styles.forgot,{color:theme.accent}]}>Forgot password?</Text></Pressable>}
+        <Pressable onPress={google} disabled={busy} style={[styles.provider,{borderColor:theme.line,backgroundColor:theme.surface2}]}>
+          <Text style={[styles.googleG,{color:theme.text}]}>G</Text>
+          <Text style={[styles.providerText,{color:theme.text}]}>Continue with Google</Text>
+        </Pressable>
 
-      {!!error&&<Text style={[styles.status,{color:theme.danger}]}>{error}</Text>}
-      {!!status&&<Text style={[styles.status,{color:theme.success}]}>{status}</Text>}
-
-      <Pressable onPress={submit} disabled={busy} style={[styles.primary,{backgroundColor:theme.accent,opacity:busy?0.65:1}]}>
-        {busy?<ActivityIndicator color="#fff"/>:<Text style={styles.primaryText}>{mode==='signin'?'Sign in':'Create account'}</Text>}
-      </Pressable>
-
-      <View style={styles.orRow}><View style={[styles.line,{backgroundColor:theme.line}]}/><Text style={[styles.or,{color:theme.muted}]}>or</Text><View style={[styles.line,{backgroundColor:theme.line}]}/></View>
-
-      <Pressable onPress={google} disabled={busy} style={[styles.provider,{borderColor:theme.line,backgroundColor:theme.surface2}]}>
-        <Text style={[styles.googleG,{color:theme.text}]}>G</Text>
-        <Text style={[styles.providerText,{color:theme.text}]}>Continue with Google</Text>
-      </Pressable>
-
-      <Text style={[styles.legal,{color:theme.muted}]}>By continuing, you agree to StudentHood’s Terms and acknowledge the Privacy and Safety policies.</Text>
-    </View>
+        <Text style={[styles.legal,{color:theme.muted}]}>By continuing, you agree to StudentHood’s Terms and acknowledge the Privacy and Safety policies.</Text>
+      </View>
+    </ScrollView>
 
     {showDate&&<DateTimePicker
       value={dobDate}
@@ -245,9 +215,12 @@ function Input({icon,theme,...props}){
 }
 
 const styles=StyleSheet.create({
-  root:{flex:1,justifyContent:'center',padding:18},
-  card:{width:'100%',maxWidth:500,alignSelf:'center',borderWidth:1,borderRadius:28,padding:22},
-  logo:{width:176,height:44,alignSelf:'center',marginBottom:24},
+  root:{flex:1},
+  scroll:{flex:1},
+  scrollContent:{flexGrow:1,width:'100%',maxWidth:536,alignSelf:'center',paddingHorizontal:18,paddingTop:18,paddingBottom:32},
+  scrollContentCentered:{justifyContent:'center'},
+  card:{width:'100%',alignSelf:'center',borderWidth:1,borderRadius:28,paddingHorizontal:22,paddingTop:18,paddingBottom:22},
+  logo:{width:154,height:38,alignSelf:'center',marginBottom:16},
   kicker:{fontSize:10,fontWeight:'900',letterSpacing:1.7,textAlign:'center'},
   title:{fontSize:34,fontWeight:'800',letterSpacing:-1.2,textAlign:'center',marginTop:7},
   subtitle:{fontSize:13,lineHeight:19,textAlign:'center',marginTop:7,marginBottom:20},
