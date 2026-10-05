@@ -1,8 +1,7 @@
 import React,{createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} from 'react';
 import {AppState} from 'react-native';
 import {bindAuthAutoRefresh,supabase} from './supabase';
-import {getAccessPolicy,getEffectiveSafety,getMyProfile,initializeSafetyProfile,recordPlatformAgeSignal,recordPlatformAgeStatus} from './api';
-import {consumePendingSignupSafety} from './auth';
+import {getAccessPolicy,getEffectiveSafety,getMyProfile,recordPlatformAgeSignal,recordPlatformAgeStatus} from './api';
 import {platformAgeSignalsAvailable,requestPlatformAgeSignal} from './ageAssurance';
 
 const SessionContext=createContext(null);
@@ -33,15 +32,11 @@ export function SessionProvider({children}){
       return;
     }
 
-    const pending=await consumePendingSignupSafety();
-    if(pending){
-      try{await initializeSafetyProfile(pending)}catch{}
-    }
-
     let nextProfile=await getMyProfile();
 
     if(
-      nextProfile?.date_of_birth
+      nextProfile?.onboarding_completed
+      && nextProfile?.date_of_birth
       && nextProfile?.country_code
       && nextProfile?.time_zone
       && !ageSignalAttemptedRef.current
