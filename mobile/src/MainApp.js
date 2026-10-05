@@ -11,7 +11,8 @@ import ScenesScreen from './screens/ScenesScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import CreateSceneSheet from './components/CreateSceneSheet';
 
-const LOGO=require('../assets/studenthood-logo.png');
+const LOGO_DARK=require('../assets/studenthood-logo.png');
+const LOGO_LIGHT=require('../assets/studenthood-logo-light.png');
 
 export default function MainApp({theme}){
   const {profile,safety}=useSession();
@@ -54,7 +55,7 @@ export default function MainApp({theme}){
 
 function Header({theme,isTablet,onSheet}){
   return <View style={[styles.header,{borderBottomColor:theme.line,backgroundColor:theme.bg}]}>
-    <Image source={LOGO} style={[styles.logo,{width:isTablet?168:142}]} resizeMode="contain"/>
+    <Image source={theme.isLight?LOGO_LIGHT:LOGO_DARK} style={[styles.logo,{width:isTablet?168:142}]} resizeMode="contain"/>
     {isTablet&&<View style={[styles.searchGhost,{backgroundColor:theme.surface,borderColor:theme.line}]}><Feather name="search" size={17} color={theme.muted}/><Text style={[styles.searchText,{color:theme.muted}]}>Search people, Hangs, Crews, Gigs...</Text></View>}
     <View style={[styles.topIsland,isTablet&&{backgroundColor:theme.surface,borderColor:theme.line,borderWidth:1}]}>
       <Pressable onPress={()=>onSheet('Discover')} style={styles.topIcon} accessibilityLabel="Discover"><DiscoverIcon color={theme.text}/></Pressable>
