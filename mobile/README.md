@@ -40,3 +40,27 @@ For under-18 accounts where local law permits access:
 - quiet hours from 19:00 to 07:00 in the locked account time zone
 
 Country-specific minimum-age and guardian-consent requirements override the general Teen Mode rule. The server policy is authoritative; native UI checks are supplementary.
+
+
+## Age assurance
+
+StudentHood does **not** treat Google Sign-In or Sign in with Apple as proof that the person holding the device is the account owner.
+
+The native app now has a platform-age bridge for:
+
+- Apple Declared Age Range on supported iPhone/iPad versions.
+- Google Play Age Signals 0.0.4 on supported Android devices.
+
+StudentHood requests age bands around 13, 16 and 18. The server compares a platform age band with the private DOB supplied to StudentHood.
+
+Rules:
+
+- A platform signal can make an account more restricted, never less restricted.
+- If DOB and a platform signal disagree across the under-18 boundary, the younger category wins until the discrepancy is resolved.
+- A parent’s 18+ Google/Apple account cannot override a StudentHood DOB that says the user is under 18.
+- An 18+ platform account does not set `adult_access_verified`.
+- Adult-classified content remains locked unless a separate person-level verification result marks the StudentHood user as a verified adult.
+- Raw IDs, selfies and biometric templates are not intended to be stored in StudentHood's database. The private verification audit stores only the result/provider reference needed for enforcement and audit.
+- When Google Play reports `VERIFICATION_REQUIRED` in a mandatory jurisdiction, StudentHood pauses account activation until the platform age requirement is resolved.
+
+The platform age module lives in `modules/studenthood-age-signals`. It requires a native development build; Expo Go cannot provide these native platform APIs.
