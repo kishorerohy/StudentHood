@@ -41,8 +41,7 @@ export function SessionProvider({children}){
     let nextProfile=await getMyProfile();
 
     if(
-      nextProfile?.onboarding_completed
-      && nextProfile?.date_of_birth
+      nextProfile?.date_of_birth
       && nextProfile?.country_code
       && nextProfile?.time_zone
       && !ageSignalAttemptedRef.current
