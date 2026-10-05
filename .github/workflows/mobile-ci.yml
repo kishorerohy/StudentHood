@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   bundle-android:
@@ -21,6 +21,67 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Generate proper Android adaptive icon
+        working-directory: .
+        shell: bash
+        run: |
+          python -m pip install --quiet pillow
+          python - <<'PY'
+          from PIL import Image
+
+          src_path = "mobile/assets/studenthood-app-icon-1024.png"
+          legacy_path = "mobile/assets/studenthood-app-icon-compact-1024.png"
+          foreground_path = "mobile/assets/studenthood-app-icon-foreground.png"
+
+          src = Image.open(src_path).convert("RGBA")
+
+          # Legacy/full icon used by installers and devices that do not use adaptive icons.
+          # Keep the approved artwork, but make it substantially more compact.
+          legacy = Image.new("RGBA", (1024, 1024), (11, 13, 15, 255))
+          legacy_size = 650
+          scaled = src.resize((legacy_size, legacy_size), Image.Resampling.LANCZOS)
+          legacy.alpha_composite(scaled, ((1024 - legacy_size)//2, (1024 - legacy_size)//2))
+          legacy.convert("RGB").save(legacy_path, quality=100, optimize=True)
+
+          # Android adaptive icon foreground must be transparent and contain only the H.
+          rgba = src.copy()
+          p = rgba.load()
+          for y in range(rgba.height):
+              for x in range(rgba.width):
+                  r, g, b, a = p[x, y]
+                  hi, lo = max(r, g, b), min(r, g, b)
+                  chroma = hi - lo
+
+                  # The approved H is vivid/saturated. The tile behind it is near-black.
+                  # Feather the edge instead of leaving a hard threshold.
+                  if hi < 42 or chroma < 18:
+                      p[x, y] = (r, g, b, 0)
+                  else:
+                      edge_alpha = min(a, max(0, min(255, int((chroma - 18) * 8))))
+                      p[x, y] = (r, g, b, edge_alpha)
+
+          bbox = rgba.getbbox()
+          if bbox:
+              mark = rgba.crop(bbox)
+          else:
+              mark = rgba
+
+          # Keep the coloured mark well inside Android's adaptive-icon safe zone.
+          target = 540
+          mark.thumbnail((target, target), Image.Resampling.LANCZOS)
+          fg = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
+          fg.alpha_composite(mark, ((1024 - mark.width)//2, (1024 - mark.height)//2))
+          fg.save(foreground_path, optimize=True)
+          PY
+
+          git config user.name "studenthood-ci"
+          git config user.email "studenthood-ci@users.noreply.github.com"
+          git add mobile/assets/studenthood-app-icon-compact-1024.png mobile/assets/studenthood-app-icon-foreground.png
+          if ! git diff --cached --quiet; then
+            git commit -m "Fix Android adaptive icon sizing"
+            git push
+          fi
 
       - name: Use Node.js
         uses: actions/setup-node@v4
