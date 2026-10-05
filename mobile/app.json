@@ -32,8 +32,12 @@
     "extra": {
       "privacyUrl": "https://kishorerohy.github.io/StudentHood/privacy.html",
       "termsUrl": "https://kishorerohy.github.io/StudentHood/terms.html",
-      "safetyUrl": "https://kishorerohy.github.io/StudentHood/safety.html"
+      "safetyUrl": "https://kishorerohy.github.io/StudentHood/safety.html",
+      "eas": {
+        "projectId": "2a76faaf-95de-438c-a4f5-f4f33a3dbcd3"
+      }
     },
-    "icon": "assets/studenthood-app-icon-1024.png"
+    "icon": "assets/studenthood-app-icon-1024.png",
+    "owner": "studenthood-0920"
   }
 }
