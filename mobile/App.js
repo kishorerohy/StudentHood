@@ -26,15 +26,17 @@ function StudentHood(){
     </SafeAreaView>;
   }
 
-  if(!profile||!profile.onboarding_completed||!profile.date_of_birth||!profile.country_code||!profile.time_zone){
+  const safetyReady=!!(profile?.date_of_birth&&profile?.country_code&&profile?.time_zone);
+
+  if(safetyReady&&policy&&!policy.app_access){
     return <SafeAreaView style={[styles.safe,{backgroundColor:theme.bg}]}>
-      <OnboardingScreen theme={theme}/>
+      <SafetyGate theme={theme} policy={policy}/>
     </SafeAreaView>;
   }
 
-  if(policy&&!policy.app_access){
+  if(!profile||!profile.onboarding_completed||!safetyReady){
     return <SafeAreaView style={[styles.safe,{backgroundColor:theme.bg}]}>
-      <SafetyGate theme={theme} policy={policy}/>
+      <OnboardingScreen theme={theme}/>
     </SafeAreaView>;
   }
 
