@@ -1,8 +1,11 @@
-import React from 'react';
-import {Linking,Pressable,StyleSheet,Text,View} from 'react-native';
+import React,{useEffect,useMemo,useState} from 'react';
+import {ActivityIndicator,Linking,Pressable,Share,StyleSheet,Text,TextInput,View} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {Feather} from '@expo/vector-icons';
 import {signOut} from '../auth';
-import {LEGAL_URLS} from '../config';
+import {createGuardianConsentRequest,getGuardianConsentStatus} from '../api';
+import {GUARDIAN_CONSENT_URL,LEGAL_URLS} from '../config';
+import {useSession} from '../session';
 
 const COPY={
   quiet_hours:{
@@ -43,10 +46,87 @@ const COPY={
 };
 
 export default function SafetyGate({theme,policy}){
+  const {session,refreshAccount}=useSession();
+  const [guardianEmail,setGuardianEmail]=useState('');
+  const [relationship,setRelationship]=useState('parent');
+  const [request,setRequest]=useState(null);
+  const [approvalLink,setApprovalLink]=useState('');
+  const [busy,setBusy]=useState(false);
+  const [message,setMessage]=useState('');
+  const [error,setError]=useState('');
+
   const item=COPY[policy?.reason]||{
     icon:'shield',kicker:'STUDENTHOOD SAFETY',title:'This account is paused.',
     body:'StudentHood cannot open this account right now.',note:'Visit Safety for more information.'
   };
+  const isGuardianGate=policy?.reason==='guardian_consent_required';
+  const storageKey=useMemo(()=>session?.user?.id?'studenthood.guardianApprovalLink.'+session.user.id:'',[session?.user?.id]);
+
+  async function loadStatus(){
+    if(!isGuardianGate) return;
+    try{
+      const next=await getGuardianConsentStatus();
+      setRequest(next);
+      if(next?.status==='approved'){
+        setMessage('Guardian approval received. Opening StudentHood…');
+        if(storageKey) await AsyncStorage.removeItem(storageKey);
+        await refreshAccount();
+      }
+    }catch{}
+  }
+
+  useEffect(()=>{
+    let active=true;
+    let timer=null;
+    (async()=>{
+      if(storageKey){
+        const saved=await AsyncStorage.getItem(storageKey);
+        if(active&&saved) setApprovalLink(saved);
+      }
+      await loadStatus();
+    })();
+    if(isGuardianGate) timer=setInterval(loadStatus,5000);
+    return ()=>{active=false;if(timer) clearInterval(timer)};
+  },[isGuardianGate,storageKey]);
+
+  async function askGuardian(){
+    setError('');
+    setMessage('');
+    const email=guardianEmail.trim().toLowerCase();
+    if(!email){setError('Enter your parent or guardian email address.');return;}
+    setBusy(true);
+    try{
+      const created=await createGuardianConsentRequest({guardianEmail:email,relationship});
+      const link=GUARDIAN_CONSENT_URL+'?token='+encodeURIComponent(created.token);
+      setRequest(created);
+      setApprovalLink(link);
+      if(storageKey) await AsyncStorage.setItem(storageKey,link);
+      setMessage('Approval request created. Send the secure link to your parent or guardian.');
+    }catch(e){
+      setError(e?.message||'Could not create the guardian approval request.');
+    }finally{setBusy(false)}
+  }
+
+  async function shareApproval(){
+    if(!approvalLink) return;
+    try{
+      await Share.share({
+        title:'StudentHood guardian approval',
+        message:'Please review and approve my StudentHood account using this secure link. The link expires after 24 hours.\n\n'+approvalLink
+      });
+    }catch(e){setError(e?.message||'Could not open the share sheet.')}
+  }
+
+  async function refreshApproval(){
+    setBusy(true);
+    setError('');
+    try{await loadStatus();await refreshAccount()}
+    catch(e){setError(e?.message||'Could not refresh guardian approval status.')}
+    finally{setBusy(false)}
+  }
+
+  const requestStatus=request?.status||'none';
+  const showRequestForm=!request||['none','expired','rejected'].includes(requestStatus);
 
   return <View style={[styles.root,{backgroundColor:theme.bg}]}>
     <View style={[styles.card,{backgroundColor:theme.surface,borderColor:theme.line}]}>
@@ -58,9 +138,45 @@ export default function SafetyGate({theme,policy}){
         <Text style={[styles.noteText,{color:theme.muted}]}>{item.note}</Text>
         {policy?.time_zone&&<Text style={[styles.zone,{color:theme.text}]}>Local time zone: {policy.time_zone}</Text>}
       </View>
-      <Pressable onPress={()=>Linking.openURL(LEGAL_URLS.safety)} style={[styles.primary,{backgroundColor:theme.accent}]}>
-        <Text style={styles.primaryText}>How safety works</Text>
-      </Pressable>
+
+      {isGuardianGate?<>
+        {showRequestForm?<>
+          <View style={styles.form}>
+            <Text style={[styles.label,{color:theme.text}]}>Parent or guardian email</Text>
+            <TextInput value={guardianEmail} onChangeText={setGuardianEmail} keyboardType='email-address' autoCapitalize='none' autoCorrect={false} placeholder='guardian@example.com' placeholderTextColor={theme.muted} style={[styles.input,{backgroundColor:theme.surface2,borderColor:theme.line,color:theme.text}]}/>
+            <Text style={[styles.label,{color:theme.text}]}>Relationship</Text>
+            <View style={styles.relationshipRow}>
+              {[[ 'parent','Parent' ],[ 'legal_guardian','Legal guardian' ]].map(([value,label])=><Pressable key={value} onPress={()=>setRelationship(value)} style={[styles.relationship,{borderColor:relationship===value?theme.accent:theme.line,backgroundColor:theme.surface2}]}>
+                <Text style={[styles.relationshipText,{color:relationship===value?theme.accent:theme.text}]}>{label}</Text>
+              </Pressable>)}
+            </View>
+            <Pressable onPress={askGuardian} disabled={busy} style={[styles.primary,{backgroundColor:theme.accent,opacity:busy?0.65:1}]}>
+              {busy?<ActivityIndicator color='#fff'/>:<Text style={styles.primaryText}>Ask a parent or guardian</Text>}
+            </Pressable>
+          </View>
+        </>:<>
+          <View style={[styles.pending,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
+            <Feather name={requestStatus==='approved'?'check-circle':'clock'} size={18} color={theme.accent}/>
+            <View style={{flex:1}}>
+              <Text style={[styles.pendingTitle,{color:theme.text}]}>{requestStatus==='approved'?'Guardian approved':'Waiting for guardian approval'}</Text>
+              <Text style={[styles.pendingCopy,{color:theme.muted}]}>{request?.guardian_email||guardianEmail}</Text>
+              {requestStatus!=='approved'&&<Text style={[styles.expiry,{color:theme.muted}]}>The secure approval link expires after 24 hours.</Text>}
+            </View>
+          </View>
+          {!!approvalLink&&requestStatus!=='approved'&&<Pressable onPress={shareApproval} style={[styles.primary,{backgroundColor:theme.accent}]}>
+            <Feather name='share-2' size={16} color='#fff'/><Text style={styles.primaryText}>Send approval link</Text>
+          </Pressable>}
+          <Pressable onPress={refreshApproval} disabled={busy} style={[styles.outline,{borderColor:theme.line,backgroundColor:theme.surface2}]}>
+            {busy?<ActivityIndicator color={theme.text}/>:<><Feather name='refresh-cw' size={15} color={theme.text}/><Text style={[styles.outlineText,{color:theme.text}]}>Check approval status</Text></>}
+          </Pressable>
+        </>}
+        {!!message&&<Text style={[styles.message,{color:theme.muted}]}>{message}</Text>}
+        {!!error&&<Text style={[styles.error,{color:theme.danger}]}>{error}</Text>}
+        <Pressable onPress={()=>Linking.openURL(LEGAL_URLS.safety)} style={styles.linkButton}><Text style={[styles.linkText,{color:theme.muted}]}>How safety works</Text></Pressable>
+      </>:<>
+        <Pressable onPress={()=>Linking.openURL(LEGAL_URLS.safety)} style={[styles.primary,{backgroundColor:theme.accent}]}><Text style={styles.primaryText}>How safety works</Text></Pressable>
+      </>}
+
       <Pressable onPress={signOut} style={styles.secondary}><Text style={[styles.secondaryText,{color:theme.muted}]}>Sign out</Text></Pressable>
     </View>
   </View>;
@@ -76,8 +192,24 @@ const styles=StyleSheet.create({
   note:{width:'100%',borderWidth:1,borderRadius:16,padding:14,marginTop:20},
   noteText:{fontSize:11,lineHeight:17,textAlign:'center'},
   zone:{fontSize:10,fontWeight:'800',textAlign:'center',marginTop:7},
-  primary:{width:'100%',height:50,borderRadius:15,alignItems:'center',justifyContent:'center',marginTop:20},
+  form:{width:'100%',marginTop:14},
+  label:{fontSize:11,fontWeight:'800',marginTop:10,marginBottom:6},
+  input:{height:50,borderWidth:1,borderRadius:14,paddingHorizontal:13,fontSize:14},
+  relationshipRow:{flexDirection:'row',gap:8},
+  relationship:{flex:1,minHeight:44,borderWidth:1,borderRadius:13,alignItems:'center',justifyContent:'center',paddingHorizontal:8},
+  relationshipText:{fontSize:11,fontWeight:'800'},
+  pending:{width:'100%',borderWidth:1,borderRadius:16,padding:14,marginTop:16,flexDirection:'row',alignItems:'flex-start',gap:10},
+  pendingTitle:{fontSize:12,fontWeight:'900'},
+  pendingCopy:{fontSize:10,lineHeight:15,marginTop:3},
+  expiry:{fontSize:9,lineHeight:14,marginTop:4},
+  primary:{width:'100%',height:50,borderRadius:15,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:8,marginTop:16},
+  outline:{width:'100%',height:48,borderRadius:15,borderWidth:1,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:8,marginTop:9},
+  outlineText:{fontSize:11,fontWeight:'900'},
+  message:{width:'100%',fontSize:10,lineHeight:15,textAlign:'center',marginTop:10},
+  error:{width:'100%',fontSize:10,lineHeight:15,textAlign:'center',marginTop:10},
+  linkButton:{padding:10,marginTop:4},
+  linkText:{fontSize:10,fontWeight:'800'},
   primaryText:{color:'#fff',fontSize:12,fontWeight:'900'},
-  secondary:{padding:12,marginTop:4},
+  secondary:{padding:12,marginTop:0},
   secondaryText:{fontSize:11,fontWeight:'800'}
 });
