@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import {supabase} from './supabase';
@@ -6,22 +5,17 @@ import {OAUTH_REDIRECT_URI} from './config';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const PENDING_SAFETY_KEY='studenthood.pendingSignupSafety';
-
 function normalizeEmail(value){
   return String(value||'').trim().toLowerCase();
 }
 
-export async function signUpWithEmail({fullName,email,password,dateOfBirth,countryCode,timeZone}){
+export async function signUpWithEmail({fullName,email,password}){
   const {data,error}=await supabase.auth.signUp({
     email:normalizeEmail(email),
     password,
     options:{
       data:{
-        full_name:String(fullName||'').trim(),
-        date_of_birth:dateOfBirth,
-        country_code:String(countryCode||'').toUpperCase(),
-        time_zone:timeZone
+        full_name:String(fullName||'').trim()
       }
     }
   });
@@ -49,11 +43,7 @@ export async function requestPasswordReset(email){
   if(error) throw error;
 }
 
-export async function startGoogleAuth(pendingSafety=null){
-  if(pendingSafety){
-    await AsyncStorage.setItem(PENDING_SAFETY_KEY,JSON.stringify(pendingSafety));
-  }
-
+export async function startGoogleAuth(){
   const {data,error}=await supabase.auth.signInWithOAuth({
     provider:'google',
     options:{
@@ -97,9 +87,3 @@ export async function startGoogleAuth(pendingSafety=null){
   throw new Error('Google sign-in returned without a usable session.');
 }
 
-export async function consumePendingSignupSafety(){
-  const raw=await AsyncStorage.getItem(PENDING_SAFETY_KEY);
-  if(!raw) return null;
-  await AsyncStorage.removeItem(PENDING_SAFETY_KEY);
-  try{return JSON.parse(raw)}catch{return null}
-}
