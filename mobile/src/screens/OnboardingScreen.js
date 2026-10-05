@@ -25,23 +25,27 @@ function parseDate(value){
 export default function OnboardingScreen({theme}){
   const {profile,session,refreshAccount}=useSession();
   const locale=Localization.getLocales?.()[0];
-  const initialDob=profile?.date_of_birth||session?.user?.user_metadata?.date_of_birth||'';
+  const metadataDob=session?.user?.user_metadata?.date_of_birth||'';
+  const metadataCountry=String(session?.user?.user_metadata?.country_code||'').toUpperCase();
+  const initialDob=metadataDob||profile?.date_of_birth||'';
   const [fullName,setFullName]=useState(profile?.full_name||session?.user?.user_metadata?.full_name||session?.user?.user_metadata?.name||'');
   const [username,setUsername]=useState(profile?.username||'');
   const [dateOfBirth,setDateOfBirth]=useState(initialDob);
   const [dobDate,setDobDate]=useState(parseDate(initialDob));
   const [showDate,setShowDate]=useState(false);
-  const [country,setCountry]=useState(profile?.country_code||session?.user?.user_metadata?.country_code||locale?.regionCode||localeRegion(locale?.languageTag||'en'));
+  const [country,setCountry]=useState(metadataCountry||profile?.country_code||locale?.regionCode||localeRegion(locale?.languageTag||'en'));
   const [city,setCity]=useState(profile?.city||'');
   const [campus,setCampus]=useState(profile?.campus_name||'');
   const [bio,setBio]=useState(profile?.bio||'');
   const [interests,setInterests]=useState((profile?.interests||[]).join(', '));
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
+  const [reviewSafety,setReviewSafety]=useState(false);
 
   const timeZone=profile?.time_zone||session?.user?.user_metadata?.time_zone||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
-  const dobLocked=!!profile?.date_of_birth;
-  const countryLocked=!!profile?.country_code;
+  const savedDob=!!initialDob;
+  const savedCountry=!!country;
+  const safetyDetailsComplete=savedDob&&savedCountry;
 
   async function save(){
     setError('');
@@ -77,13 +81,30 @@ export default function OnboardingScreen({theme}){
         <Field theme={theme} icon="user" value={fullName} onChangeText={setFullName} placeholder="Full name"/>
         <Field theme={theme} icon="at-sign" value={username} onChangeText={v=>setUsername(v.toLowerCase().replace(/[^a-z0-9_]/g,''))} placeholder="Username" autoCapitalize="none"/>
 
-        <Pressable disabled={dobLocked} onPress={()=>setShowDate(true)} style={[styles.field,{backgroundColor:theme.surface2,borderColor:theme.line,opacity:dobLocked?0.8:1}]}>
+        {safetyDetailsComplete&&!reviewSafety&&<View style={[styles.savedSafety,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
+          <View style={styles.savedSafetyInfo}>
+            <Feather name="shield" size={16} color={theme.accent}/>
+            <View style={{flex:1}}>
+              <Text style={[styles.savedSafetyTitle,{color:theme.text}]}>Private safety details saved</Text>
+              <Text style={[styles.savedSafetyCopy,{color:theme.muted}]}>Your date of birth and country were carried over from sign-up.</Text>
+            </View>
+          </View>
+          <Pressable onPress={()=>setReviewSafety(true)} hitSlop={8}>
+            <Text style={[styles.reviewLink,{color:theme.accent}]}>Review</Text>
+          </Pressable>
+        </View>}
+
+        {(!savedDob||reviewSafety)&&<Pressable onPress={()=>setShowDate(true)} style={[styles.field,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
           <Feather name="calendar" size={18} color={theme.muted}/>
           <Text style={[styles.fieldText,{color:dateOfBirth?theme.text:theme.muted}]}>{dateOfBirth||'Date of birth'}</Text>
-          <Feather name={dobLocked?'lock':'chevron-down'} size={17} color={theme.muted}/>
-        </Pressable>
+          <Feather name="chevron-down" size={17} color={theme.muted}/>
+        </Pressable>}
 
-        <CountryPicker theme={theme} value={country} onChange={setCountry} disabled={countryLocked}/>
+        {(!savedCountry||reviewSafety)&&<CountryPicker theme={theme} value={country} onChange={setCountry}/>}
+
+        {reviewSafety&&<Pressable onPress={()=>setReviewSafety(false)} style={styles.doneReview}>
+          <Text style={[styles.reviewLink,{color:theme.accent}]}>Done reviewing</Text>
+        </Pressable>}
 
         <View style={[styles.safetyBox,{backgroundColor:theme.accentSoft,borderColor:theme.line}]}>
           <Feather name="clock" size={16} color={theme.accent}/>
@@ -142,6 +163,12 @@ const styles=StyleSheet.create({
   fieldText:{flex:1,fontSize:14},
   input:{flex:1,fontSize:14,paddingVertical:0},
   multiline:{minHeight:96,paddingVertical:14},
+  savedSafety:{borderWidth:1,borderRadius:15,padding:13,marginTop:10,flexDirection:'row',alignItems:'center',gap:12},
+  savedSafetyInfo:{flex:1,flexDirection:'row',alignItems:'center',gap:10},
+  savedSafetyTitle:{fontSize:11,fontWeight:'800'},
+  savedSafetyCopy:{fontSize:9,lineHeight:14,marginTop:2},
+  reviewLink:{fontSize:10,fontWeight:'900'},
+  doneReview:{alignSelf:'flex-end',paddingTop:8,paddingHorizontal:3},
   safetyBox:{flexDirection:'row',gap:10,borderWidth:1,borderRadius:15,padding:13,marginTop:10},
   safetyTitle:{fontSize:11,fontWeight:'800'},
   safetyCopy:{fontSize:10,lineHeight:15,marginTop:3},
