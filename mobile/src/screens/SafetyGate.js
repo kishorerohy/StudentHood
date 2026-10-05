@@ -19,8 +19,8 @@ const COPY={
     icon:'shield',
     kicker:'GUARDIAN APPROVAL',
     title:'A parent or guardian needs to approve this account.',
-    body:'Your country or region requires verified guardian permission before StudentHood can activate this account.',
-    note:'Your profile is saved. StudentHood will continue after the required verification flow is completed.'
+    body:'Your country or region requires parent or guardian permission before StudentHood can activate this account.',
+    note:'Your profile is saved. Create a secure approval request and send the 24-hour link to your parent or legal guardian.'
   },
   regional_age_restriction:{
     icon:'lock',
