@@ -20,12 +20,19 @@ export default function ProfileScreen({theme,profile,safety,onSettings}){
         {!!profile?.city&&<View style={[styles.metaPill,{backgroundColor:theme.surface2}]}><Feather name="map-pin" size={13} color={theme.accent}/><Text style={[styles.metaText,{color:theme.text}]}>{profile.city}</Text></View>}
       </View>
       {safety?.youth_account&&<View style={[styles.teen,{backgroundColor:theme.accentSoft,borderColor:theme.line}]}><Feather name="shield" size={16} color={theme.accent}/><View style={{flex:1}}><Text style={[styles.teenTitle,{color:theme.text}]}>Teen Mode active</Text><Text style={[styles.teenCopy,{color:theme.muted}]}>Private profile, safer recommendations, Peep-only Pings and local quiet hours.</Text></View></View>}
+      {safety?.age_conflict&&<View style={[styles.teen,{backgroundColor:theme.surface2,borderColor:theme.line}]}><Feather name="alert-triangle" size={16} color={theme.accent}/><View style={{flex:1}}><Text style={[styles.teenTitle,{color:theme.text}]}>Age information needs review</Text><Text style={[styles.teenCopy,{color:theme.muted}]}>StudentHood is using the younger age category until the conflicting age signals are resolved.</Text></View></View>}
     </View>
 
     <View style={[styles.card,{backgroundColor:theme.surface,borderColor:theme.line}]}>
       <Text style={[styles.sectionTitle,{color:theme.text}]}>Account</Text>
       <Row icon="edit-3" title="Edit Profile" copy="Name, bio, campus and interests" theme={theme}/>
       <Row icon="settings" title="Settings" copy="Privacy, safety, notifications and account" theme={theme} onPress={onSettings}/>
+    </View>
+
+    <View style={[styles.card,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+      <Text style={[styles.sectionTitle,{color:theme.text}]}>Age & safety</Text>
+      <Row icon="shield" title="Age assurance" copy={safety?.adult_access_verified?'Adult status independently verified':safety?.youth_account?'Teen protections active':'Adult-classified content remains locked until person-level verification'} theme={theme}/>
+      <Row icon="clock" title="Platform age signal" copy={profile?.platform_age_status==='shared'?'Age range received from '+(profile?.platform_age_provider||'platform'):profile?.platform_age_status==='verification_required'?'Platform verification required':'No platform age range currently shared'} theme={theme}/>
     </View>
 
     <View style={[styles.card,{backgroundColor:theme.surface,borderColor:theme.line}]}>
