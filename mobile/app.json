@@ -8,7 +8,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.studenthood.app"
+      "bundleIdentifier": "com.studenthood.app",
+      "entitlements": {
+        "com.apple.developer.declared-age-range": true
+      }
     },
     "android": {
       "package": "com.studenthood.app",
