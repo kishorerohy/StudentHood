@@ -32,5 +32,8 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Expo Doctor
+        run: npx expo-doctor@latest
+
       - name: Export Android bundle
         run: npx expo export --platform android --output-dir dist
