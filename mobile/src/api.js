@@ -110,3 +110,9 @@ export async function getGuardianConsentStatus(){
   if(error) throw error;
   return data;
 }
+
+export async function deleteCurrentTestAccount(){
+  const {data,error}=await supabase.rpc('studenthood_delete_test_account');
+  if(error) throw error;
+  return data;
+}
