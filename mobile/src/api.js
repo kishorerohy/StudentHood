@@ -7,7 +7,7 @@ export async function getMyProfile(){
 
   const {data,error}=await supabase
     .from('profiles')
-    .select('id,full_name,username,date_of_birth,city,campus_name,locale,country_code,preferred_currency,time_zone,age_assurance_status,guardian_consent_status,platform_age_provider,platform_age_lower,platform_age_upper,platform_age_source,platform_age_signal_at,age_conflict,adult_access_verified,profile_visibility,location_visibility,recommendation_mode,ping_permissions,avatar_url,bio,interests,onboarding_completed,created_at,updated_at')
+    .select('id,full_name,username,date_of_birth,city,campus_name,locale,country_code,preferred_currency,time_zone,age_assurance_status,guardian_consent_status,platform_age_provider,platform_age_status,platform_age_lower,platform_age_upper,platform_age_source,platform_age_signal_at,age_conflict,adult_access_verified,profile_visibility,location_visibility,recommendation_mode,ping_permissions,avatar_url,bio,interests,onboarding_completed,created_at,updated_at')
     .eq('id',user.id)
     .maybeSingle();
 
@@ -81,6 +81,16 @@ export async function recordPlatformAgeSignal({provider,ageLower,ageUpper=null,s
     p_age_lower:Number(ageLower),
     p_age_upper:ageUpper===null||ageUpper===undefined?null:Number(ageUpper),
     p_source:String(source||'unknown').toLowerCase()
+  });
+  if(error) throw error;
+  return data;
+}
+
+
+export async function recordPlatformAgeStatus({provider,status}){
+  const {data,error}=await supabase.rpc('studenthood_record_platform_age_status',{
+    p_provider:String(provider||'').toLowerCase(),
+    p_status:String(status||'unknown').toLowerCase()
   });
   if(error) throw error;
   return data;
