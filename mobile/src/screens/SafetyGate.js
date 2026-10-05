@@ -26,6 +26,13 @@ const COPY={
     body:'Some countries set a higher minimum age for social-media accounts.',
     note:'StudentHood applies the local requirement even when younger users are permitted elsewhere.'
   },
+  platform_age_verification_required:{
+    icon:'shield',
+    kicker:'AGE CHECK REQUIRED',
+    title:'Your platform needs an age check.',
+    body:'Google Play or the device platform requires age verification before StudentHood can continue in this region.',
+    note:'StudentHood will not guess your age or treat an adult Google or Apple account as proof that the current user is an adult.'
+  },
   safety_setup_required:{
     icon:'shield',
     kicker:'SAFETY SETUP',
