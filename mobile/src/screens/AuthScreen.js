@@ -18,7 +18,8 @@ import {localeRegion} from '../countries';
 import {requestPasswordReset,signInWithEmail,signUpWithEmail,startGoogleAuth} from '../auth';
 import CountryPicker from '../components/CountryPicker';
 
-const LOGO=require('../../assets/studenthood-logo.png');
+const LOGO_DARK=require('../../assets/studenthood-logo.png');
+const LOGO_LIGHT=require('../../assets/studenthood-logo-light.png');
 
 function toIsoDate(date){
   const y=date.getFullYear();
@@ -144,7 +145,7 @@ export default function AuthScreen({theme}){
       overScrollMode="never"
     >
       <View style={[styles.card,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-        <Image source={LOGO} style={styles.logo} resizeMode="contain"/>
+        <Image source={theme.isLight?LOGO_LIGHT:LOGO_DARK} style={styles.logo} resizeMode="contain"/>
         <Text style={[styles.kicker,{color:theme.accent}]}>YOUR CAMPUS. YOUR PEOPLE.</Text>
         <Text style={[styles.title,{color:theme.text}]}>{mode==='signin'?'Welcome back':'Join StudentHood'}</Text>
         <Text style={[styles.subtitle,{color:theme.muted}]}>
