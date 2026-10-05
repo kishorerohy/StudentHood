@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["StudentHoodAgeSignalsModule"]
+  },
+  "android": {
+    "modules": ["com.studenthood.agesignals.StudentHoodAgeSignalsModule"]
+  }
+}
