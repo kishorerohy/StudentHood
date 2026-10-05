@@ -11,7 +11,8 @@ import {localeRegion} from '../countries';
 import {completeProfile} from '../api';
 import {useSession} from '../session';
 
-const LOGO=require('../../assets/studenthood-logo.png');
+const LOGO_DARK=require('../../assets/studenthood-logo.png');
+const LOGO_LIGHT=require('../../assets/studenthood-logo-light.png');
 
 function iso(date){
   return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
@@ -68,7 +69,7 @@ export default function OnboardingScreen({theme}){
   return <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':undefined} style={[styles.root,{backgroundColor:theme.bg}]}>
     <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
       <View style={[styles.card,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-        <Image source={LOGO} style={styles.logo} resizeMode="contain"/>
+        <Image source={theme.isLight?LOGO_LIGHT:LOGO_DARK} style={styles.logo} resizeMode="contain"/>
         <Text style={[styles.kicker,{color:theme.accent}]}>YOUR STUDENTHOOD</Text>
         <Text style={[styles.title,{color:theme.text}]}>Set up your profile</Text>
         <Text style={[styles.subtitle,{color:theme.muted}]}>Campus, identity and safety details now. Public details can be edited later.</Text>
