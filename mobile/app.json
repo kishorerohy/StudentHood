@@ -17,7 +17,7 @@
       "package": "com.studenthood.app",
       "adaptiveIcon": {
         "backgroundColor": "#0B0D0F",
-        "foregroundImage": "assets/studenthood-app-icon-1024.png"
+        "foregroundImage": "assets/studenthood-app-icon-compact-1024.png"
       }
     },
     "plugins": [
@@ -37,7 +37,7 @@
         "projectId": "2a76faaf-95de-438c-a4f5-f4f33a3dbcd3"
       }
     },
-    "icon": "assets/studenthood-app-icon-1024.png",
+    "icon": "assets/studenthood-app-icon-compact-1024.png",
     "owner": "studenthood-0920"
   }
 }
