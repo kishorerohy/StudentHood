@@ -1,8 +1,9 @@
 import React,{createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} from 'react';
 import {AppState} from 'react-native';
 import {bindAuthAutoRefresh,supabase} from './supabase';
-import {getAccessPolicy,getEffectiveSafety,getMyProfile,initializeSafetyProfile} from './api';
+import {getAccessPolicy,getEffectiveSafety,getMyProfile,initializeSafetyProfile,recordPlatformAgeSignal,recordPlatformAgeStatus} from './api';
 import {consumePendingSignupSafety} from './auth';
+import {platformAgeSignalsAvailable,requestPlatformAgeSignal} from './ageAssurance';
 
 const SessionContext=createContext(null);
 
@@ -15,6 +16,7 @@ export function SessionProvider({children}){
   const [error,setError]=useState('');
   const recheckTimer=useRef(null);
   const sessionRef=useRef(null);
+  const ageSignalAttemptedRef=useRef(false);
 
   const clearRecheck=useCallback(()=>{
     if(recheckTimer.current){
@@ -36,7 +38,41 @@ export function SessionProvider({children}){
       try{await initializeSafetyProfile(pending)}catch{}
     }
 
-    const nextProfile=await getMyProfile();
+    let nextProfile=await getMyProfile();
+
+    if(
+      nextProfile?.onboarding_completed
+      && nextProfile?.date_of_birth
+      && nextProfile?.country_code
+      && nextProfile?.time_zone
+      && !ageSignalAttemptedRef.current
+      && platformAgeSignalsAvailable()
+    ){
+      ageSignalAttemptedRef.current=true;
+
+      try{
+        const signal=await requestPlatformAgeSignal();
+
+        if(signal.status==='shared'){
+          await recordPlatformAgeSignal({
+            provider:signal.provider,
+            ageLower:signal.ageLower,
+            ageUpper:signal.ageUpper,
+            source:signal.source
+          });
+        }else if(signal.status==='verification_required'||signal.status==='not_shared'){
+          await recordPlatformAgeStatus({
+            provider:signal.provider,
+            status:signal.status
+          });
+        }
+
+        nextProfile=await getMyProfile();
+      }catch{
+        // Age-signal failure never upgrades access. The existing safety state remains.
+      }
+    }
+
     setProfile(nextProfile);
 
     if(nextProfile?.date_of_birth&&nextProfile?.country_code&&nextProfile?.time_zone){
@@ -91,6 +127,7 @@ export function SessionProvider({children}){
         try{await refreshAccount(next)}catch(e){setError(e?.message||'Could not load your StudentHood account.')}
       }else{
         clearRecheck();
+        ageSignalAttemptedRef.current=false;
         setProfile(null);
         setPolicy(null);
         setSafety(null);
