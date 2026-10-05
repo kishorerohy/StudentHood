@@ -95,3 +95,18 @@ export async function recordPlatformAgeStatus({provider,status}){
   if(error) throw error;
   return data;
 }
+
+export async function createGuardianConsentRequest({guardianEmail,relationship='parent_or_guardian'}){
+  const {data,error}=await supabase.rpc('studenthood_create_guardian_consent_request',{
+    p_guardian_email:String(guardianEmail||'').trim().toLowerCase(),
+    p_relationship:String(relationship||'parent_or_guardian').toLowerCase()
+  });
+  if(error) throw error;
+  return data;
+}
+
+export async function getGuardianConsentStatus(){
+  const {data,error}=await supabase.rpc('studenthood_guardian_consent_status');
+  if(error) throw error;
+  return data;
+}
