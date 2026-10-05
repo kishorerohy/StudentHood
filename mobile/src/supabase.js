@@ -6,6 +6,7 @@ import {createClient} from '@supabase/supabase-js';
 import {SUPABASE_PUBLISHABLE_KEY,SUPABASE_URL} from './config';
 
 const CHUNK_SIZE=1800;
+const AUTH_STORAGE_KEY='sb-'+SUPABASE_URL.replace(/^https?:\/\//,'').split('.')[0]+'-auth-token';
 
 const SecureSessionStorage={
   async getItem(key){
@@ -50,6 +51,10 @@ export const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
     flowType:'pkce'
   }
 });
+
+export async function clearStoredAuthSession(){
+  await SecureSessionStorage.removeItem(AUTH_STORAGE_KEY);
+}
 
 let autoRefreshBound=false;
 
