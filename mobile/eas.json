@@ -8,16 +8,25 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_STUDENTHOOD_TEST_FRESH_START": "true"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_STUDENTHOOD_TEST_FRESH_START": "true"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_STUDENTHOOD_TEST_FRESH_START": "false"
+      }
     }
   },
   "submit": {
