@@ -1,8 +1,10 @@
 import React,{createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} from 'react';
 import {AppState} from 'react-native';
-import {bindAuthAutoRefresh,supabase} from './supabase';
-import {getAccessPolicy,getEffectiveSafety,getMyProfile,recordPlatformAgeSignal,recordPlatformAgeStatus} from './api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {bindAuthAutoRefresh,clearStoredAuthSession,supabase} from './supabase';
+import {deleteCurrentTestAccount,getAccessPolicy,getEffectiveSafety,getMyProfile,recordPlatformAgeSignal,recordPlatformAgeStatus} from './api';
 import {platformAgeSignalsAvailable,requestPlatformAgeSignal} from './ageAssurance';
+import {TEST_FRESH_START} from './config';
 
 const SessionContext=createContext(null);
 
@@ -101,9 +103,25 @@ export function SessionProvider({children}){
         const {data,error:getError}=await supabase.auth.getSession();
         if(getError) throw getError;
         if(!mounted) return;
-        const next=data?.session||null;
+        let next=data?.session||null;
+
+        if(TEST_FRESH_START&&next?.access_token){
+          try{
+            await supabase.auth.updateUser({data:{studenthood_test_account:true}});
+            await deleteCurrentTestAccount();
+          }catch{}
+          try{await supabase.auth.signOut({scope:'local'})}catch{}
+          try{await clearStoredAuthSession()}catch{}
+          try{
+            const keys=await AsyncStorage.getAllKeys();
+            const studenthoodKeys=keys.filter(key=>key.startsWith('studenthood.'));
+            if(studenthoodKeys.length) await AsyncStorage.multiRemove(studenthoodKeys);
+          }catch{}
+          next=null;
+        }
+
         setSession(next);
-      sessionRef.current=next;
+        sessionRef.current=next;
         if(next) await refreshAccount(next);
       }catch(e){
         if(mounted) setError(e?.message||'Could not restore your session.');
