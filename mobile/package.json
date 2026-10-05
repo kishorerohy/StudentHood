@@ -7,7 +7,10 @@
     "start": "expo start",
     "ios": "expo start --ios",
     "android": "expo start --android",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "build:android:dev": "eas build --profile development --platform android",
+    "build:android:preview": "eas build --profile preview --platform android",
+    "build:ios:dev": "eas build --profile development --platform ios"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.4",
@@ -25,6 +28,7 @@
     "expo-web-browser": "~15.0.7",
     "react-native-url-polyfill": "^2.0.0",
     "@react-native-community/datetimepicker": "8.4.4",
-    "expo-secure-store": "~15.0.7"
+    "expo-secure-store": "~15.0.7",
+    "expo-dev-client": "~6.0.16"
   }
 }
