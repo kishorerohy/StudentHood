@@ -37,3 +37,42 @@ jobs:
 
       - name: Export Android bundle
         run: npx expo export --platform android --output-dir dist
+
+  build-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      EXPO_PUBLIC_STUDENTHOOD_TEST_FRESH_START: 'true'
+      NODE_ENV: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: mobile/package.json
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --no-install --clean
+
+      - name: Build installable preview APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleRelease --no-daemon
+        working-directory: mobile/android
+
+      - name: Publish Android preview APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: studenthood-preview-v0.1.2-apk
+          path: mobile/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
