@@ -93,7 +93,7 @@ export default function SafetyGate({theme,policy}){
     setError('');
     setMessage('');
     const email=guardianEmail.trim().toLowerCase();
-    if(!email){setError('Enter your parent or guardian email address.');return;}
+    if(!/^[A-Z0-9._%+'-]+@[A-Z0-9.-]+[.][A-Z]{2,}$/i.test(email)){setError('Enter a valid email address.');return;}
     setBusy(true);
     try{
       const created=await createGuardianConsentRequest({guardianEmail:email,relationship});
@@ -105,6 +105,20 @@ export default function SafetyGate({theme,policy}){
     }catch(e){
       setError(e?.message||'Could not create the guardian approval request.');
     }finally{setBusy(false)}
+  }
+
+  async function prepareApprovalEmail(){
+    if(!approvalLink) return;
+    const to=String(request?.guardian_email||guardianEmail||'').trim();
+    const subject='StudentHood: please review my account approval';
+    const body='Hello,\\n\\nPlease review my StudentHood guardian approval request using this secure link. It expires after 24 hours.\\n\\n'+approvalLink+'\\n\\nThank you.';
+    const url='mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+    try{
+      await Linking.openURL(url);
+      setMessage('Email draft opened. Please tap Send in your email app to deliver it.');
+    }catch{
+      setError('Could not open an email app. Use Share approval link instead.');
+    }
   }
 
   async function shareApproval(){
@@ -163,9 +177,15 @@ export default function SafetyGate({theme,policy}){
               {requestStatus!=='approved'&&<Text style={[styles.expiry,{color:theme.muted}]}>The secure approval link expires after 24 hours.</Text>}
             </View>
           </View>
-          {!!approvalLink&&requestStatus!=='approved'&&<Pressable onPress={shareApproval} style={[styles.primary,{backgroundColor:theme.accent}]}>
-            <Feather name='share-2' size={16} color='#fff'/><Text style={styles.primaryText}>Send approval link</Text>
-          </Pressable>}
+          {!!approvalLink&&requestStatus!=='approved'&&<>
+            <Pressable onPress={prepareApprovalEmail} style={[styles.primary,{backgroundColor:theme.accent}]}>
+              <Feather name='mail' size={16} color='#fff'/><Text style={styles.primaryText}>Prepare approval email</Text>
+            </Pressable>
+            <Pressable onPress={shareApproval} style={[styles.outline,{borderColor:theme.line,backgroundColor:theme.surface2}]}>
+              <Feather name='share-2' size={15} color={theme.text}/><Text style={[styles.outlineText,{color:theme.text}]}>Share approval link</Text>
+            </Pressable>
+            <Text style={[styles.expiry,{color:theme.muted,textAlign:'center',marginTop:8}]}>This test build prepares an email draft. Sending is completed in your email app.</Text>
+          </>}
           <Pressable onPress={refreshApproval} disabled={busy} style={[styles.outline,{borderColor:theme.line,backgroundColor:theme.surface2}]}>
             {busy?<ActivityIndicator color={theme.text}/>:<><Feather name='refresh-cw' size={15} color={theme.text}/><Text style={[styles.outlineText,{color:theme.text}]}>Check approval status</Text></>}
           </Pressable>
