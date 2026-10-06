@@ -1,6 +1,7 @@
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
-import {supabase} from './supabase';
+import {clearStoredAuthSession,supabase} from './supabase';
+import {deleteCurrentTestAccount} from './api';
 import {OAUTH_REDIRECT_URI,TEST_FRESH_START} from './config';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -44,6 +45,23 @@ export async function signInWithEmail({email,password}){
 }
 
 export async function signOut(){
+  // Test email accounts created by this preview are disposable.
+  // Existing Google, Apple and ordinary email accounts must never be deleted here.
+  const {data,error:sessionError}=await supabase.auth.getSession();
+  if(sessionError) throw sessionError;
+  const disposable=TEST_FRESH_START &&
+    data?.session?.user?.user_metadata?.studenthood_test_account===true;
+
+  if(disposable){
+    // The backend verifies the authenticated user's test-account marker.
+    // Do not sign out on a deletion failure, so the user can retry cleanup.
+    const result=await deleteCurrentTestAccount();
+    if(result?.deleted!==true) throw new Error('Your disposable test account could not be deleted. Please try again.');
+    try{await supabase.auth.signOut({scope:'local'})}catch{}
+    await clearStoredAuthSession();
+    return;
+  }
+
   const {error}=await supabase.auth.signOut();
   if(error) throw error;
 }
