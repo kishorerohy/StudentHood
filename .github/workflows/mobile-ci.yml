@@ -1,6 +1,12 @@
 name: StudentHood Mobile CI
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - 'assets/**'
+      - '.github/workflows/mobile-ci.yml'
   push:
     branches: [main]
     paths:
