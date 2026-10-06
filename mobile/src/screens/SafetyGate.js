@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {Feather} from '@expo/vector-icons';
 import {signOut} from '../auth';
 import {createGuardianConsentRequest,getGuardianConsentStatus} from '../api';
-import {GUARDIAN_CONSENT_URL,LEGAL_URLS} from '../config';
+import {GUARDIAN_CONSENT_URL,LEGAL_URLS,TEST_FRESH_START} from '../config';
 import {useSession} from '../session';
 
 const COPY={
@@ -111,8 +111,8 @@ export default function SafetyGate({theme,policy}){
     if(!approvalLink) return;
     const to=String(request?.guardian_email||guardianEmail||'').trim();
     const subject='StudentHood: please review my account approval';
-    const body='Hello,\\n\\nPlease review my StudentHood guardian approval request using this secure link. It expires after 24 hours.\\n\\n'+approvalLink+'\\n\\nThank you.';
-    const url='mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+    const body='Hello,\n\nPlease review my StudentHood guardian approval request using this secure link. It expires after 24 hours.\n\n'+approvalLink+'\n\nThank you.';
+    const url='mailto:'+to+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
     try{
       await Linking.openURL(url);
       setMessage('Email draft opened. Please tap Send in your email app to deliver it.');
@@ -198,6 +198,7 @@ export default function SafetyGate({theme,policy}){
       </>}
 
       <Pressable onPress={signOut} style={styles.secondary}><Text style={[styles.secondaryText,{color:theme.muted}]}>Sign out</Text></Pressable>
+      {TEST_FRESH_START&&<Text style={[styles.expiry,{color:theme.muted,textAlign:'center',marginTop:8}]}>Preview testing: Google accounts are retained. New disposable email test accounts are removed on sign-out or next cold launch; server cleanup runs after 26 hours.</Text>}
     </View>
   </View>;
 }
