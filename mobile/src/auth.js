@@ -11,10 +11,11 @@ function normalizeEmail(value){
 
 async function markDisposableTestAccount(){
   if(!TEST_FRESH_START) return;
-  const {error}=await supabase.auth.updateUser({
-    data:{studenthood_test_account:true}
-  });
+  // Never convert a pre-existing personal account into a disposable one.
+  // Accounts created through the test email signup explicitly carry this marker.
+  const {data,error}=await supabase.auth.getUser();
   if(error) throw error;
+  if(data?.user?.user_metadata?.studenthood_test_account!==true) return;
 }
 
 export async function signUpWithEmail({fullName,email,password}){
