@@ -1,0 +1,7 @@
+node_modules/
+.expo/
+dist/
+eas-build.json
+.env
+.env.*
+!.env.example

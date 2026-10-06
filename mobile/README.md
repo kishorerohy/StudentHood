@@ -2,6 +2,46 @@
 
 Native Expo/React Native UI for iOS, Android and tablets.
 
+## Android preview validation and EAS build
+
+Install the committed dependencies with `npm ci --no-audit --no-fund`, then run:
+
+```sh
+npx expo-doctor@latest
+node --test scripts/verify-eas-build.test.cjs
+npx expo export --platform android --output-dir dist
+```
+
+The JavaScript export is validation only; it does not produce an APK or compile
+the native age-signals module. Official APKs are built only on Expo EAS using
+the existing `preview` profile, owner, project ID, Android package and signing
+credentials.
+
+The owner must privately create an Expo access token with access to the existing
+`studenthood-0920` project and configure it as the GitHub Actions repository
+secret `EXPO_TOKEN`. Use GitHub Settings → Secrets and variables → Actions;
+never paste the token into an issue, pull request, chat, or log.
+
+After build approval, run **StudentHood Expo EAS Android Preview** from GitHub
+Actions for the reviewed commit. The workflow freezes signing credentials,
+waits for EAS completion, and checks the returned status, owner/project,
+Android package, version, versionCode, source commit, and APK artifact. Its
+summary links to the Expo build page. A missing token or missing existing
+signing credentials must be resolved by the owner; do not create replacement
+credentials or use a GitHub Gradle build.
+
+Waiting may exceed the workflow's 120-minute timeout during a long Expo queue.
+If it times out after submission, check the submitted build on Expo before
+requesting another build. Download the APK from that build page and record
+actual device results: install/launch, approved icons and light/dark logos,
+email/Google login, onboarding, guardian-link approval, age restrictions and
+Scenes. Do not mark device checks complete based on a successful bundle export.
+
+Preview fresh-start behavior remains enabled: only explicitly marked disposable
+test email accounts are eligible for deletion on a later launch. Existing
+Google, Apple and regular accounts must be retained. Use designated test
+accounts and record relaunch behavior; never delete real accounts for testing.
+
 ## Product rules implemented
 
 - **Scenes** is the main feed for posts, photos and videos.

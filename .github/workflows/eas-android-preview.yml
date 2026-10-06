@@ -16,8 +16,9 @@ concurrency:
 
 jobs:
   request-expo-apk:
-    name: Request APK from Expo EAS
+    name: Build and verify APK on Expo EAS
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     defaults:
       run:
         working-directory: mobile
@@ -29,6 +30,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
 
       - name: Check Expo access token
         env:
@@ -43,12 +46,21 @@ jobs:
       - name: Set up Expo EAS
         uses: expo/expo-github-action@v8
         with:
-          eas-version: latest
+          eas-version: 24.11.0
           token: ${{ secrets.EXPO_TOKEN }}
           packager: npm
 
       - name: Install application dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
-      - name: Queue Android APK on Expo EAS
-        run: eas build --platform android --profile preview --non-interactive --no-wait
+      - name: Validate Expo dependencies
+        run: npx expo-doctor@latest
+
+      - name: Test EAS build verification
+        run: node --test scripts/verify-eas-build.test.cjs
+
+      - name: Build Android APK on Expo EAS and wait for completion
+        run: eas build --platform android --profile preview --non-interactive --freeze-credentials --wait --json > eas-build.json
+
+      - name: Verify completed Expo APK
+        run: node scripts/verify-eas-build.cjs eas-build.json
