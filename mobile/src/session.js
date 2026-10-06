@@ -131,13 +131,24 @@ export function SessionProvider({children}){
       }
     })();
 
-    const {data:{subscription}}=supabase.auth.onAuthStateChange(async(_event,next)=>{
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,next)=>{
       if(!mounted) return;
       setSession(next);
       sessionRef.current=next;
       setError('');
+
+      // Supabase auth callbacks run under the auth client's lock.
+      // Calling the async Supabase APIs inside this callback can deadlock.
+      // Defer profile and safety requests until the callback has returned.
       if(next){
-        try{await refreshAccount(next)}catch(e){setError(e?.message||'Could not load your StudentHood account.')}
+        setTimeout(()=>{
+          if(!mounted||sessionRef.current?.access_token!==next.access_token) return;
+          refreshAccount(next).catch(e=>{
+            if(mounted&&sessionRef.current?.access_token===next.access_token){
+              setError(e?.message||'Could not load your StudentHood account.');
+            }
+          });
+        },0);
       }else{
         clearRecheck();
         ageSignalAttemptedRef.current=false;
