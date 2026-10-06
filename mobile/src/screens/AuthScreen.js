@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {requestPasswordReset,signInWithEmail,signUpWithEmail,startGoogleAuth} from '../auth';
+import {TEST_FRESH_START} from '../config';
 
 const LOGO_DARK=require('../../assets/studenthood-logo.png');
 const LOGO_LIGHT=require('../../assets/studenthood-logo-light.png');
@@ -127,6 +128,7 @@ export default function AuthScreen({theme}){
           <Text style={[styles.providerText,{color:theme.text}]}>Continue with Google</Text>
         </Pressable>
 
+        {TEST_FRESH_START&&<Text style={[styles.legal,{color:theme.muted}]}>TEST PREVIEW: New email signups are disposable and cleared on sign-out, at the next fresh launch, or after about 26 hours. Google accounts are retained and closing the app alone cannot reliably delete an account.</Text>}
         <Text style={[styles.legal,{color:theme.muted}]}>By continuing, you agree to StudentHood’s Terms and acknowledge the Privacy and Safety policies.</Text>
       </View>
     </ScrollView>
