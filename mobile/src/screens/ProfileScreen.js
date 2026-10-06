@@ -1,5 +1,5 @@
 import React from 'react';
-import {Image,Linking,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
+import {Alert,Image,Linking,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {signOut} from '../auth';
 import {LEGAL_URLS} from '../config';
@@ -42,7 +42,7 @@ export default function ProfileScreen({theme,profile,safety,onSettings}){
       <Row icon="file-text" title="Terms" theme={theme} onPress={()=>Linking.openURL(LEGAL_URLS.terms)}/>
     </View>
 
-    <Pressable onPress={signOut} style={[styles.signOut,{borderColor:theme.line,backgroundColor:theme.surface}]}>
+    <Pressable onPress={async()=>{try{await signOut()}catch(e){Alert.alert('Could not sign out',e?.message||'Please try again.')}}} style={[styles.signOut,{borderColor:theme.line,backgroundColor:theme.surface}]}>
       <Feather name="log-out" size={17} color={theme.danger}/>
       <Text style={[styles.signOutText,{color:theme.danger}]}>Sign out</Text>
     </Pressable>
