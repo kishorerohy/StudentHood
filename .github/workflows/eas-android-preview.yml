@@ -1,14 +1,15 @@
 name: StudentHood Expo EAS Android Preview
 
+# One official EAS APK submission per IST day. Scheduled for 19:00 IST;
+# manual dispatch remains possible, but must respect the same daily limit.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'mobile/app.json'
+  schedule:
+    - cron: '30 13 * * *'
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: studenthood-eas-android-preview
@@ -16,7 +17,7 @@ concurrency:
 
 jobs:
   request-expo-apk:
-    name: Request APK from Expo EAS
+    name: Request APK from Expo EAS (daily EOD)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -25,22 +26,78 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Enforce one APK request per IST day and skip unchanged mobile code
+        id: daily-gate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const dayInIST = date => new Intl.DateTimeFormat('en-CA', {
+              timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
+            }).format(new Date(date));
+            const today = dayInIST(Date.now());
+            const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+              owner, repo, workflow_id: 'eas-android-preview.yml', per_page: 100
+            });
+            let latestSubmitted = null;
+            for (const run of runs
+              .filter(x => x.id !== context.runId && x.status === 'completed')
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+              .slice(0, 60)) {
+              const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                owner, repo, run_id: run.id, per_page: 100
+              });
+              const submitted = jobs.some(job => job.steps?.some(step =>
+                step.name === 'Queue Android APK on Expo EAS' && step.conclusion === 'success'
+              ));
+              if (submitted) { latestSubmitted = run; break; }
+            }
+            if (latestSubmitted && dayInIST(latestSubmitted.created_at) === today) {
+              core.info('An Expo APK was already submitted today (IST); skipping.');
+              core.setOutput('should_build', 'false');
+              return;
+            }
+            if (context.eventName === 'schedule' && latestSubmitted) {
+              if (latestSubmitted.head_sha === context.sha) {
+                core.info('No changes since the previous EAS submission; skipping.');
+                core.setOutput('should_build', 'false');
+                return;
+              }
+              const compare = await github.rest.repos.compareCommits({
+                owner, repo, base: latestSubmitted.head_sha, head: context.sha
+              });
+              const mobileChanged = compare.data.files?.some(file =>
+                file.filename.startsWith('mobile/') || file.filename.startsWith('assets/')
+              );
+              if (!mobileChanged) {
+                core.info('No approved mobile or shared asset changes since the last submission; skipping.');
+                core.setOutput('should_build', 'false');
+                return;
+              }
+            }
+            core.info('Daily cap clear; approved EAS submission may proceed.');
+            core.setOutput('should_build', 'true');
+
       - name: Use Node.js
+        if: steps.daily-gate.outputs.should_build == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Check Expo access token
+        if: steps.daily-gate.outputs.should_build == 'true'
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           if [ -z "$EXPO_TOKEN" ]; then
-            echo "::error::EXPO_TOKEN is missing. Create a token at https://expo.dev/settings/access-tokens and add it as an Actions repository secret: https://github.com/kishorerohy/StudentHood/settings/secrets/actions"
+            echo "::error::EXPO_TOKEN is missing. Set the GitHub Actions repository secret without exposing its value."
             exit 1
           fi
           echo "Expo token is configured; keeping its value secret."
 
       - name: Set up Expo EAS
+        if: steps.daily-gate.outputs.should_build == 'true'
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
@@ -48,7 +105,9 @@ jobs:
           packager: npm
 
       - name: Install application dependencies
+        if: steps.daily-gate.outputs.should_build == 'true'
         run: npm install --no-audit --no-fund
 
       - name: Queue Android APK on Expo EAS
+        if: steps.daily-gate.outputs.should_build == 'true'
         run: eas build --platform android --profile preview --non-interactive --no-wait

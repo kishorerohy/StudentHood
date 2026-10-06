@@ -18,6 +18,13 @@ StudentHood is a student social-network app with an Expo/React Native mobile cli
 - Do not assume an APK was built just because JavaScript checks pass. Use **Expo EAS** for official Android/iOS builds. Do not reintroduce GitHub-native APK builds; do not change build ownership, signing or Expo project ID without approval.
 - Do not modify billing, registrar, Resend, app-store distribution or public legal policies unless the task explicitly requests it.
 
+
+## Daily EOD build policy (owner instruction)
+- **At most one official Expo EAS APK build submission per calendar day in Asia/Kolkata.** Batch approved mobile changes throughout the day and request the next preview build at end of day (default 19:00 IST); avoid one build per individual fix.
+- The EOD workflow skips when there are no newly merged mobile changes. GitHub code checks and JavaScript exports may run throughout the day because they are **not** EAS APK builds.
+- Do not rerun or manually queue an extra EAS APK the same day, including from Codespaces or Expo directly. Do not use GitHub-native Gradle builds as a workaround. A separately approved urgent exception is required to change this policy.
+- Leave builds to the approved EAS process. The GitHub Actions EOD gate is a safeguard against duplicate **workflow** submissions; humans and agents must also avoid separate Expo CLI builds.
+
 ## Completion criteria
 - Keep each PR scoped to one issue and describe security/UX impact.
 - Test the specific change. For mobile changes run `cd mobile && npm install --no-audit --no-fund && npx expo-doctor@latest && npx expo export --platform android --output-dir dist` where feasible, and report any unavailable test tools or network failures instead of claiming success.

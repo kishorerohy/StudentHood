@@ -8,3 +8,5 @@ The Expo SDK 54 / React Native app is in this directory. Respect root `AGENTS.md
 - The `preview` profile in `eas.json` builds an APK on **Expo EAS**, owner `studenthood-0920`. `EXPO_TOKEN` is a protected GitHub Actions secret configured by the owner; never print or commit it.
 - Preserve the official `assets/studenthood-app-icon-compact-1024.png` and existing light/dark logo images.
 - Do not silently add tracking, public exposure of personal data, or any change to policy that would enable underage accounts incorrectly.
+
+- Respect the single daily EOD EAS APK limit documented in root `AGENTS.md`: batch approved work during the day; no additional ad-hoc Expo EAS build.
