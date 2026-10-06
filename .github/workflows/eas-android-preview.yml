@@ -1,0 +1,54 @@
+name: StudentHood Expo EAS Android Preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/app.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: studenthood-eas-android-preview
+  cancel-in-progress: false
+
+jobs:
+  request-expo-apk:
+    name: Request APK from Expo EAS
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check Expo access token
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::EXPO_TOKEN is missing. Create a token at https://expo.dev/settings/access-tokens and add it as an Actions repository secret: https://github.com/kishorerohy/StudentHood/settings/secrets/actions"
+            exit 1
+          fi
+          echo "Expo token is configured; keeping its value secret."
+
+      - name: Set up Expo EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: npm
+
+      - name: Install application dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Queue Android APK on Expo EAS
+        run: eas build --platform android --profile preview --non-interactive --no-wait
