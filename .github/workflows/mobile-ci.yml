@@ -72,7 +72,7 @@ jobs:
       - name: Publish Android preview APK
         uses: actions/upload-artifact@v4
         with:
-          name: studenthood-preview-v0.1.2-apk
+          name: studenthood-preview-v0.1.3-apk
           path: mobile/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
