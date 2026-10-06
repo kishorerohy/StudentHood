@@ -106,10 +106,11 @@ export function SessionProvider({children}){
         let next=data?.session||null;
 
         if(TEST_FRESH_START&&next?.access_token){
-          try{
-            await supabase.auth.updateUser({data:{studenthood_test_account:true}});
-            await deleteCurrentTestAccount();
-          }catch{}
+          // Only accounts explicitly created as disposable test accounts may be deleted.
+          // Never mark an existing Google or email account disposable on app launch.
+          if(next.user?.user_metadata?.studenthood_test_account===true){
+            try{await deleteCurrentTestAccount()}catch{}
+          }
           try{await supabase.auth.signOut({scope:'local'})}catch{}
           try{await clearStoredAuthSession()}catch{}
           try{
