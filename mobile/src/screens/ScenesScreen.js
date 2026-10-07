@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {SceneIcon} from '../icons';
+import {getCampusPeeps} from '../api';
 import {fetchScenes,toggleSceneLike} from '../scenes';
 
 const FILTERS=['For you','Viral','Nearby','Campus','Live now'];
@@ -16,6 +17,22 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
   const [refreshing,setRefreshing]=useState(false);
   const [error,setError]=useState('');
   const [viewerIndex,setViewerIndex]=useState(null);
+  const [pulsePeeps,setPulsePeeps]=useState([]);
+
+  const loadPulse=useCallback(async()=>{
+    try{
+      const rows=await getCampusPeeps({limit:12,offset:0});
+      const selfId=profile?.id;
+      const seen=new Set();
+      setPulsePeeps((rows||[]).filter(item=>{
+        if(!item?.id||item.id===selfId||seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+      }).slice(0,8));
+    }catch{
+      setPulsePeeps([]);
+    }
+  },[profile?.id,profile?.campus_name]);
 
   const load=useCallback(async(nextFilter=filter,{refresh=false}={})=>{
     refresh?setRefreshing(true):setLoading(true);
@@ -32,6 +49,7 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
   },[filter]);
 
   useEffect(()=>{load(filter)},[filter,reloadKey]);
+  useEffect(()=>{loadPulse()},[loadPulse,reloadKey]);
 
   async function like(sceneId){
     try{
@@ -45,15 +63,6 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
       setError(e?.message||'Could not update that Scene.');
     }
   }
-
-  const creators=useMemo(()=>{
-    const seen=new Set();
-    return items.filter(item=>{
-      if(!item.author_id||seen.has(item.author_id)) return false;
-      seen.add(item.author_id);
-      return true;
-    }).slice(0,8);
-  },[items]);
 
   return <View style={[styles.root,{backgroundColor:theme.bg}]}>
     <ScrollView
@@ -84,11 +93,11 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
             <View style={[styles.pulseRing,{borderColor:theme.line,backgroundColor:theme.surface2}]}><Feather name="plus" size={22} color={theme.accent}/></View>
             <Text style={[styles.pulseName,{color:theme.muted}]}>Your Pulse</Text>
           </Pressable>
-          {creators.map(item=><Pressable key={item.author_id} onPress={()=>onOpenProfile?.(item.author_id)} style={styles.pulse}>
+          {pulsePeeps.map(item=><Pressable key={item.id} onPress={()=>onOpenProfile?.(item.id)} style={styles.pulse}>
             <View style={[styles.pulseRing,{borderColor:theme.accent,backgroundColor:theme.surface2}]}>
-              {item.author_avatar_url?<Image source={{uri:item.author_avatar_url}} style={styles.pulseImage}/>:<Feather name="user" size={22} color={theme.muted}/>}
+              {item.avatar_url?<Image source={{uri:item.avatar_url}} style={styles.pulseImage}/>:<Feather name="user" size={22} color={theme.muted}/>}
             </View>
-            <Text numberOfLines={1} style={[styles.pulseName,{color:theme.muted}]}>{item.author_name?.split(' ')[0]||item.author_username||'Peep'}</Text>
+            <Text numberOfLines={1} style={[styles.pulseName,{color:theme.muted}]}>{item.full_name?.split(' ')[0]||item.username||'Peep'}</Text>
           </Pressable>)}
         </ScrollView>
       </View>
