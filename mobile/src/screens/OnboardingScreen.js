@@ -79,7 +79,7 @@ export default function OnboardingScreen({theme}){
     const request=++usernameRequest.current;
 
     if(!normalized){setUsernameState('idle');return;}
-    if(!/^[a-z0-9_]{3,24}$/.test(normalized)){setUsernameState('invalid');return;}
+    if(!/^[a-z0-9._-]{3,24}$/.test(normalized)){setUsernameState('invalid');return;}
     if(original&&normalized===original){setUsernameState('available');return;}
 
     setUsernameState('checking');
@@ -228,7 +228,7 @@ export default function OnboardingScreen({theme}){
     setError('');
     const normalizedUsername=username.trim().toLowerCase();
     if(!safetyChecked){setError('Complete the age and safety check first.');return;}
-    if(!/^[a-z0-9_]{3,24}$/.test(normalizedUsername)){setUsernameState('invalid');return;}
+    if(!/^[a-z0-9._-]{3,24}$/.test(normalizedUsername)){setUsernameState('invalid');return;}
     if(usernameState==='checking'){setError('Checking username availability.');return;}
     try{
       const available=await checkUsernameAvailability(normalizedUsername);
@@ -325,11 +325,11 @@ export default function OnboardingScreen({theme}){
         {safetyChecked&&<>
           <Text style={[styles.profileSectionTitle,{color:theme.text}]}>Your profile</Text>
           <Field theme={theme} icon="user" value={fullName} onChangeText={setFullName} placeholder="Full name"/>
-          <Field theme={theme} icon="at-sign" value={username} onChangeText={v=>setUsername(v.toLowerCase().replace(/[^a-z0-9_]/g,''))} placeholder="Username" autoCapitalize="none"/>
+          <Field theme={theme} icon="at-sign" value={username} onChangeText={v=>setUsername(v.toLowerCase().replace(/[^a-z0-9._-]/g,''))} placeholder="Username" autoCapitalize="none"/>
           {usernameState==='checking'&&<Text style={[styles.fieldHint,{color:theme.muted}]}>Checking username...</Text>}
           {usernameState==='available'&&!!username.trim()&&<Text style={[styles.fieldHint,{color:theme.accent}]}>Username available</Text>}
           {usernameState==='taken'&&<Text style={[styles.fieldHint,{color:theme.danger}]}>user name already exist</Text>}
-          {usernameState==='invalid'&&!!username.trim()&&<Text style={[styles.fieldHint,{color:theme.danger}]}>Use 3 to 24 lowercase letters, numbers or underscores.</Text>}
+          {usernameState==='invalid'&&!!username.trim()&&<Text style={[styles.fieldHint,{color:theme.danger}]}>Use 3 to 24 lowercase letters, numbers, dots, hyphens or underscores.</Text>}
           {usernameState==='error'&&<Text style={[styles.fieldHint,{color:theme.danger}]}>Could not check username. Try again.</Text>}
 
           <View style={[styles.field,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
