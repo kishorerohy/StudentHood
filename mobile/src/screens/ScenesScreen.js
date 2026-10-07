@@ -4,6 +4,7 @@ import {
   StyleSheet,Text,View
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
+import {SceneIcon} from '../icons';
 import {fetchScenes,toggleSceneLike} from '../scenes';
 
 const FILTERS=['For you','Viral','Nearby','Campus','Live now'];
@@ -120,7 +121,7 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
 
       {loading?<View style={styles.loading}><ActivityIndicator color={theme.accent}/><Text style={[styles.loadingText,{color:theme.muted}]}>Loading your campus…</Text></View>:
         items.length===0?<View style={[styles.empty,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-          <View style={[styles.emptyIcon,{backgroundColor:theme.accentSoft}]}><Feather name="play-square" size={28} color={theme.accent}/></View>
+          <View style={[styles.emptyIcon,{backgroundColor:theme.accentSoft}]}><SceneIcon size={28} color={theme.accent}/></View>
           <Text style={[styles.emptyTitle,{color:theme.text}]}>Your campus is quiet here.</Text>
           <Text style={[styles.emptyCopy,{color:theme.muted}]}>Be the first to post a Scene. New Scenes are moderated before broader distribution.</Text>
           <Pressable onPress={onOpenCreate} style={[styles.emptyButton,{backgroundColor:theme.accent}]}><Text style={styles.emptyButtonText}>Create a Scene</Text></Pressable>

@@ -21,3 +21,11 @@ export function DiscoverIcon({color,size=22}){
     <Path d="m15.7 8.3-2.3 5.1-5.1 2.3 2.3-5.1 5.1-2.3Z" fill="none" stroke={color} strokeWidth="1.7" strokeLinejoin="round"/>
   </Svg>;
 }
+
+
+export function SceneIcon({color,size=22}){
+  return <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Path d="M5.5 4.5h13A1.5 1.5 0 0 1 20 6v12a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18V6a1.5 1.5 0 0 1 1.5-1.5Z" fill="none" stroke={color} strokeWidth="1.7" strokeLinejoin="round"/>
+    <Path d="m10 8.7 5 3.3-5 3.3V8.7Z" fill="none" stroke={color} strokeWidth="1.7" strokeLinejoin="round"/>
+  </Svg>;
+}

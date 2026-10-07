@@ -4,7 +4,7 @@ import {
   StyleSheet,Text,useWindowDimensions,View
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
-import {DiscoverIcon,DropsIcon,PingIcon} from './icons';
+import {DiscoverIcon,DropsIcon,PingIcon,SceneIcon} from './icons';
 import {getCampusPeeps,getProfileCard} from './api';
 import {useSession} from './session';
 import ScenesScreen from './screens/ScenesScreen';
@@ -44,7 +44,7 @@ export default function MainApp({theme}){
     {tab==='Hangs'&&<Placeholder theme={theme} icon="calendar" title="Hangs" copy="Campus plans and meetups will live here."/>}
     {tab==='Gigs'&&<Placeholder theme={theme} icon="briefcase" title="Gigs" copy="Student opportunities will live here with local currency formatting."/>}
 
-    <BottomDial theme={theme} tab={tab} onTab={setTab} onCreate={chooseCreate} isTablet={isTablet}/>
+    <BottomDial theme={theme} tab={tab} onTab={setTab} onCreate={chooseCreate} isTablet={isTablet} screenWidth={width}/>
 
     <ActionSheet visible={!!sheet} name={sheet} onClose={()=>setSheet(null)} onTab={name=>{setTab(name);setSheet(null)}} onSheet={setSheet} onOpenProfile={id=>{setSheet(null);setProfileTarget(id)}} profile={profile} theme={theme}/>
     <CreateChooser visible={createChooser} onClose={()=>setCreateChooser(false)} onScene={()=>{setCreateChooser(false);setCreateOpen(true)}} theme={theme}/>
@@ -65,14 +65,17 @@ function Header({theme,isTablet,onSheet}){
   </View>;
 }
 
-function BottomDial({theme,tab,onTab,onCreate,isTablet}){
+function BottomDial({theme,tab,onTab,onCreate,isTablet,screenWidth}){
+  const dialWidth=Math.min(isTablet?520:380,Math.max(0,screenWidth-24));
   const item=(name,icon)=><Pressable key={name} onPress={()=>onTab(name)} style={[styles.dialItem,tab===name&&{backgroundColor:theme.accentSoft}]}>
-    <Feather name={icon} size={20} color={tab===name?theme.accent:theme.muted}/>
+    {name==='Scenes'
+      ?<SceneIcon size={20} color={tab===name?theme.accent:theme.muted}/>
+      :<Feather name={icon} size={20} color={tab===name?theme.accent:theme.muted}/>}
     <Text style={[styles.dialLabel,{color:tab===name?theme.accent:theme.muted}]}>{name}</Text>
   </Pressable>;
 
-  return <View style={[styles.dial,{width:isTablet?520:380,maxWidth:'94%',backgroundColor:theme.surface,borderColor:theme.line,transform:[{translateX:isTablet?-260:-190}],...Platform.select({ios:{shadowColor:'#000',shadowOpacity:.17,shadowRadius:20,shadowOffset:{width:0,height:10}},android:{elevation:12}})}]}>
-    {item('Scenes','play-square')}
+  return <View style={[styles.dial,{width:dialWidth,backgroundColor:theme.surface,borderColor:theme.line,transform:[{translateX:-dialWidth/2}],...Platform.select({ios:{shadowColor:'#000',shadowOpacity:.17,shadowRadius:20,shadowOffset:{width:0,height:10}},android:{elevation:12}})}]}>
+    {item('Scenes','video')}
     {item('Hangs','calendar')}
     <Pressable onPress={onCreate} style={[styles.create,{backgroundColor:theme.accent}]} accessibilityLabel="Create"><Feather name="plus" size={28} color="#fff"/></Pressable>
     {item('Gigs','briefcase')}
@@ -163,7 +166,7 @@ function CreateChooser({visible,onClose,onScene,theme}){
     <View style={[styles.sheet,{backgroundColor:theme.surface,borderColor:theme.line}]}>
       <View style={[styles.grip,{backgroundColor:theme.line}]}/>
       <View style={styles.sheetHead}><Text style={[styles.sheetTitle,{color:theme.text}]}>Create</Text><Pressable onPress={onClose}><Feather name="x" size={22} color={theme.muted}/></Pressable></View>
-      <Pressable onPress={onScene}><CreateRow theme={theme} icon="play-square" title="Post a Scene" copy="Photo, video or post" active/></Pressable>
+      <Pressable onPress={onScene}><CreateRow theme={theme} icon="scene" title="Post a Scene" copy="Photo, video or post" active/></Pressable>
       <CreateRow theme={theme} icon="circle" title="Add to Pulse" copy="Quick moments are next"/>
       <CreateRow theme={theme} icon="calendar" title="Start a Hang" copy="Meetup creation is next"/>
       <CreateRow theme={theme} icon="briefcase" title="Post a Gig" copy="Opportunity creation is next"/>
@@ -171,7 +174,7 @@ function CreateChooser({visible,onClose,onScene,theme}){
   </Modal>;
 }
 function CreateRow({theme,icon,title,copy,active=false}){
-  return <View style={[styles.createRow,{borderTopColor:theme.line,opacity:active?1:.55}]}><View style={[styles.createRowIcon,{backgroundColor:theme.accentSoft}]}><Feather name={icon} size={19} color={theme.accent}/></View><View style={{flex:1}}><Text style={[styles.createRowTitle,{color:theme.text}]}>{title}</Text><Text style={[styles.createRowCopy,{color:theme.muted}]}>{copy}</Text></View><Feather name={active?'chevron-right':'clock'} size={17} color={theme.muted}/></View>;
+  return <View style={[styles.createRow,{borderTopColor:theme.line,opacity:active?1:.55}]}><View style={[styles.createRowIcon,{backgroundColor:theme.accentSoft}]}>{icon==='scene'?<SceneIcon size={19} color={theme.accent}/>:<Feather name={icon} size={19} color={theme.accent}/>}</View><View style={{flex:1}}><Text style={[styles.createRowTitle,{color:theme.text}]}>{title}</Text><Text style={[styles.createRowCopy,{color:theme.muted}]}>{copy}</Text></View><Feather name={active?'chevron-right':'clock'} size={17} color={theme.muted}/></View>;
 }
 
 function CreatorProfile({visible,userId,onClose,theme}){
