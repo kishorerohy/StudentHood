@@ -1,5 +1,7 @@
 # StudentHood coding agent instructions
 
+Before starting work, read `PROJECT_STATE.md` for the current durable project checkpoint, release policy, active backlog and recovery notes.
+
 StudentHood is a student social-network app with an Expo/React Native mobile client in `mobile/`, public GitHub Pages website at repository root, and a Supabase backend. Read only relevant project files for the task.
 
 ## Product and branding
