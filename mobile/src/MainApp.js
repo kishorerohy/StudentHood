@@ -41,13 +41,22 @@ export default function MainApp({theme}){
       onOpenCreate={chooseCreate}
     />}
     {tab==='Profile'&&<ProfileScreen theme={theme} profile={profile} safety={safety} onSettings={()=>setSheet('Settings')}/>}
-    {tab==='Hangs'&&<Placeholder theme={theme} icon="calendar" title="Hangs" copy="Campus plans and meetups will live here."/>}
-    {tab==='Gigs'&&<Placeholder theme={theme} icon="briefcase" title="Gigs" copy="Student opportunities will live here with local currency formatting."/>}
+    {tab==='Pulse'&&<Placeholder theme={theme} icon="circle" title="Pulse" copy="Quick campus moments live here. Pulse creation is being wired next."/>}
+    {tab==='Hangs'&&<Placeholder theme={theme} icon="calendar" title="Hangs" copy="Campus plans and meetups live here. Hang creation is being wired next."/>}
+    {tab==='Gigs'&&<Placeholder theme={theme} icon="briefcase" title="Gigs" copy="Student opportunities live here. Gig creation is being wired next."/>}
 
     <BottomDial theme={theme} tab={tab} onTab={setTab} onCreate={chooseCreate} isTablet={isTablet} screenWidth={width}/>
 
     <ActionSheet visible={!!sheet} name={sheet} onClose={()=>setSheet(null)} onTab={name=>{setTab(name);setSheet(null)}} onSheet={setSheet} onOpenProfile={id=>{setSheet(null);setProfileTarget(id)}} profile={profile} theme={theme}/>
-    <CreateChooser visible={createChooser} onClose={()=>setCreateChooser(false)} onScene={()=>{setCreateChooser(false);setCreateOpen(true)}} theme={theme}/>
+    <CreateChooser
+      visible={createChooser}
+      onClose={()=>setCreateChooser(false)}
+      onScene={()=>{setCreateChooser(false);setCreateOpen(true)}}
+      onPulse={()=>{setCreateChooser(false);setTab('Pulse')}}
+      onHang={()=>{setCreateChooser(false);setTab('Hangs')}}
+      onGig={()=>{setCreateChooser(false);setTab('Gigs')}}
+      theme={theme}
+    />
     <CreateSceneSheet visible={createOpen} onClose={()=>setCreateOpen(false)} onCreated={()=>{setReloadKey(x=>x+1);setTab('Scenes')}} theme={theme}/>
     <CreatorProfile visible={!!profileTarget} userId={profileTarget} onClose={()=>setProfileTarget(null)} theme={theme}/>
   </View>;
@@ -160,21 +169,30 @@ function SheetRow({theme,icon,title,copy}){
   return <View style={[styles.sheetRow,{borderTopColor:theme.line}]}><View style={[styles.sheetRowIcon,{backgroundColor:theme.surface2}]}><Feather name={icon} size={16} color={theme.accent}/></View><View style={{flex:1}}><Text style={[styles.sheetRowTitle,{color:theme.text}]}>{title}</Text><Text style={[styles.sheetRowCopy,{color:theme.muted}]}>{copy}</Text></View><Feather name="chevron-right" size={17} color={theme.muted}/></View>;
 }
 
-function CreateChooser({visible,onClose,onScene,theme}){
+function CreateChooser({visible,onClose,onScene,onPulse,onHang,onGig,theme}){
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
     <Pressable onPress={onClose} style={styles.backdrop}/>
     <View style={[styles.sheet,{backgroundColor:theme.surface,borderColor:theme.line}]}>
       <View style={[styles.grip,{backgroundColor:theme.line}]}/>
       <View style={styles.sheetHead}><Text style={[styles.sheetTitle,{color:theme.text}]}>Create</Text><Pressable onPress={onClose}><Feather name="x" size={22} color={theme.muted}/></Pressable></View>
-      <Pressable onPress={onScene}><CreateRow theme={theme} icon="scene" title="Post a Scene" copy="Photo, video or post" active/></Pressable>
-      <CreateRow theme={theme} icon="circle" title="Add to Pulse" copy="Quick moments are next"/>
-      <CreateRow theme={theme} icon="calendar" title="Start a Hang" copy="Meetup creation is next"/>
-      <CreateRow theme={theme} icon="briefcase" title="Post a Gig" copy="Opportunity creation is next"/>
+      <Pressable onPress={onScene}><CreateRow theme={theme} kind="scene" title="Post a Scene" copy="Photo, video or post"/></Pressable>
+      <Pressable onPress={onPulse}><CreateRow theme={theme} icon="circle" title="Add to Pulse" copy="Quick campus moment"/></Pressable>
+      <Pressable onPress={onHang}><CreateRow theme={theme} icon="calendar" title="Start a Hang" copy="Campus meetup"/></Pressable>
+      <Pressable onPress={onGig}><CreateRow theme={theme} icon="briefcase" title="Post a Gig" copy="Student opportunity"/></Pressable>
     </View>
   </Modal>;
 }
-function CreateRow({theme,icon,title,copy,active=false}){
-  return <View style={[styles.createRow,{borderTopColor:theme.line,opacity:active?1:.55}]}><View style={[styles.createRowIcon,{backgroundColor:theme.accentSoft}]}>{icon==='scene'?<SceneIcon size={19} color={theme.accent}/>:<Feather name={icon} size={19} color={theme.accent}/>}</View><View style={{flex:1}}><Text style={[styles.createRowTitle,{color:theme.text}]}>{title}</Text><Text style={[styles.createRowCopy,{color:theme.muted}]}>{copy}</Text></View><Feather name={active?'chevron-right':'clock'} size={17} color={theme.muted}/></View>;
+function CreateRow({theme,kind,icon,title,copy}){
+  return <View style={[styles.createRow,{borderTopColor:theme.line}]}>
+    <View style={[styles.createRowIcon,{backgroundColor:theme.accentSoft}]}>
+      {kind==='scene'?<SceneIcon size={19} color={theme.accent}/>:<Feather name={icon} size={19} color={theme.accent}/>}
+    </View>
+    <View style={{flex:1}}>
+      <Text style={[styles.createRowTitle,{color:theme.text}]}>{title}</Text>
+      <Text style={[styles.createRowCopy,{color:theme.muted}]}>{copy}</Text>
+    </View>
+    <Feather name="chevron-right" size={17} color={theme.muted}/>
+  </View>;
 }
 
 function CreatorProfile({visible,userId,onClose,theme}){
