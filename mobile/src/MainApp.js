@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {DiscoverIcon,DropsIcon,PingIcon} from './icons';
-import {getProfileCard} from './api';
+import {getCampusPeeps,getProfileCard} from './api';
 import {useSession} from './session';
 import ScenesScreen from './screens/ScenesScreen';
 import ProfileScreen from './screens/ProfileScreen';
@@ -46,7 +46,7 @@ export default function MainApp({theme}){
 
     <BottomDial theme={theme} tab={tab} onTab={setTab} onCreate={chooseCreate} isTablet={isTablet}/>
 
-    <ActionSheet visible={!!sheet} name={sheet} onClose={()=>setSheet(null)} onTab={name=>{setTab(name);setSheet(null)}} theme={theme}/>
+    <ActionSheet visible={!!sheet} name={sheet} onClose={()=>setSheet(null)} onTab={name=>{setTab(name);setSheet(null)}} onSheet={setSheet} onOpenProfile={id=>{setSheet(null);setProfileTarget(id)}} profile={profile} theme={theme}/>
     <CreateChooser visible={createChooser} onClose={()=>setCreateChooser(false)} onScene={()=>{setCreateChooser(false);setCreateOpen(true)}} theme={theme}/>
     <CreateSceneSheet visible={createOpen} onClose={()=>setCreateOpen(false)} onCreated={()=>{setReloadKey(x=>x+1);setTab('Scenes')}} theme={theme}/>
     <CreatorProfile visible={!!profileTarget} userId={profileTarget} onClose={()=>setProfileTarget(null)} theme={theme}/>
@@ -80,7 +80,27 @@ function BottomDial({theme,tab,onTab,onCreate,isTablet}){
   </View>;
 }
 
-function ActionSheet({visible,name,onClose,onTab,theme}){
+function ActionSheet({visible,name,onClose,onTab,onSheet,onOpenProfile,profile,theme}){
+  const [campusPeeps,setCampusPeeps]=useState([]);
+  const [peepsLoading,setPeepsLoading]=useState(false);
+  const [peepsError,setPeepsError]=useState('');
+
+  useEffect(()=>{
+    let live=true;
+    if(!visible||name!=='Peeps') return;
+    setPeepsLoading(true);
+    setPeepsError('');
+    getCampusPeeps({limit:150}).then(rows=>{
+      if(live) setCampusPeeps(rows);
+    }).catch(e=>{
+      if(live){
+        setCampusPeeps([]);
+        setPeepsError(e?.message||'Could not load campus Peeps.');
+      }
+    }).finally(()=>{if(live)setPeepsLoading(false)});
+    return()=>{live=false};
+  },[visible,name]);
+
   if(!name) return null;
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
     <Pressable onPress={onClose} style={styles.backdrop}/>
@@ -89,8 +109,25 @@ function ActionSheet({visible,name,onClose,onTab,theme}){
       <View style={styles.sheetHead}><Text style={[styles.sheetTitle,{color:theme.text}]}>{name}</Text><Pressable onPress={onClose}><Feather name="x" size={22} color={theme.muted}/></Pressable></View>
 
       {name==='Discover'&&<View style={styles.discoverGrid}>
-        {[['Peeps','users'],['Hangs','calendar'],['Crews','users'],['Gigs','briefcase']].map(([label,icon])=><Pressable key={label} onPress={()=>['Hangs','Gigs'].includes(label)&&onTab(label)} style={[styles.discoverCard,{backgroundColor:theme.surface2,borderColor:theme.line}]}><Feather name={icon} size={20} color={theme.accent}/><Text style={[styles.discoverTitle,{color:theme.text}]}>{label}</Text></Pressable>)}
+        {[['Peeps','users'],['Hangs','calendar'],['Crews','users'],['Gigs','briefcase']].map(([label,icon])=><Pressable key={label} onPress={()=>label==='Peeps'?onSheet('Peeps'):['Hangs','Gigs'].includes(label)&&onTab(label)} style={[styles.discoverCard,{backgroundColor:theme.surface2,borderColor:theme.line}]}><Feather name={icon} size={20} color={theme.accent}/><Text style={[styles.discoverTitle,{color:theme.text}]}>{label}</Text></Pressable>)}
       </View>}
+
+      {name==='Peeps'&&<>
+        <Text style={[styles.sheetNote,{backgroundColor:theme.surface2,color:theme.muted}]}>Showing discoverable students from {profile?.campus_name||'your campus'}. Private and teen-safety restrictions still apply.</Text>
+        {peepsLoading?<View style={styles.emptySheet}><ActivityIndicator color={theme.accent}/></View>:
+          !!peepsError?<View style={[styles.emptySheet,{backgroundColor:theme.surface2}]}><Text style={[styles.emptySheetCopy,{color:theme.muted}]}>{peepsError}</Text></View>:
+          campusPeeps.length===0?<View style={[styles.emptySheet,{backgroundColor:theme.surface2}]}><Feather name="users" size={26} color={theme.accent}/><Text style={[styles.emptySheetTitle,{color:theme.text}]}>No campus Peeps to show yet.</Text><Text style={[styles.emptySheetCopy,{color:theme.muted}]}>Students from the same selected institution will appear here when their privacy settings allow discovery.</Text></View>:
+          <ScrollView style={{maxHeight:420}} showsVerticalScrollIndicator={false}>
+            {campusPeeps.map(item=><Pressable key={item.id} onPress={()=>onOpenProfile?.(item.id)} style={[styles.peepRow,{borderBottomColor:theme.line}]}>
+              <View style={[styles.peepAvatar,{backgroundColor:theme.surface2}]}>{item.avatar_url?<Image source={{uri:item.avatar_url}} style={styles.peepAvatarImage}/>:<Feather name="user" size={17} color={theme.accent}/>}</View>
+              <View style={{flex:1}}>
+                <Text style={[styles.sheetRowTitle,{color:theme.text}]}>{item.full_name||item.username||'Student'}</Text>
+                {!!item.username&&<Text style={[styles.sheetRowCopy,{color:theme.muted}]}>@{item.username}{item.city?' · '+item.city:''}</Text>}
+              </View>
+              <Feather name="chevron-right" size={17} color={theme.muted}/>
+            </Pressable>)}
+          </ScrollView>}
+      </>}
 
       {name==='Drops'&&<>
         <Text style={[styles.sheetNote,{backgroundColor:theme.surface2,color:theme.muted}]}>Drops contains non-message activity only. New Pings and Ping requests stay inside Ping.</Text>
@@ -198,6 +235,9 @@ const styles=StyleSheet.create({
   discoverTitle:{fontSize:12,fontWeight:'800'},
   sheetNote:{fontSize:10,lineHeight:15,padding:11,borderRadius:12,marginBottom:6},
   sheetRow:{minHeight:60,borderTopWidth:StyleSheet.hairlineWidth,flexDirection:'row',alignItems:'center',gap:10},
+  peepRow:{minHeight:62,borderBottomWidth:StyleSheet.hairlineWidth,flexDirection:'row',alignItems:'center',gap:10},
+  peepAvatar:{width:40,height:40,borderRadius:20,alignItems:'center',justifyContent:'center',overflow:'hidden'},
+  peepAvatarImage:{width:'100%',height:'100%'},
   sheetRowIcon:{width:36,height:36,borderRadius:12,alignItems:'center',justifyContent:'center'},
   sheetRowTitle:{fontSize:11,fontWeight:'800'},
   sheetRowCopy:{fontSize:9,marginTop:3},

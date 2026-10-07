@@ -28,6 +28,12 @@
           "photosPermission": "StudentHood uses your photo library only when you choose a photo or video for a Scene.",
           "cameraPermission": "StudentHood uses your camera only when you choose to create a photo or video."
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "StudentHood uses your location during profile setup to find your city and nearby schools, colleges and universities. Your precise location is not stored."
+        }
       ]
     ],
     "extra": {

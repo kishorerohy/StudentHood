@@ -15,6 +15,42 @@ export async function getMyProfile(){
   return data;
 }
 
+
+export async function checkUsernameAvailability(username){
+  const normalized=String(username||'').trim().toLowerCase();
+  const {data,error}=await supabase.rpc('studenthood_username_available',{p_username:normalized});
+  if(error) throw error;
+  return data===true;
+}
+
+export async function findNearbyInstitutions({latitude,longitude,radiusMeters=18000}){
+  const lat=Math.round(Number(latitude)*1000)/1000;
+  const lon=Math.round(Number(longitude)*1000)/1000;
+  if(!Number.isFinite(lat)||!Number.isFinite(lon)) throw new Error('Location is unavailable.');
+
+  const {data,error}=await supabase.functions.invoke('institution-search',{
+    body:{latitude:lat,longitude:lon,radiusMeters}
+  });
+  if(error) throw error;
+  if(data?.error) throw new Error(data.error);
+  return Array.isArray(data?.institutions)?data.institutions:[];
+}
+
+export async function getCampusPeeps({limit=100,offset=0}={}){
+  const {data,error}=await supabase.rpc('studenthood_campus_peeps',{
+    p_limit:limit,
+    p_offset:offset
+  });
+  if(error) throw error;
+
+  const seen=new Set();
+  return (data||[]).filter(item=>{
+    if(!item?.id||seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
+
 export async function initializeSafetyProfile({dateOfBirth,countryCode,timeZone}){
   const {data,error}=await supabase.rpc('initialize_safety_profile',{
     p_date_of_birth:dateOfBirth,
