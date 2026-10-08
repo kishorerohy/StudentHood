@@ -231,7 +231,7 @@ const styles=StyleSheet.create({
   discoverCardName:{fontWeight:'900',fontSize:14,marginTop:11},
   discoverCardCopy:{fontSize:10,lineHeight:14,marginTop:3},
   sectionHeading:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:8,marginBottom:10},
-  sectionTitle:{fontSize:18,fontWeight:'850'},
+  sectionTitle:{fontSize:18,fontWeight:'800'},
   sectionCaption:{fontSize:11,maxWidth:'47%'},
   peepRow:{minHeight:72,flexDirection:'row',alignItems:'center',gap:12,paddingHorizontal:14},
   avatar:{width:44,height:44,borderRadius:22,alignItems:'center',justifyContent:'center',overflow:'hidden'},
