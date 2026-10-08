@@ -65,7 +65,7 @@ export default function ProfileMenuScreen({page='menu',theme,profile,safety,onBa
           </View>
           <Feather name="chevron-right" size={19} color={theme.muted}/>
         </Pressable>
-      ))}
+      )}
       {page==='privacy'&&<>
         <Summary theme={theme} title="Profile visibility" value={profile?.profile_visibility||'Default privacy settings'}/>
         <Summary theme={theme} title="Location sharing" value={profile?.location_visibility||'Not shared'}/>
