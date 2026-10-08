@@ -99,11 +99,15 @@ export async function getCampusPeeps({limit=100,offset=0}={}){
   if(error) throw error;
 
   const seen=new Set();
-  return (data||[]).filter(item=>{
+  const unique=(data||[]).filter(item=>{
     if(!item?.id||seen.has(item.id)) return false;
     seen.add(item.id);
     return true;
   });
+  return Promise.all(unique.map(async item=>({
+    ...item,
+    avatar_url:await getAvatarDisplayUrl(item.avatar_url)
+  })));
 }
 
 export async function getDropsFeed({limit=40,offset=0}={}){
