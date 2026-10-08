@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {DiscoverIcon,DropsIcon,PingIcon,SceneIcon} from './icons';
-import {getCampusPeeps,getDropsFeed,getProfileCard} from './api';
+import {getProfileCard} from './api';
 import {useSession} from './session';
 import ScenesScreen from './screens/ScenesScreen';
 import ProfileScreen from './screens/ProfileScreen';
@@ -80,7 +80,7 @@ export default function MainApp({theme}){
     <BottomDial theme={theme} tab={tab} onTab={selectTab} onCreate={chooseCreate} isTablet={isTablet} screenWidth={width}/>
     </React.Fragment>
 
-    <ActionSheet visible={!!sheet} name={sheet} onClose={()=>setSheet(null)} onTab={name=>{setTab(name);setSheet(null)}} onSheet={setSheet} onOpenProfile={id=>{setSheet(null);setProfileTarget(id)}} profile={profile} theme={theme}/>
+    <SettingsSheet visible={sheet==='Settings'} onClose={()=>setSheet(null)} theme={theme}/>
     <CreateChooser
       visible={createChooser}
       onClose={()=>setCreateChooser(false)}
@@ -125,141 +125,23 @@ function BottomDial({theme,tab,onTab,onCreate,isTablet,screenWidth}){
   </View>;
 }
 
-function ActionSheet({visible,name,onClose,onTab,onSheet,onOpenProfile,profile,theme}){
-  const [campusPeeps,setCampusPeeps]=useState([]);
-  const [peepsLoading,setPeepsLoading]=useState(false);
-  const [peepsError,setPeepsError]=useState('');
-  const [dropItems,setDropItems]=useState([]);
-  const [dropsLoading,setDropsLoading]=useState(false);
-  const [dropsError,setDropsError]=useState('');
-  const [dropsRefreshKey,setDropsRefreshKey]=useState(0);
-
-  useEffect(()=>{
-    let live=true;
-    if(!visible||name!=='Peeps') return;
-    setPeepsLoading(true);
-    setPeepsError('');
-    getCampusPeeps({limit:150}).then(rows=>{
-      if(live) setCampusPeeps(rows);
-    }).catch(e=>{
-      if(live){
-        setCampusPeeps([]);
-        setPeepsError(e?.message||'Could not load campus Peeps.');
-      }
-    }).finally(()=>{if(live)setPeepsLoading(false)});
-    return()=>{live=false};
-  },[visible,name]);
-
-  useEffect(()=>{
-    let live=true;
-    if(!visible||name!=='Drops') return;
-    setDropsLoading(true);
-    setDropsError('');
-    getDropsFeed({limit:50}).then(rows=>{
-      if(live) setDropItems(rows);
-    }).catch(e=>{
-      if(live){
-        setDropItems([]);
-        setDropsError(e?.message||'Could not load activity.');
-      }
-    }).finally(()=>{if(live)setDropsLoading(false)});
-    return()=>{live=false};
-  },[visible,name,dropsRefreshKey]);
-
-  if(!name) return null;
+function SettingsSheet({visible,onClose,theme}){
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
     <Pressable onPress={onClose} style={styles.backdrop}/>
     <View style={[styles.sheet,{backgroundColor:theme.surface,borderColor:theme.line}]}>
       <View style={[styles.grip,{backgroundColor:theme.line}]}/>
-      <View style={styles.sheetHead}><Text style={[styles.sheetTitle,{color:theme.text}]}>{name}</Text><Pressable onPress={onClose}><Feather name="x" size={22} color={theme.muted}/></Pressable></View>
-
-      {name==='Discover'&&<View style={styles.discoverGrid}>
-        {[['Peeps','users'],['Hangs','calendar'],['Crews','users'],['Gigs','briefcase']].map(([label,icon])=><Pressable key={label} onPress={()=>label==='Peeps'?onSheet('Peeps'):['Hangs','Gigs'].includes(label)&&onTab(label)} style={[styles.discoverCard,{backgroundColor:theme.surface2,borderColor:theme.line}]}><Feather name={icon} size={20} color={theme.accent}/><Text style={[styles.discoverTitle,{color:theme.text}]}>{label}</Text></Pressable>)}
-      </View>}
-
-      {name==='Peeps'&&<>
-        <Text style={[styles.sheetNote,{backgroundColor:theme.surface2,color:theme.muted}]}>Showing discoverable students from {profile?.campus_name||'your campus'}. Private and teen-safety restrictions still apply.</Text>
-        {peepsLoading?<View style={styles.emptySheet}><ActivityIndicator color={theme.accent}/></View>:
-          !!peepsError?<View style={[styles.emptySheet,{backgroundColor:theme.surface2}]}><Text style={[styles.emptySheetCopy,{color:theme.muted}]}>{peepsError}</Text></View>:
-          campusPeeps.length===0?<View style={[styles.emptySheet,{backgroundColor:theme.surface2}]}><Feather name="users" size={26} color={theme.accent}/><Text style={[styles.emptySheetTitle,{color:theme.text}]}>No campus Peeps to show yet.</Text><Text style={[styles.emptySheetCopy,{color:theme.muted}]}>Students from the same selected institution will appear here when their privacy settings allow discovery.</Text></View>:
-          <ScrollView style={{maxHeight:420}} showsVerticalScrollIndicator={false}>
-            {campusPeeps.map(item=><Pressable key={item.id} onPress={()=>onOpenProfile?.(item.id)} style={[styles.peepRow,{borderBottomColor:theme.line}]}>
-              <View style={[styles.peepAvatar,{backgroundColor:theme.surface2}]}>{item.avatar_url?<Image source={{uri:item.avatar_url}} style={styles.peepAvatarImage}/>:<Feather name="user" size={17} color={theme.accent}/>}</View>
-              <View style={{flex:1}}>
-                <Text style={[styles.sheetRowTitle,{color:theme.text}]}>{item.full_name||item.username||'Student'}</Text>
-                {!!item.username&&<Text style={[styles.sheetRowCopy,{color:theme.muted}]}>@{item.username}{item.city?' · '+item.city:''}</Text>}
-              </View>
-              <Feather name="chevron-right" size={17} color={theme.muted}/>
-            </Pressable>)}
-          </ScrollView>}
-      </>}
-
-      {name==='Drops'&&<>
-        <View style={[styles.dropsIntro,{backgroundColor:theme.surface2}]}>
-          <Text style={[styles.dropsIntroText,{color:theme.muted}]}>Your latest StudentHood activity, all in one place.</Text>
-          <Pressable
-            onPress={()=>setDropsRefreshKey(key=>key+1)}
-            disabled={dropsLoading}
-            accessibilityLabel="Refresh Drops"
-            style={styles.dropsRefresh}
-          >
-            {dropsLoading?<ActivityIndicator size="small" color={theme.accent}/>:<Feather name="refresh-cw" size={17} color={theme.accent}/>}
-          </Pressable>
-        </View>
-        {!!dropsError?<View style={[styles.emptySheet,{backgroundColor:theme.surface2}]}>
-          <Feather name="alert-circle" size={22} color={theme.danger}/>
-          <Text style={[styles.emptySheetCopy,{color:theme.muted}]}>{dropsError}</Text>
-        </View>:dropsLoading&&dropItems.length===0?<View style={styles.dropsLoading}>
-          <ActivityIndicator color={theme.accent}/>
-          <Text style={[styles.emptySheetCopy,{color:theme.muted}]}>Loading your activity…</Text>
-        </View>:dropItems.length===0?<View style={[styles.emptySheet,{backgroundColor:theme.surface2}]}>
-          <Feather name="bell" size={24} color={theme.accent}/>
-          <Text style={[styles.emptySheetTitle,{color:theme.text}]}>All caught up</Text>
-          <Text style={[styles.emptySheetCopy,{color:theme.muted}]}>Your activity updates will appear here as they happen.</Text>
-        </View>:<ScrollView style={styles.dropsList} showsVerticalScrollIndicator={false}>
-          {dropItems.map(activity=><DropActivityRow key={activity.event_key} activity={activity} theme={theme}/>)}
-        </ScrollView>}
-      </>}
-
-      {name==='Ping'&&<>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pingTabs}>
-          {['All','Peeps','Hang Chats','Crew Chats'].map((label,index)=><View key={label} style={[styles.pingTab,{backgroundColor:index===0?theme.accent:theme.surface2,borderColor:index===0?theme.accent:theme.line}]}><Text style={{fontSize:9,fontWeight:'800',color:index===0?'#fff':theme.muted}}>{label}</Text></View>)}
-        </ScrollView>
-        <View style={[styles.emptySheet,{backgroundColor:theme.surface2}]}><PingIcon color={theme.accent} size={26}/><Text style={[styles.emptySheetTitle,{color:theme.text}]}>Ping is ready for messaging.</Text><Text style={[styles.emptySheetCopy,{color:theme.muted}]}>Real-time conversations are the next module. Message alerts will not be duplicated into Drops.</Text></View>
-      </>}
-
-      {name==='Settings'&&<>
-        <SheetRow theme={theme} icon="lock" title="Privacy" copy="Profile visibility and discovery"/>
-        <SheetRow theme={theme} icon="shield" title="Safety" copy="Blocks, reports and Teen Mode"/>
-        <SheetRow theme={theme} icon="bell" title="Notifications" copy="Drops and app alerts"/>
-        <SheetRow theme={theme} icon="key" title="Account & security" copy="Password, sessions and deletion"/>
-      </>}
+      <View style={styles.sheetHead}>
+        <Text style={[styles.sheetTitle,{color:theme.text}]}>Settings</Text>
+        <Pressable onPress={onClose} accessibilityLabel="Close Settings">
+          <Feather name="x" size={22} color={theme.muted}/>
+        </Pressable>
+      </View>
+      <SheetRow theme={theme} icon="lock" title="Privacy" copy="Profile visibility and discovery"/>
+      <SheetRow theme={theme} icon="shield" title="Safety" copy="Blocks, reports and Teen Mode"/>
+      <SheetRow theme={theme} icon="bell" title="Notifications" copy="Drops and app alerts"/>
+      <SheetRow theme={theme} icon="key" title="Account & security" copy="Password, sessions and deletion"/>
     </View>
   </Modal>;
-}
-
-function DropActivityRow({activity,theme}){
-  const kinds={
-    scene_like:{icon:'heart',verb:'liked your Scene'},
-    scene_comment:{icon:'message-circle',verb:'commented on your Scene'},
-    peep_request:{icon:'user-plus',verb:'sent you a Peep request'},
-    peep_accepted:{icon:'check-circle',verb:'accepted your Peep request'}
-  };
-  const descriptor=kinds[activity.activity_type]||{icon:'bell',verb:'interacted with you'};
-  const name=String(activity.actor_name||'A student');
-  const ms=Date.now()-new Date(activity.happened_at||0).getTime();
-  const mins=Math.max(0,Math.floor(ms/60000));
-  const ago=!Number.isFinite(ms)||ms<0?'':mins<1?'Just now':mins<60?mins+'m ago':mins<1440?Math.floor(mins/60)+'h ago':Math.floor(mins/1440)+'d ago';
-
-  return <View style={[styles.dropActivity,{borderBottomColor:theme.line}]}>
-    <View style={[styles.dropActivityIcon,{backgroundColor:theme.accentSoft}]}>
-      <Feather name={descriptor.icon} size={18} color={theme.accent}/>
-    </View>
-    <View style={{flex:1}}>
-      <Text style={[styles.dropActivityTitle,{color:theme.text}]}>{name} {descriptor.verb}</Text>
-      {!!ago&&<Text style={[styles.dropActivityTime,{color:theme.muted}]}>{ago}</Text>}
-    </View>
-  </View>;
 }
 
 function SheetRow({theme,icon,title,copy}){
