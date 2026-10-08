@@ -1,6 +1,6 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {
-  ActivityIndicator,Image,Modal,PanResponder,Platform,Pressable,ScrollView,
+  ActivityIndicator,BackHandler,Image,Modal,PanResponder,Platform,Pressable,ScrollView,
   StyleSheet,Text,useWindowDimensions,View
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import {useSession} from './session';
 import ScenesScreen from './screens/ScenesScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import CreateSceneSheet from './components/CreateSceneSheet';
+import TopHubScreen from './screens/TopHubScreen';
 
 const LOGO_DARK=require('../assets/studenthood-logo.png');
 const LOGO_LIGHT=require('../assets/studenthood-logo-light.png');
@@ -20,6 +21,7 @@ export default function MainApp({theme}){
   const isTablet=width>=768;
   const [tab,setTab]=useState('Scenes');
   const [sheet,setSheet]=useState(null);
+  const [hub,setHub]=useState(null);
   const [createOpen,setCreateOpen]=useState(false);
   const [createChooser,setCreateChooser]=useState(false);
   const [profileTarget,setProfileTarget]=useState(null);
@@ -29,8 +31,38 @@ export default function MainApp({theme}){
     setCreateChooser(true);
   }
 
+  useEffect(()=>{
+    if(!hub) return;
+    const sub=BackHandler.addEventListener('hardwareBackPress',()=>{
+      setHub(null);
+      return true;
+    });
+    return ()=>sub.remove();
+  },[hub]);
+
+  function openTopPage(nextHub){
+    setHub(nextHub);
+    setSheet(null);
+  }
+
+  function selectTab(nextTab){
+    setTab(nextTab);
+    setHub(null);
+  }
+
   return <View style={[styles.root,{backgroundColor:theme.bg}]}>
-    <Header theme={theme} isTablet={isTablet} onSheet={setSheet}/>
+    <Header theme={theme} isTablet={isTablet} onSheet={openTopPage}/>
+
+    {hub&&<TopHubScreen
+      kind={hub}
+      theme={theme}
+      profile={profile}
+      onBack={()=>setHub(null)}
+      onTab={selectTab}
+      onOpenProfile={setProfileTarget}
+    />}
+
+    {!hub&&<React.Fragment>
 
     {tab==='Scenes'&&<ScenesScreen
       theme={theme}
@@ -45,7 +77,8 @@ export default function MainApp({theme}){
     {tab==='Hangs'&&<Placeholder theme={theme} icon="calendar" title="Hangs" copy="Campus plans and meetups live here. Hang creation is being wired next."/>}
     {tab==='Gigs'&&<Placeholder theme={theme} icon="briefcase" title="Gigs" copy="Student opportunities live here. Gig creation is being wired next."/>}
 
-    <BottomDial theme={theme} tab={tab} onTab={setTab} onCreate={chooseCreate} isTablet={isTablet} screenWidth={width}/>
+    <BottomDial theme={theme} tab={tab} onTab={selectTab} onCreate={chooseCreate} isTablet={isTablet} screenWidth={width}/>
+    </React.Fragment>
 
     <ActionSheet visible={!!sheet} name={sheet} onClose={()=>setSheet(null)} onTab={name=>{setTab(name);setSheet(null)}} onSheet={setSheet} onOpenProfile={id=>{setSheet(null);setProfileTarget(id)}} profile={profile} theme={theme}/>
     <CreateChooser
