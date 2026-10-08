@@ -1,15 +1,18 @@
-import React,{useState} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import {
   ActivityIndicator,Image,KeyboardAvoidingView,Platform,Pressable,ScrollView,
   StyleSheet,Text,TextInput,View
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Localization from 'expo-localization';
+import * as Location from 'expo-location';
 import {Feather} from '@expo/vector-icons';
-import CountryPicker from '../components/CountryPicker';
+import CountryPicker,{CountryPickerPage} from '../components/CountryPicker';
+import SlidePage from '../components/SlidePage';
 import {localeRegion} from '../countries';
 import {
-  completeProfile,initializeSafetyProfile,recordPlatformAgeSignal,recordPlatformAgeStatus
+  checkUsernameAvailability,completeProfile,findNearbyInstitutions,initializeSafetyProfile,
+  recordPlatformAgeSignal,recordPlatformAgeStatus
 } from '../api';
 import {platformAgeSignalsAvailable,requestPlatformAgeSignal} from '../ageAssurance';
 import {useSession} from '../session';
@@ -57,8 +60,113 @@ export default function OnboardingScreen({theme}){
     alreadyChecked?'Your age and regional safety details have already been checked.':''
   );
   const [error,setError]=useState('');
+  const [usernameState,setUsernameState]=useState('idle');
+  const [locationNote,setLocationNote]=useState('');
+  const [locating,setLocating]=useState(false);
+  const [currentCoords,setCurrentCoords]=useState(null);
+  const [institutions,setInstitutions]=useState([]);
+  const [institutionLoading,setInstitutionLoading]=useState(false);
+  const [institutionError,setInstitutionError]=useState('');
+  const [selector,setSelector]=useState(null);
+  const [selectorClosing,setSelectorClosing]=useState(false);
+  const [campusQuery,setCampusQuery]=useState('');
+  const usernameRequest=useRef(0);
+  const locationAttempted=useRef(false);
 
   const timeZone=profile?.time_zone||session?.user?.user_metadata?.time_zone||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
+
+  useEffect(()=>{
+    const normalized=username.trim().toLowerCase();
+    const original=String(profile?.username||'').trim().toLowerCase();
+    const request=++usernameRequest.current;
+
+    if(!normalized){setUsernameState('idle');return;}
+    if(!/^[a-z0-9._-]{3,24}$/.test(normalized)){setUsernameState('invalid');return;}
+    if(original&&normalized===original){setUsernameState('available');return;}
+
+    setUsernameState('checking');
+    const timer=setTimeout(async()=>{
+      try{
+        const available=await checkUsernameAvailability(normalized);
+        if(request===usernameRequest.current) setUsernameState(available?'available':'taken');
+      }catch{
+        if(request===usernameRequest.current) setUsernameState('error');
+      }
+    },350);
+
+    return()=>clearTimeout(timer);
+  },[username,profile?.username]);
+
+  useEffect(()=>{
+    if(!safetyChecked||city.trim()||locationAttempted.current) return;
+    locationAttempted.current=true;
+    detectLocation();
+  },[safetyChecked]);
+
+  async function loadInstitutions(coords){
+    if(!coords) return;
+    setInstitutionLoading(true);
+    setInstitutionError('');
+    try{
+      const rows=await findNearbyInstitutions(coords);
+      setInstitutions(rows);
+      if(rows.length===0) setInstitutionError('No nearby schools, colleges or universities were found.');
+    }catch(e){
+      setInstitutions([]);
+      setInstitutionError(e?.message||'Could not load nearby institutions.');
+    }finally{
+      setInstitutionLoading(false);
+    }
+  }
+
+  async function detectLocation(){
+    setLocating(true);
+    setLocationNote('');
+    setInstitutionError('');
+    try{
+      const enabled=await Location.hasServicesEnabledAsync();
+      if(!enabled){
+        setLocationNote('Turn on location services to find your city and nearby institutions.');
+        return;
+      }
+
+      const permission=await Location.requestForegroundPermissionsAsync();
+      if(permission.status!=='granted'){
+        setLocationNote('Location permission is needed to find your city and nearby institutions.');
+        return;
+      }
+
+      const position=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});
+      const coords={
+        latitude:Math.round(position.coords.latitude*1000)/1000,
+        longitude:Math.round(position.coords.longitude*1000)/1000
+      };
+      setCurrentCoords(coords);
+
+      const addresses=await Location.reverseGeocodeAsync(coords);
+      const address=addresses?.[0];
+      const detectedCity=String(address?.city||address?.district||address?.subregion||'').trim();
+      if(detectedCity) setCity(detectedCity);
+      setLocationNote(detectedCity?'City detected from your current location.':'Location found. Choose your institution below.');
+      await loadInstitutions(coords);
+    }catch(e){
+      setLocationNote(e?.message||'Could not detect your location. You can retry.');
+    }finally{
+      setLocating(false);
+    }
+  }
+
+  function chooseInstitution(item){
+    setCampus(String(item?.name||'').trim());
+    setSelectorClosing(true);
+    setCampusQuery('');
+  }
+
+  const filteredInstitutions=institutions.filter(item=>
+    String(item?.name||'').toLowerCase().includes(campusQuery.trim().toLowerCase())
+  );
+
+  function closeSelector(){setSelectorClosing(true)}
 
   function changeCountry(value){
     setCountry(value);
@@ -124,8 +232,16 @@ export default function OnboardingScreen({theme}){
     setError('');
     const normalizedUsername=username.trim().toLowerCase();
     if(!safetyChecked){setError('Complete the age and safety check first.');return;}
-    if(!/^[a-z0-9_]{3,24}$/.test(normalizedUsername)){setError('Username must use 3 to 24 lowercase letters, numbers or underscores.');return;}
-    if(!campus.trim()){setError('Add your campus or institution.');return;}
+    if(!/^[a-z0-9._-]{3,24}$/.test(normalizedUsername)){setUsernameState('invalid');return;}
+    if(usernameState==='checking'){setError('Checking username availability.');return;}
+    try{
+      const available=await checkUsernameAvailability(normalizedUsername);
+      if(!available){setUsernameState('taken');return;}
+    }catch(e){
+      setError(e?.message||'Could not check username availability.');
+      return;
+    }
+    if(!campus.trim()){setError('Choose your campus or institution.');return;}
     const list=interests.split(',').map(v=>v.trim()).filter(Boolean);
     if(list.length>12){setError('Choose up to 12 interests.');return;}
 
@@ -138,7 +254,11 @@ export default function OnboardingScreen({theme}){
       await refreshAccount();
     }catch(e){
       const message=String(e?.message||'Could not finish your profile.');
-      setError(message.toLowerCase().includes('duplicate')?'That username is already taken.':message);
+      if(message.toLowerCase().includes('duplicate')||message.includes('profiles_username_lower_unique')){
+        setUsernameState('taken');
+      }else{
+        setError(message);
+      }
     }finally{setBusy(false);}
   }
 
@@ -173,7 +293,7 @@ export default function OnboardingScreen({theme}){
               <Feather name="chevron-down" size={17} color={theme.muted}/>
             </Pressable>
 
-            <CountryPicker theme={theme} value={country} onChange={changeCountry}/>
+            <CountryPicker theme={theme} value={country} onOpen={()=>setSelector('country')}/>
 
             <View style={[styles.safetyBox,{backgroundColor:theme.accentSoft,borderColor:theme.line}]}>
               <Feather name="clock" size={16} color={theme.accent}/>
@@ -209,9 +329,28 @@ export default function OnboardingScreen({theme}){
         {safetyChecked&&<>
           <Text style={[styles.profileSectionTitle,{color:theme.text}]}>Your profile</Text>
           <Field theme={theme} icon="user" value={fullName} onChangeText={setFullName} placeholder="Full name"/>
-          <Field theme={theme} icon="at-sign" value={username} onChangeText={v=>setUsername(v.toLowerCase().replace(/[^a-z0-9_]/g,''))} placeholder="Username" autoCapitalize="none"/>
-          <Field theme={theme} icon="map-pin" value={city} onChangeText={setCity} placeholder="City"/>
-          <Field theme={theme} icon="book-open" value={campus} onChangeText={setCampus} placeholder="Campus or institution"/>
+          <Field theme={theme} icon="at-sign" value={username} onChangeText={v=>setUsername(v.toLowerCase().replace(/[^a-z0-9._-]/g,''))} placeholder="Username" autoCapitalize="none"/>
+          {usernameState==='checking'&&<Text style={[styles.fieldHint,{color:theme.muted}]}>Checking username...</Text>}
+          {usernameState==='available'&&!!username.trim()&&<Text style={[styles.fieldHint,{color:theme.accent}]}>Username available</Text>}
+          {usernameState==='taken'&&<Text style={[styles.fieldHint,{color:theme.danger}]}>user name already exist</Text>}
+          {usernameState==='invalid'&&!!username.trim()&&<Text style={[styles.fieldHint,{color:theme.danger}]}>Use 3 to 24 lowercase letters, numbers, dots, hyphens or underscores.</Text>}
+          {usernameState==='error'&&<Text style={[styles.fieldHint,{color:theme.danger}]}>Could not check username. Try again.</Text>}
+
+          <View style={[styles.field,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
+            <Feather name="map-pin" size={18} color={theme.muted}/>
+            <TextInput value={city} onChangeText={setCity} placeholder="City" placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text}]}/>
+            <Pressable onPress={detectLocation} disabled={locating} hitSlop={8} accessibilityLabel="Detect current city">
+              {locating?<ActivityIndicator size="small" color={theme.accent}/>:<Feather name="navigation" size={17} color={theme.accent}/>}
+            </Pressable>
+          </View>
+          {!!locationNote&&<Text style={[styles.fieldHint,{color:theme.muted}]}>{locationNote}</Text>}
+
+          <Pressable onPress={()=>{setSelector('campus');if(currentCoords&&institutions.length===0&&!institutionLoading)loadInstitutions(currentCoords)}} style={[styles.field,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
+            <Feather name="book-open" size={18} color={theme.muted}/>
+            <Text numberOfLines={1} style={[styles.fieldText,{color:campus?theme.text:theme.muted}]}>{campus||'Campus or institution'}</Text>
+            <Feather name="chevron-down" size={17} color={theme.muted}/>
+          </Pressable>
+          {!!institutionError&&<Text style={[styles.fieldHint,{color:theme.danger}]}>{institutionError}</Text>}
           <Field theme={theme} icon="edit-3" value={bio} onChangeText={setBio} placeholder="Bio" multiline maxLength={280}/>
           <Field theme={theme} icon="hash" value={interests} onChangeText={setInterests} placeholder="Interests, separated by commas"/>
 
@@ -245,6 +384,35 @@ export default function OnboardingScreen({theme}){
       }}
     />}
     {showDate&&Platform.OS==='ios'&&<Pressable onPress={()=>setShowDate(false)} style={[styles.dateDone,{backgroundColor:theme.accent}]}><Text style={styles.primaryText}>Done</Text></Pressable>}
+
+    {!!selector&&<SlidePage theme={theme} closing={selectorClosing} onBack={closeSelector} onExited={()=>{setSelector(null);setSelectorClosing(false)}}>
+      {selector==='country'
+        ?<CountryPickerPage theme={theme} onBack={closeSelector} onSelect={value=>{changeCountry(value);closeSelector()}}/>
+        :<View style={[styles.pickerFull,{backgroundColor:theme.bg}]}>
+          <View style={[styles.pickerFullHeader,{borderBottomColor:theme.line}]}>
+            <Pressable onPress={closeSelector} accessibilityLabel="Back" style={styles.pickerBack}><Feather name="arrow-left" size={23} color={theme.text}/></Pressable>
+            <Text style={[styles.pickerTitle,{color:theme.text}]}>Choose your institution</Text>
+            <View style={{width:42}}/>
+          </View>
+          <Text style={[styles.pickerCopy,{color:theme.muted}]}>Schools, colleges and universities near your detected location.</Text>
+          <View style={[styles.pickerSearch,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
+            <Feather name="search" size={17} color={theme.muted}/>
+            <TextInput value={campusQuery} onChangeText={setCampusQuery} placeholder="Search nearby institutions" placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text}]}/>
+          </View>
+          {institutionLoading?<View style={styles.pickerLoading}><ActivityIndicator color={theme.accent}/><Text style={[styles.pickerCopy,{color:theme.muted}]}>Finding nearby institutions...</Text></View>:
+            <ScrollView style={{flex:1}} showsVerticalScrollIndicator={false} contentContainerStyle={styles.pickerList}>
+              {filteredInstitutions.map(item=><Pressable key={item.id} onPress={()=>chooseInstitution(item)} style={[styles.institutionRow,{borderBottomColor:theme.line}]}>
+                <View style={[styles.institutionIcon,{backgroundColor:theme.accentSoft}]}><Feather name="book-open" size={17} color={theme.accent}/></View>
+                <View style={{flex:1}}>
+                  <Text style={[styles.institutionName,{color:theme.text}]}>{item.name}</Text>
+                  <Text style={[styles.institutionMeta,{color:theme.muted}]}>{String(item.type||'institution').replace(/^./,c=>c.toUpperCase())}{Number.isFinite(item.distance_m)?' · '+(item.distance_m/1000).toFixed(1)+' km':''}</Text>
+                </View>
+                {campus===item.name&&<Feather name="check" size={18} color={theme.accent}/>}
+              </Pressable>)}
+              {!filteredInstitutions.length&&!institutionLoading&&<View style={styles.pickerLoading}><Text style={[styles.pickerCopy,{color:theme.muted}]}>No matching institution found. Retry location to refresh nearby institutions.</Text></View>}
+            </ScrollView>}
+        </View>}
+    </SlidePage>}
   </KeyboardAvoidingView>;
 }
 
@@ -286,6 +454,19 @@ const styles=StyleSheet.create({
   profileSectionTitle:{fontSize:14,fontWeight:'900',marginTop:18,marginBottom:2},
   privacy:{fontSize:10,lineHeight:15,marginTop:12},
   error:{fontSize:11,lineHeight:16,marginTop:10},
+  fieldHint:{fontSize:9,lineHeight:13,marginTop:5,marginHorizontal:5},
+  pickerFull:{flex:1},
+  pickerFullHeader:{height:64,borderBottomWidth:StyleSheet.hairlineWidth,flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:16},
+  pickerBack:{width:42,height:42,alignItems:'center',justifyContent:'center'},
+  pickerTitle:{fontSize:18,fontWeight:'900'},
+  pickerCopy:{fontSize:11,lineHeight:16,marginHorizontal:16,marginTop:12},
+  pickerSearch:{height:48,borderWidth:1,borderRadius:14,flexDirection:'row',alignItems:'center',gap:9,paddingHorizontal:12,margin:16},
+  pickerList:{paddingHorizontal:16,paddingBottom:40},
+  pickerLoading:{padding:24,alignItems:'center',gap:8},
+  institutionRow:{minHeight:66,borderBottomWidth:StyleSheet.hairlineWidth,flexDirection:'row',alignItems:'center',gap:10},
+  institutionIcon:{width:38,height:38,borderRadius:12,alignItems:'center',justifyContent:'center'},
+  institutionName:{fontSize:11,fontWeight:'800'},
+  institutionMeta:{fontSize:9,marginTop:3},
   primary:{height:52,borderRadius:15,alignItems:'center',justifyContent:'center',marginTop:14},
   primaryText:{color:'#fff',fontWeight:'900',fontSize:13},
   dateDone:{position:'absolute',bottom:20,left:20,right:20,height:46,borderRadius:14,alignItems:'center',justifyContent:'center'}

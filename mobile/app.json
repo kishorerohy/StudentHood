@@ -3,7 +3,7 @@
     "name": "StudentHood",
     "slug": "studenthood",
     "scheme": "studenthood",
-    "version": "0.1.5",
+    "version": "0.1.6",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -19,7 +19,7 @@
         "backgroundColor": "#0B0D0F",
         "foregroundImage": "assets/studenthood-app-icon-foreground.png"
       },
-      "versionCode": 6
+      "versionCode": 7
     },
     "plugins": [
       [
@@ -27,6 +27,12 @@
         {
           "photosPermission": "StudentHood uses your photo library only when you choose a photo or video for a Scene.",
           "cameraPermission": "StudentHood uses your camera only when you choose to create a photo or video."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "StudentHood uses your location during profile setup to find your city and nearby schools, colleges and universities. Your precise location is not stored."
         }
       ]
     ],

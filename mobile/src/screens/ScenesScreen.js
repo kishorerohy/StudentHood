@@ -1,9 +1,11 @@
 import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {
-  ActivityIndicator,Image,Modal,PanResponder,Pressable,RefreshControl,ScrollView,
-  StyleSheet,Text,View
+  ActivityIndicator,Animated,Image,Modal,PanResponder,Pressable,RefreshControl,ScrollView,
+  StyleSheet,Text,useWindowDimensions,View
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
+import {SceneIcon} from '../icons';
+import {getCampusPeeps} from '../api';
 import {fetchScenes,toggleSceneLike} from '../scenes';
 
 const FILTERS=['For you','Viral','Nearby','Campus','Live now'];
@@ -15,6 +17,22 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
   const [refreshing,setRefreshing]=useState(false);
   const [error,setError]=useState('');
   const [viewerIndex,setViewerIndex]=useState(null);
+  const [pulsePeeps,setPulsePeeps]=useState([]);
+
+  const loadPulse=useCallback(async()=>{
+    try{
+      const rows=await getCampusPeeps({limit:12,offset:0});
+      const selfId=profile?.id;
+      const seen=new Set();
+      setPulsePeeps((rows||[]).filter(item=>{
+        if(!item?.id||item.id===selfId||seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+      }).slice(0,8));
+    }catch{
+      setPulsePeeps([]);
+    }
+  },[profile?.id,profile?.campus_name]);
 
   const load=useCallback(async(nextFilter=filter,{refresh=false}={})=>{
     refresh?setRefreshing(true):setLoading(true);
@@ -31,6 +49,7 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
   },[filter]);
 
   useEffect(()=>{load(filter)},[filter,reloadKey]);
+  useEffect(()=>{loadPulse()},[loadPulse,reloadKey]);
 
   async function like(sceneId){
     try{
@@ -44,15 +63,6 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
       setError(e?.message||'Could not update that Scene.');
     }
   }
-
-  const creators=useMemo(()=>{
-    const seen=new Set();
-    return items.filter(item=>{
-      if(!item.author_id||seen.has(item.author_id)) return false;
-      seen.add(item.author_id);
-      return true;
-    }).slice(0,8);
-  },[items]);
 
   return <View style={[styles.root,{backgroundColor:theme.bg}]}>
     <ScrollView
@@ -83,11 +93,11 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
             <View style={[styles.pulseRing,{borderColor:theme.line,backgroundColor:theme.surface2}]}><Feather name="plus" size={22} color={theme.accent}/></View>
             <Text style={[styles.pulseName,{color:theme.muted}]}>Your Pulse</Text>
           </Pressable>
-          {creators.map(item=><Pressable key={item.author_id} onPress={()=>onOpenProfile?.(item.author_id)} style={styles.pulse}>
+          {pulsePeeps.map(item=><Pressable key={item.id} onPress={()=>onOpenProfile?.(item.id)} style={styles.pulse}>
             <View style={[styles.pulseRing,{borderColor:theme.accent,backgroundColor:theme.surface2}]}>
-              {item.author_avatar_url?<Image source={{uri:item.author_avatar_url}} style={styles.pulseImage}/>:<Feather name="user" size={22} color={theme.muted}/>}
+              {item.avatar_url?<Image source={{uri:item.avatar_url}} style={styles.pulseImage}/>:<Feather name="user" size={22} color={theme.muted}/>}
             </View>
-            <Text numberOfLines={1} style={[styles.pulseName,{color:theme.muted}]}>{item.author_name?.split(' ')[0]||item.author_username||'Peep'}</Text>
+            <Text numberOfLines={1} style={[styles.pulseName,{color:theme.muted}]}>{item.full_name?.split(' ')[0]||item.username||'Peep'}</Text>
           </Pressable>)}
         </ScrollView>
       </View>
@@ -120,7 +130,7 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
 
       {loading?<View style={styles.loading}><ActivityIndicator color={theme.accent}/><Text style={[styles.loadingText,{color:theme.muted}]}>Loading your campus…</Text></View>:
         items.length===0?<View style={[styles.empty,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-          <View style={[styles.emptyIcon,{backgroundColor:theme.accentSoft}]}><Feather name="play-square" size={28} color={theme.accent}/></View>
+          <View style={[styles.emptyIcon,{backgroundColor:theme.accentSoft}]}><SceneIcon size={28} color={theme.accent}/></View>
           <Text style={[styles.emptyTitle,{color:theme.text}]}>Your campus is quiet here.</Text>
           <Text style={[styles.emptyCopy,{color:theme.muted}]}>Be the first to post a Scene. New Scenes are moderated before broader distribution.</Text>
           <Pressable onPress={onOpenCreate} style={[styles.emptyButton,{backgroundColor:theme.accent}]}><Text style={styles.emptyButtonText}>Create a Scene</Text></Pressable>
@@ -173,7 +183,21 @@ function SceneCard({scene,theme,onOpen,onProfile,onLike}){
 }
 
 function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,theme}){
+  const {width}=useWindowDimensions();
+  const slide=useRef(new Animated.Value(width)).current;
   const start=useRef({x:0,y:0}).current;
+
+  useEffect(()=>{
+    if(visible){
+      slide.setValue(width);
+      Animated.timing(slide,{toValue:0,duration:260,useNativeDriver:true}).start();
+    }
+  },[visible,slide,width]);
+
+  function leave(next){
+    Animated.timing(slide,{toValue:width,duration:230,useNativeDriver:true})
+      .start(()=>{onClose();next?.()});
+  }
   const pan=useMemo(()=>PanResponder.create({
     onStartShouldSetPanResponder:()=>true,
     onPanResponderGrant:(_,g)=>{start.x=g.x0;start.y=g.y0},
@@ -181,7 +205,7 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,them
       const dx=g.moveX-start.x;
       const dy=g.moveY-start.y;
       if(Math.max(Math.abs(dx),Math.abs(dy))<45) return;
-      if(Math.abs(dx)>Math.abs(dy)&&dx<0){onProfile(scenes[index]);return;}
+      if(Math.abs(dx)>Math.abs(dy)&&dx<0){leave(()=>onProfile(scenes[index]));return;}
       if(Math.abs(dy)>=Math.abs(dx)){
         const next=(index+(dy<0?1:-1)+scenes.length)%scenes.length;
         onIndex(next);
@@ -192,13 +216,13 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,them
   const scene=scenes[index];
   if(!scene) return null;
 
-  return <Modal visible={visible} animationType="fade" statusBarTranslucent onRequestClose={onClose}>
-    <View style={styles.viewer} {...pan.panHandlers}>
+  return <Modal visible={visible} animationType="none" statusBarTranslucent onRequestClose={()=>leave()}>
+    <Animated.View style={[styles.viewer,{transform:[{translateX:slide}]}]} {...pan.panHandlers}>
       {scene.media_signed_url&&scene.media_type==='image'?<Image source={{uri:scene.media_signed_url}} style={StyleSheet.absoluteFillObject} resizeMode="cover"/>:<View style={[StyleSheet.absoluteFillObject,{backgroundColor:'#08090A',alignItems:'center',justifyContent:'center'}]}>{scene.media_type==='video'?<><Feather name="play-circle" size={72} color="#fff"/><Text style={styles.viewerVideo}>Video Scene</Text></>:<Text style={styles.viewerText}>{scene.body}</Text>}</View>}
       <View style={styles.viewerShade}/>
-      <Pressable onPress={onClose} style={styles.viewerClose}><Feather name="x" size={24} color="#fff"/></Pressable>
+      <Pressable onPress={()=>leave()} style={styles.viewerClose}><Feather name="x" size={24} color="#fff"/></Pressable>
       <View style={styles.viewerBottom}>
-        <Pressable onPress={()=>onProfile(scene)} style={styles.viewerCreator}><View style={styles.viewerAvatar}>{scene.author_avatar_url?<Image source={{uri:scene.author_avatar_url}} style={styles.avatarImage}/>:<Feather name="user" size={18} color="#fff"/>}</View><View><Text style={styles.viewerName}>{scene.author_name||scene.author_username||'Student'}</Text><Text style={styles.viewerMeta}>{scene.author_campus_name||'Campus'} · {timeAgo(scene.created_at)}</Text></View></Pressable>
+        <Pressable onPress={()=>leave(()=>onProfile(scene))} style={styles.viewerCreator}><View style={styles.viewerAvatar}>{scene.author_avatar_url?<Image source={{uri:scene.author_avatar_url}} style={styles.avatarImage}/>:<Feather name="user" size={18} color="#fff"/>}</View><View><Text style={styles.viewerName}>{scene.author_name||scene.author_username||'Student'}</Text><Text style={styles.viewerMeta}>{scene.author_campus_name||'Campus'} · {timeAgo(scene.created_at)}</Text></View></Pressable>
         {!!scene.body&&scene.media_type!=='text'&&<Text style={styles.viewerCaption}>{scene.body}</Text>}
         <Text style={styles.viewerHint}>Swipe left for profile · Swipe up for next Scene</Text>
       </View>
@@ -207,7 +231,7 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,them
         <View style={styles.viewerAction}><Feather name="message-circle" size={24} color="#fff"/><Text style={styles.viewerActionText}>{compact(scene.comment_count)}</Text></View>
         <View style={styles.viewerAction}><Feather name="send" size={24} color="#fff"/><Text style={styles.viewerActionText}>Share</Text></View>
       </View>
-    </View>
+    </Animated.View>
   </Modal>;
 }
 

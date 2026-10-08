@@ -10,7 +10,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_STUDENTHOOD_TEST_FRESH_START": "true"
+        "EXPO_PUBLIC_STUDENTHOOD_TEST_FRESH_START": "false"
       }
     },
     "preview": {
@@ -19,7 +19,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_STUDENTHOOD_TEST_FRESH_START": "true"
+        "EXPO_PUBLIC_STUDENTHOOD_TEST_FRESH_START": "false"
       }
     },
     "production": {
