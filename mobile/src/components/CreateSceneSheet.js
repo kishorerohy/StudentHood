@@ -1,6 +1,6 @@
 import React,{useState} from 'react';
 import {
-  ActivityIndicator,Image,Modal,Pressable,ScrollView,StyleSheet,Text,TextInput,View
+  ActivityIndicator,Image,Pressable,ScrollView,StyleSheet,Text,TextInput,View
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import {Feather} from '@expo/vector-icons';
@@ -50,8 +50,8 @@ export default function CreateSceneSheet({visible,onClose,onCreated,theme}){
     }
   }
 
-  return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-    <View style={[styles.root,{backgroundColor:theme.bg}]}>
+  if(!visible) return null;
+  return <View style={[styles.root,{backgroundColor:theme.bg}]}>
       <View style={styles.header}>
         <Pressable onPress={onClose} style={[styles.iconBtn,{backgroundColor:theme.surface}]}><Feather name="x" size={21} color={theme.text}/></Pressable>
         <Text style={[styles.title,{color:theme.text}]}>New Scene</Text>
@@ -101,8 +101,7 @@ export default function CreateSceneSheet({visible,onClose,onCreated,theme}){
 
         {!!error&&<Text style={[styles.error,{color:theme.danger}]}>{error}</Text>}
       </ScrollView>
-    </View>
-  </Modal>;
+  </View>;
 }
 
 const styles=StyleSheet.create({
