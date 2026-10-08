@@ -78,7 +78,7 @@ export default function MainApp({theme}){
     {tab==='Gigs'&&<Placeholder theme={theme} icon="briefcase" title="Gigs" copy="Student opportunities live here. Gig creation is being wired next."/>}
 
     <BottomDial theme={theme} tab={tab} onTab={selectTab} onCreate={chooseCreate} isTablet={isTablet} screenWidth={width}/>
-    </React.Fragment>
+    </React.Fragment>}
 
     <SettingsSheet visible={sheet==='Settings'} onClose={()=>setSheet(null)} theme={theme}/>
     <CreateChooser
