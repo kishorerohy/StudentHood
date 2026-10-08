@@ -1,4 +1,5 @@
 import {supabase} from './supabase';
+import {getAvatarDisplayUrl} from './api';
 
 const filterMap={
   'For you':'for_you',
@@ -17,12 +18,14 @@ function extensionForAsset(asset){
 }
 
 async function signMedia(scene){
-  if(!scene?.media_url) return {...scene,media_signed_url:null};
-  if(/^https?:\/\//i.test(scene.media_url)) return {...scene,media_signed_url:scene.media_url};
+  const author_avatar_url=await getAvatarDisplayUrl(scene?.author_avatar_url);
+  const item={...scene,author_avatar_url};
+  if(!scene?.media_url) return {...item,media_signed_url:null};
+  if(/^https?:\/\//i.test(scene.media_url)) return {...item,media_signed_url:scene.media_url};
 
   const {data,error}=await supabase.storage.from('scene-media').createSignedUrl(scene.media_url,3600);
-  if(error) return {...scene,media_signed_url:null};
-  return {...scene,media_signed_url:data?.signedUrl||null};
+  if(error) return {...item,media_signed_url:null};
+  return {...item,media_signed_url:data?.signedUrl||null};
 }
 
 export async function fetchScenes(filter='For you',limit=20,offset=0){
