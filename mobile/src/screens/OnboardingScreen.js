@@ -1,13 +1,14 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {
-  ActivityIndicator,Image,KeyboardAvoidingView,Modal,Platform,Pressable,ScrollView,
+  ActivityIndicator,Image,KeyboardAvoidingView,Platform,Pressable,ScrollView,
   StyleSheet,Text,TextInput,View
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Localization from 'expo-localization';
 import * as Location from 'expo-location';
 import {Feather} from '@expo/vector-icons';
-import CountryPicker from '../components/CountryPicker';
+import CountryPicker,{CountryPickerPage} from '../components/CountryPicker';
+import SlidePage from '../components/SlidePage';
 import {localeRegion} from '../countries';
 import {
   checkUsernameAvailability,completeProfile,findNearbyInstitutions,initializeSafetyProfile,
@@ -66,7 +67,8 @@ export default function OnboardingScreen({theme}){
   const [institutions,setInstitutions]=useState([]);
   const [institutionLoading,setInstitutionLoading]=useState(false);
   const [institutionError,setInstitutionError]=useState('');
-  const [campusOpen,setCampusOpen]=useState(false);
+  const [selector,setSelector]=useState(null);
+  const [selectorClosing,setSelectorClosing]=useState(false);
   const [campusQuery,setCampusQuery]=useState('');
   const usernameRequest=useRef(0);
   const locationAttempted=useRef(false);
@@ -156,13 +158,15 @@ export default function OnboardingScreen({theme}){
 
   function chooseInstitution(item){
     setCampus(String(item?.name||'').trim());
-    setCampusOpen(false);
+    setSelectorClosing(true);
     setCampusQuery('');
   }
 
   const filteredInstitutions=institutions.filter(item=>
     String(item?.name||'').toLowerCase().includes(campusQuery.trim().toLowerCase())
   );
+
+  function closeSelector(){setSelectorClosing(true)}
 
   function changeCountry(value){
     setCountry(value);
@@ -289,7 +293,7 @@ export default function OnboardingScreen({theme}){
               <Feather name="chevron-down" size={17} color={theme.muted}/>
             </Pressable>
 
-            <CountryPicker theme={theme} value={country} onChange={changeCountry}/>
+            <CountryPicker theme={theme} value={country} onOpen={()=>setSelector('country')}/>
 
             <View style={[styles.safetyBox,{backgroundColor:theme.accentSoft,borderColor:theme.line}]}>
               <Feather name="clock" size={16} color={theme.accent}/>
@@ -341,7 +345,7 @@ export default function OnboardingScreen({theme}){
           </View>
           {!!locationNote&&<Text style={[styles.fieldHint,{color:theme.muted}]}>{locationNote}</Text>}
 
-          <Pressable onPress={()=>{setCampusOpen(true);if(currentCoords&&institutions.length===0&&!institutionLoading)loadInstitutions(currentCoords)}} style={[styles.field,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
+          <Pressable onPress={()=>{setSelector('campus');if(currentCoords&&institutions.length===0&&!institutionLoading)loadInstitutions(currentCoords)}} style={[styles.field,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
             <Feather name="book-open" size={18} color={theme.muted}/>
             <Text numberOfLines={1} style={[styles.fieldText,{color:campus?theme.text:theme.muted}]}>{campus||'Campus or institution'}</Text>
             <Feather name="chevron-down" size={17} color={theme.muted}/>
@@ -381,34 +385,34 @@ export default function OnboardingScreen({theme}){
     />}
     {showDate&&Platform.OS==='ios'&&<Pressable onPress={()=>setShowDate(false)} style={[styles.dateDone,{backgroundColor:theme.accent}]}><Text style={styles.primaryText}>Done</Text></Pressable>}
 
-    <Modal visible={campusOpen} transparent animationType="fade" onRequestClose={()=>setCampusOpen(false)}>
-      <Pressable style={styles.pickerBackdrop} onPress={()=>setCampusOpen(false)}/>
-      <View style={[styles.pickerSheet,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-        <View style={styles.pickerHead}>
-          <View style={{flex:1}}>
+    {!!selector&&<SlidePage theme={theme} closing={selectorClosing} onBack={closeSelector} onExited={()=>{setSelector(null);setSelectorClosing(false)}}>
+      {selector==='country'
+        ?<CountryPickerPage theme={theme} onBack={closeSelector} onSelect={value=>{changeCountry(value);closeSelector()}}/>
+        :<View style={[styles.pickerFull,{backgroundColor:theme.bg}]}>
+          <View style={[styles.pickerFullHeader,{borderBottomColor:theme.line}]}>
+            <Pressable onPress={closeSelector} accessibilityLabel="Back" style={styles.pickerBack}><Feather name="arrow-left" size={23} color={theme.text}/></Pressable>
             <Text style={[styles.pickerTitle,{color:theme.text}]}>Choose your institution</Text>
-            <Text style={[styles.pickerCopy,{color:theme.muted}]}>Schools, colleges and universities near your detected location.</Text>
+            <View style={{width:42}}/>
           </View>
-          <Pressable onPress={()=>setCampusOpen(false)} hitSlop={8}><Feather name="x" size={21} color={theme.muted}/></Pressable>
-        </View>
-        <View style={[styles.pickerSearch,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
-          <Feather name="search" size={17} color={theme.muted}/>
-          <TextInput value={campusQuery} onChangeText={setCampusQuery} placeholder="Search nearby institutions" placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text}]}/>
-        </View>
-        {institutionLoading?<View style={styles.pickerLoading}><ActivityIndicator color={theme.accent}/><Text style={[styles.pickerCopy,{color:theme.muted}]}>Finding nearby institutions...</Text></View>:
-          <ScrollView showsVerticalScrollIndicator={false} style={styles.pickerList}>
-            {filteredInstitutions.map(item=><Pressable key={item.id} onPress={()=>chooseInstitution(item)} style={[styles.institutionRow,{borderBottomColor:theme.line}]}>
-              <View style={[styles.institutionIcon,{backgroundColor:theme.accentSoft}]}><Feather name="book-open" size={17} color={theme.accent}/></View>
-              <View style={{flex:1}}>
-                <Text style={[styles.institutionName,{color:theme.text}]}>{item.name}</Text>
-                <Text style={[styles.institutionMeta,{color:theme.muted}]}>{String(item.type||'institution').replace(/^./,c=>c.toUpperCase())}{Number.isFinite(item.distance_m)?' · '+(item.distance_m/1000).toFixed(1)+' km':''}</Text>
-              </View>
-              {campus===item.name&&<Feather name="check" size={18} color={theme.accent}/>}
-            </Pressable>)}
-            {!filteredInstitutions.length&&!institutionLoading&&<View style={styles.pickerLoading}><Text style={[styles.pickerCopy,{color:theme.muted}]}>No matching institution found. Retry location to refresh the nearby list.</Text></View>}
-          </ScrollView>}
-      </View>
-    </Modal>
+          <Text style={[styles.pickerCopy,{color:theme.muted}]}>Schools, colleges and universities near your detected location.</Text>
+          <View style={[styles.pickerSearch,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
+            <Feather name="search" size={17} color={theme.muted}/>
+            <TextInput value={campusQuery} onChangeText={setCampusQuery} placeholder="Search nearby institutions" placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text}]}/>
+          </View>
+          {institutionLoading?<View style={styles.pickerLoading}><ActivityIndicator color={theme.accent}/><Text style={[styles.pickerCopy,{color:theme.muted}]}>Finding nearby institutions...</Text></View>:
+            <ScrollView style={{flex:1}} showsVerticalScrollIndicator={false} contentContainerStyle={styles.pickerList}>
+              {filteredInstitutions.map(item=><Pressable key={item.id} onPress={()=>chooseInstitution(item)} style={[styles.institutionRow,{borderBottomColor:theme.line}]}>
+                <View style={[styles.institutionIcon,{backgroundColor:theme.accentSoft}]}><Feather name="book-open" size={17} color={theme.accent}/></View>
+                <View style={{flex:1}}>
+                  <Text style={[styles.institutionName,{color:theme.text}]}>{item.name}</Text>
+                  <Text style={[styles.institutionMeta,{color:theme.muted}]}>{String(item.type||'institution').replace(/^./,c=>c.toUpperCase())}{Number.isFinite(item.distance_m)?' · '+(item.distance_m/1000).toFixed(1)+' km':''}</Text>
+                </View>
+                {campus===item.name&&<Feather name="check" size={18} color={theme.accent}/>}
+              </Pressable>)}
+              {!filteredInstitutions.length&&!institutionLoading&&<View style={styles.pickerLoading}><Text style={[styles.pickerCopy,{color:theme.muted}]}>No matching institution found. Retry location to refresh nearby institutions.</Text></View>}
+            </ScrollView>}
+        </View>}
+    </SlidePage>}
   </KeyboardAvoidingView>;
 }
 
@@ -451,13 +455,13 @@ const styles=StyleSheet.create({
   privacy:{fontSize:10,lineHeight:15,marginTop:12},
   error:{fontSize:11,lineHeight:16,marginTop:10},
   fieldHint:{fontSize:9,lineHeight:13,marginTop:5,marginHorizontal:5},
-  pickerBackdrop:{...StyleSheet.absoluteFillObject,backgroundColor:'rgba(0,0,0,.42)'},
-  pickerSheet:{position:'absolute',left:14,right:14,bottom:14,maxHeight:'76%',borderWidth:1,borderRadius:24,padding:16},
-  pickerHead:{flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:12},
+  pickerFull:{flex:1},
+  pickerFullHeader:{height:64,borderBottomWidth:StyleSheet.hairlineWidth,flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:16},
+  pickerBack:{width:42,height:42,alignItems:'center',justifyContent:'center'},
   pickerTitle:{fontSize:18,fontWeight:'900'},
-  pickerCopy:{fontSize:10,lineHeight:15,marginTop:3},
-  pickerSearch:{height:48,borderWidth:1,borderRadius:14,flexDirection:'row',alignItems:'center',gap:9,paddingHorizontal:12,marginTop:14},
-  pickerList:{marginTop:8},
+  pickerCopy:{fontSize:11,lineHeight:16,marginHorizontal:16,marginTop:12},
+  pickerSearch:{height:48,borderWidth:1,borderRadius:14,flexDirection:'row',alignItems:'center',gap:9,paddingHorizontal:12,margin:16},
+  pickerList:{paddingHorizontal:16,paddingBottom:40},
   pickerLoading:{padding:24,alignItems:'center',gap:8},
   institutionRow:{minHeight:66,borderBottomWidth:StyleSheet.hairlineWidth,flexDirection:'row',alignItems:'center',gap:10},
   institutionIcon:{width:38,height:38,borderRadius:12,alignItems:'center',justifyContent:'center'},
