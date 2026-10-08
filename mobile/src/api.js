@@ -1,5 +1,60 @@
 import {supabase} from './supabase';
 
+export async function getMySceneCount(){
+  const {data,error}=await supabase.rpc('studenthood_my_scene_count');
+  if(error) throw error;
+  return Number(data)||0;
+}
+
+export async function saveMyProfileChanges({fullName,bio,city,campusName,campusPresence}){
+  const {data:{user},error:userError}=await supabase.auth.getUser();
+  if(userError) throw userError;
+  if(!user) throw new Error('Please sign in again.');
+  const payload={
+    full_name:String(fullName||'').trim(),
+    bio:String(bio||'').trim()||null,
+    city:String(city||'').trim()||null,
+    campus_name:String(campusName||'').trim()||null,
+    campus_presence:campusPresence
+  };
+  if(!payload.full_name) throw new Error('Your name is required.');
+  if(!payload.campus_name) throw new Error('Your institution is required.');
+  if(!['on_campus','off_campus','not_shared'].includes(campusPresence)) throw new Error('Invalid campus status.');
+  const {data,error}=await supabase.from('profiles').update(payload).eq('id',user.id)
+    .select('id,full_name,bio,city,campus_name,campus_presence').single();
+  if(error) throw error;
+  return data;
+}
+
+export async function uploadMyAvatar(asset){
+  if(!asset?.uri) throw new Error('Choose a photo first.');
+  const {data:{user},error:userError}=await supabase.auth.getUser();
+  if(userError) throw userError;
+  if(!user) throw new Error('Please sign in again.');
+  const bytes=await (await fetch(asset.uri)).arrayBuffer();
+  if(bytes.byteLength>5*1024*1024) throw new Error('Choose an image smaller than 5 MB.');
+  const contentType=asset.mimeType||'image/jpeg';
+  const ext=contentType==='image/png'?'png':contentType==='image/webp'?'webp':'jpg';
+  if(!['image/jpeg','image/png','image/webp'].includes(contentType)) throw new Error('Please choose a JPG, PNG or WebP image.');
+  const path=`${user.id}/avatar-${Date.now()}.${ext}`;
+  const {error:uploadError}=await supabase.storage.from('profile-avatars').upload(path,bytes,{contentType,upsert:false});
+  if(uploadError) throw uploadError;
+  const {error}=await supabase.from('profiles').update({avatar_url:path}).eq('id',user.id);
+  if(error){
+    await supabase.storage.from('profile-avatars').remove([path]);
+    throw error;
+  }
+  return path;
+}
+
+export async function getAvatarDisplayUrl(value){
+  if(!value) return null;
+  if(/^https?:\/\//i.test(value)) return value;
+  const {data,error}=await supabase.storage.from('profile-avatars').createSignedUrl(value,3600);
+  if(error) return null;
+  return data?.signedUrl||null;
+}
+
 export async function getMyProfile(){
   const {data:{user},error:userError}=await supabase.auth.getUser();
   if(userError) throw userError;
@@ -7,7 +62,7 @@ export async function getMyProfile(){
 
   const {data,error}=await supabase
     .from('profiles')
-    .select('id,full_name,username,date_of_birth,city,campus_name,locale,country_code,preferred_currency,time_zone,age_assurance_status,guardian_consent_status,platform_age_provider,platform_age_status,platform_age_lower,platform_age_upper,platform_age_source,platform_age_signal_at,age_conflict,adult_access_verified,profile_visibility,location_visibility,recommendation_mode,ping_permissions,avatar_url,bio,interests,onboarding_completed,created_at,updated_at')
+    .select('id,full_name,username,date_of_birth,city,campus_name,locale,country_code,preferred_currency,time_zone,age_assurance_status,guardian_consent_status,platform_age_provider,platform_age_status,platform_age_lower,platform_age_upper,platform_age_source,platform_age_signal_at,age_conflict,adult_access_verified,profile_visibility,location_visibility,recommendation_mode,ping_permissions,avatar_url,bio,interests,campus_presence,onboarding_completed,created_at,updated_at')
     .eq('id',user.id)
     .maybeSingle();
 
