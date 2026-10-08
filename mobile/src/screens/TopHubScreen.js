@@ -94,20 +94,15 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
       </>}
 
       {kind==='Discover'&&<>
-        <Text style={[styles.subtitle,{color:theme.muted}]}>Find people and opportunities around your campus.</Text>
+        <Text style={[styles.subtitle,{color:theme.muted}]}>Discover students and communities around your campus.</Text>
         <View style={styles.grid}>
           {[
-            {name:'Peeps',icon:'users',copy:'Find your campus'},
-            {name:'Hangs',icon:'calendar',copy:'Explore meetups'},
-            {name:'Crews',icon:'users',copy:'Explore communities'},
-            {name:'Gigs',icon:'briefcase',copy:'Student opportunities'}
+            {name:'Peeps',icon:'users',copy:'Meet campus students'},
+            {name:'Crews',icon:'users',copy:'Explore communities'}
           ].map(item=><Pressable
             key={item.name}
             accessibilityRole="button"
-            onPress={()=>{
-              if(item.name==='Hangs'||item.name==='Gigs') onTab(item.name);
-              else setDiscoverSection(item.name);
-            }}
+            onPress={()=>setDiscoverSection(item.name)}
             style={[styles.discoverCard,{backgroundColor:theme.surface,borderColor:discoverSection===item.name?theme.accent:theme.line}]}
           >
             <Feather name={item.icon} size={22} color={theme.accent}/>
