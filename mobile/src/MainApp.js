@@ -1,97 +1,147 @@
-import React,{useEffect,useMemo,useRef,useState} from 'react';
-import {
-  ActivityIndicator,BackHandler,Image,Modal,PanResponder,Platform,Pressable,ScrollView,
-  StyleSheet,Text,useWindowDimensions,View
-} from 'react-native';
+import React,{useCallback,useEffect,useRef,useState} from 'react';
+import {Image,Platform,Pressable,StyleSheet,Text,useWindowDimensions,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {DiscoverIcon,DropsIcon,PingIcon,SceneIcon} from './icons';
-import {getProfileCard} from './api';
 import {useSession} from './session';
 import ScenesScreen from './screens/ScenesScreen';
 import ProfileScreen from './screens/ProfileScreen';
-import CreateSceneSheet from './components/CreateSceneSheet';
 import TopHubScreen from './screens/TopHubScreen';
+import EditProfileScreen from './screens/EditProfileScreen';
+import ProfileMenuScreen from './screens/ProfileMenuScreen';
+import UserProfileScreen from './screens/UserProfileScreen';
+import CreateOptionsScreen from './screens/CreateOptionsScreen';
+import CreateSceneSheet from './components/CreateSceneSheet';
+import SlidePage from './components/SlidePage';
 
 const LOGO_DARK=require('../assets/studenthood-logo.png');
 const LOGO_LIGHT=require('../assets/studenthood-logo-light.png');
 
 export default function MainApp({theme}){
-  const {profile,safety}=useSession();
+  const {profile,safety,refreshAccount}=useSession();
   const {width}=useWindowDimensions();
   const isTablet=width>=768;
   const [tab,setTab]=useState('Scenes');
-  const [sheet,setSheet]=useState(null);
-  const [hub,setHub]=useState(null);
-  const [createOpen,setCreateOpen]=useState(false);
-  const [createChooser,setCreateChooser]=useState(false);
-  const [profileTarget,setProfileTarget]=useState(null);
+  const [pages,setPages]=useState([]);
   const [reloadKey,setReloadKey]=useState(0);
+  const nextPageId=useRef(0);
 
-  function chooseCreate(){
-    setCreateChooser(true);
-  }
+  const pushPage=useCallback(page=>{
+    const key=String(++nextPageId.current);
+    setPages(current=>[...current,{...page,key,closing:false}]);
+  },[]);
 
-  useEffect(()=>{
-    if(!hub) return;
-    const sub=BackHandler.addEventListener('hardwareBackPress',()=>{
-      setHub(null);
-      return true;
+  const goBack=useCallback(()=>{
+    setPages(current=>{
+      if(!current.length||current[current.length-1].closing)return current;
+      return current.map((page,i)=>i===current.length-1?{...page,closing:true}:page);
     });
-    return ()=>sub.remove();
-  },[hub]);
+  },[]);
 
-  function openTopPage(nextHub){
-    setHub(nextHub);
-    setSheet(null);
+  const pageExited=useCallback(key=>{
+    setPages(current=>current.filter(page=>page.key!==key));
+  },[]);
+
+  const selectTab=useCallback(nextTab=>{
+    setTab(nextTab);
+    setPages([]);
+  },[]);
+
+  const afterProfileSaved=useCallback(async()=>{
+    await refreshAccount();
+    setReloadKey(x=>x+1);
+  },[refreshAccount]);
+
+  function showPage(page){
+    pushPage(page);
   }
 
-  function selectTab(nextTab){
-    setTab(nextTab);
-    setHub(null);
+  function makePage(page){
+    switch(page.type){
+      case 'hub':
+        return <TopHubScreen
+          kind={page.kind}
+          theme={theme}
+          profile={profile}
+          onBack={goBack}
+          onTab={selectTab}
+          onOpenProfile={userId=>showPage({type:'student-profile',userId})}
+        />;
+      case 'student-profile':
+        return <UserProfileScreen
+          userId={page.userId}
+          theme={theme}
+          onBack={goBack}
+        />;
+      case 'profile-menu':
+        return <ProfileMenuScreen
+          page={page.section||'menu'}
+          theme={theme}
+          profile={profile}
+          safety={safety}
+          onBack={goBack}
+          onNavigate={section=>showPage({type:'profile-menu',section})}
+          onDrops={()=>showPage({type:'hub',kind:'Drops'})}
+        />;
+      case 'edit-profile':
+        return <EditProfileScreen
+          theme={theme}
+          profile={profile}
+          photoOnly={page.photoOnly}
+          onBack={goBack}
+          onSaved={afterProfileSaved}
+        />;
+      case 'create-options':
+        return <CreateOptionsScreen
+          theme={theme}
+          onBack={goBack}
+          onScene={()=>showPage({type:'create-scene'})}
+          onPulse={()=>selectTab('Pulse')}
+          onHang={()=>selectTab('Hangs')}
+          onGig={()=>selectTab('Gigs')}
+        />;
+      case 'create-scene':
+        return <CreateSceneSheet
+          visible
+          theme={theme}
+          onClose={goBack}
+          onCreated={()=>{setReloadKey(x=>x+1);selectTab('Scenes')}}
+        />;
+      default:
+        return <View style={{flex:1,backgroundColor:theme.bg}}/>;
+    }
   }
 
   return <View style={[styles.root,{backgroundColor:theme.bg}]}>
-    <Header theme={theme} isTablet={isTablet} onSheet={openTopPage}/>
-
-    {hub&&<TopHubScreen
-      kind={hub}
-      theme={theme}
-      profile={profile}
-      onBack={()=>setHub(null)}
-      onTab={selectTab}
-      onOpenProfile={setProfileTarget}
-    />}
-
-    {!hub&&<React.Fragment>
-
+    <Header theme={theme} isTablet={isTablet} onSheet={kind=>showPage({type:'hub',kind})}/>
     {tab==='Scenes'&&<ScenesScreen
       theme={theme}
       profile={profile}
       safety={safety}
       reloadKey={reloadKey}
-      onOpenProfile={setProfileTarget}
-      onOpenCreate={chooseCreate}
+      onOpenProfile={userId=>showPage({type:'student-profile',userId})}
+      onOpenCreate={()=>showPage({type:'create-options'})}
     />}
-    {tab==='Profile'&&<ProfileScreen theme={theme} profile={profile} safety={safety} onSettings={()=>setSheet('Settings')}/>}
+    {tab==='Profile'&&<ProfileScreen
+      theme={theme}
+      profile={profile}
+      reloadKey={reloadKey}
+      onMenu={()=>showPage({type:'profile-menu',section:'menu'})}
+      onEdit={()=>showPage({type:'edit-profile'})}
+      onEditPicture={()=>showPage({type:'edit-profile',photoOnly:true})}
+    />}
     {tab==='Pulse'&&<Placeholder theme={theme} icon="circle" title="Pulse" copy="Quick campus moments live here. Pulse creation is being wired next."/>}
     {tab==='Hangs'&&<Placeholder theme={theme} icon="calendar" title="Hangs" copy="Campus plans and meetups live here. Hang creation is being wired next."/>}
     {tab==='Gigs'&&<Placeholder theme={theme} icon="briefcase" title="Gigs" copy="Student opportunities live here. Gig creation is being wired next."/>}
+    <BottomDial theme={theme} tab={tab} onTab={selectTab} onCreate={()=>showPage({type:'create-options'})} isTablet={isTablet} screenWidth={width}/>
 
-    <BottomDial theme={theme} tab={tab} onTab={selectTab} onCreate={chooseCreate} isTablet={isTablet} screenWidth={width}/>
-    </React.Fragment>}
-
-    <SettingsSheet visible={sheet==='Settings'} onClose={()=>setSheet(null)} theme={theme}/>
-    <CreateChooser
-      visible={createChooser}
-      onClose={()=>setCreateChooser(false)}
-      onScene={()=>{setCreateChooser(false);setCreateOpen(true)}}
-      onPulse={()=>{setCreateChooser(false);setTab('Pulse')}}
-      onHang={()=>{setCreateChooser(false);setTab('Hangs')}}
-      onGig={()=>{setCreateChooser(false);setTab('Gigs')}}
+    {pages.map((page,index)=><SlidePage
+      key={page.key}
       theme={theme}
-    />
-    <CreateSceneSheet visible={createOpen} onClose={()=>setCreateOpen(false)} onCreated={()=>{setReloadKey(x=>x+1);setTab('Scenes')}} theme={theme}/>
-    <CreatorProfile visible={!!profileTarget} userId={profileTarget} onClose={()=>setProfileTarget(null)} theme={theme}/>
+      active={index===pages.length-1&&!page.closing}
+      closing={page.closing}
+      onBack={goBack}
+      onExited={()=>pageExited(page.key)}
+    >{makePage(page)}</SlidePage>)}
   </View>;
 }
 
@@ -123,89 +173,6 @@ function BottomDial({theme,tab,onTab,onCreate,isTablet,screenWidth}){
     {item('Gigs','briefcase')}
     {item('Profile','user')}
   </View>;
-}
-
-function SettingsSheet({visible,onClose,theme}){
-  return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-    <Pressable onPress={onClose} style={styles.backdrop}/>
-    <View style={[styles.sheet,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-      <View style={[styles.grip,{backgroundColor:theme.line}]}/>
-      <View style={styles.sheetHead}>
-        <Text style={[styles.sheetTitle,{color:theme.text}]}>Settings</Text>
-        <Pressable onPress={onClose} accessibilityLabel="Close Settings">
-          <Feather name="x" size={22} color={theme.muted}/>
-        </Pressable>
-      </View>
-      <SheetRow theme={theme} icon="lock" title="Privacy" copy="Profile visibility and discovery"/>
-      <SheetRow theme={theme} icon="shield" title="Safety" copy="Blocks, reports and Teen Mode"/>
-      <SheetRow theme={theme} icon="bell" title="Notifications" copy="Drops and app alerts"/>
-      <SheetRow theme={theme} icon="key" title="Account & security" copy="Password, sessions and deletion"/>
-    </View>
-  </Modal>;
-}
-
-function SheetRow({theme,icon,title,copy}){
-  return <View style={[styles.sheetRow,{borderTopColor:theme.line}]}><View style={[styles.sheetRowIcon,{backgroundColor:theme.surface2}]}><Feather name={icon} size={16} color={theme.accent}/></View><View style={{flex:1}}><Text style={[styles.sheetRowTitle,{color:theme.text}]}>{title}</Text><Text style={[styles.sheetRowCopy,{color:theme.muted}]}>{copy}</Text></View><Feather name="chevron-right" size={17} color={theme.muted}/></View>;
-}
-
-function CreateChooser({visible,onClose,onScene,onPulse,onHang,onGig,theme}){
-  return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-    <Pressable onPress={onClose} style={styles.backdrop}/>
-    <View style={[styles.sheet,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-      <View style={[styles.grip,{backgroundColor:theme.line}]}/>
-      <View style={styles.sheetHead}><Text style={[styles.sheetTitle,{color:theme.text}]}>Create</Text><Pressable onPress={onClose}><Feather name="x" size={22} color={theme.muted}/></Pressable></View>
-      <Pressable onPress={onScene}><CreateRow theme={theme} kind="scene" title="Post a Scene" copy="Photo, video or post"/></Pressable>
-      <Pressable onPress={onPulse}><CreateRow theme={theme} icon="circle" title="Add to Pulse" copy="Quick campus moment"/></Pressable>
-      <Pressable onPress={onHang}><CreateRow theme={theme} icon="calendar" title="Start a Hang" copy="Campus meetup"/></Pressable>
-      <Pressable onPress={onGig}><CreateRow theme={theme} icon="briefcase" title="Post a Gig" copy="Student opportunity"/></Pressable>
-    </View>
-  </Modal>;
-}
-function CreateRow({theme,kind,icon,title,copy}){
-  return <View style={[styles.createRow,{borderTopColor:theme.line}]}>
-    <View style={[styles.createRowIcon,{backgroundColor:theme.accentSoft}]}>
-      {kind==='scene'?<SceneIcon size={19} color={theme.accent}/>:<Feather name={icon} size={19} color={theme.accent}/>}
-    </View>
-    <View style={{flex:1}}>
-      <Text style={[styles.createRowTitle,{color:theme.text}]}>{title}</Text>
-      <Text style={[styles.createRowCopy,{color:theme.muted}]}>{copy}</Text>
-    </View>
-    <Feather name="chevron-right" size={17} color={theme.muted}/>
-  </View>;
-}
-
-function CreatorProfile({visible,userId,onClose,theme}){
-  const [card,setCard]=useState(null);
-  const [loading,setLoading]=useState(false);
-  const start=useRef(0);
-  useEffect(()=>{
-    let live=true;
-    if(!visible||!userId) return;
-    setLoading(true);
-    getProfileCard(userId).then(data=>{if(live)setCard(data)}).catch(()=>{if(live)setCard(null)}).finally(()=>{if(live)setLoading(false)});
-    return()=>{live=false};
-  },[visible,userId]);
-
-  const pan=useMemo(()=>PanResponder.create({
-    onStartShouldSetPanResponder:()=>true,
-    onPanResponderGrant:(_,g)=>{start.current=g.x0},
-    onPanResponderRelease:(_,g)=>{if(g.moveX-start.current>55)onClose()}
-  }),[onClose]);
-
-  return <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-    <View style={[styles.profileModal,{backgroundColor:theme.bg}]} {...pan.panHandlers}>
-      <Pressable onPress={onClose} style={[styles.profileBack,{backgroundColor:theme.surface}]}><Feather name="arrow-left" size={21} color={theme.text}/></Pressable>
-      {loading?<ActivityIndicator color={theme.accent}/>:card?<View style={[styles.profileCard,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-        <View style={[styles.profileAvatar,{backgroundColor:theme.surface2}]}>{card.avatar_url?<Image source={{uri:card.avatar_url}} style={{width:'100%',height:'100%',borderRadius:60}}/>:<Feather name="user" size={38} color={theme.accent}/>}</View>
-        <Text style={[styles.profileName,{color:theme.text}]}>{card.full_name||card.username||'Student'}</Text>
-        {!!card.username&&<Text style={[styles.profileHandle,{color:theme.muted}]}>@{card.username}</Text>}
-        {!!card.bio&&<Text style={[styles.profileBio,{color:theme.muted}]}>{card.bio}</Text>}
-        <View style={styles.profileMeta}>{!!card.campus_name&&<Text style={[styles.profileMetaText,{color:theme.text}]}>{card.campus_name}</Text>}{!!card.city&&<Text style={[styles.profileMetaText,{color:theme.muted}]}>{card.city}</Text>}</View>
-        <Pressable disabled={!card.can_ping} style={[styles.profileAction,{backgroundColor:card.can_ping?theme.accent:theme.surface2}]}><Text style={{color:card.can_ping?'#fff':theme.muted,fontWeight:'900',fontSize:11}}>{card.can_ping?'Ping':'Ping available to Peeps'}</Text></Pressable>
-        <Text style={[styles.swipeHint,{color:theme.muted}]}>Swipe right to return to the Scene</Text>
-      </View>:<Text style={[styles.unavailable,{color:theme.muted}]}>This profile is not available to you.</Text>}
-    </View>
-  </Modal>;
 }
 
 function Placeholder({theme,icon,title,copy}){
