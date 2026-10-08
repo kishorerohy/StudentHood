@@ -1,6 +1,6 @@
 # StudentHood Project State
 
-Last updated: 2026-10-07 (IST)
+Last updated: 2026-10-08 (IST)
 
 This file is the durable recovery checkpoint for StudentHood. Keep secrets and private user data out of this document.
 
@@ -10,7 +10,8 @@ This file is the durable recovery checkpoint for StudentHood. Keep secrets and p
 - Repository: `kishorerohy/StudentHood`
 - Mobile app: `mobile/`
 - Public website: GitHub Pages from the repository root
-- Current Android preview: version **0.1.5**, versionCode **6**
+- Currently installed Android preview baseline: **0.1.5**, versionCode **6**
+- Next consolidated preview pending approval/release: **0.1.6**, Android versionCode **7**, draft PR #5 (`fix/onboarding-campus-identity`).
 - Android package: `com.studenthood.app`
 - Official native builds use **Expo EAS**
 - The owner installed and tested the current v0.1.5 preview APK and reported that it is working.
@@ -78,6 +79,7 @@ Preserve the approved StudentHood branding unless the owner explicitly requests 
 - Automatic guardian email delivery and domain setup remain deferred.
 - Only explicitly marked disposable preview email test accounts may be cleaned up automatically.
 - Google, Apple, and ordinary real accounts must be retained.
+- **Signed-in sessions must persist across app closes/restarts** until the user explicitly logs out or a session becomes invalid/revoked. Do not use automatic fresh-start sign-out or clearing secure sessions in preview/development builds. The earlier preview APK sign-out issue was caused by `TEST_FRESH_START`; this has been removed in pending PR #5.
 - Never delete real production accounts for routine testing.
 - In Supabase auth handling, do not await Supabase requests directly inside `onAuthStateChange`; defer account refresh work outside the callback.
 
@@ -97,7 +99,7 @@ GitHub `main` is the durable code source of truth.
 
 ## Current backlog
 
-- Continue the owner's in-app correction pass.
+- The owner has finished the current in-app correction pass; review draft PR #5 and request the owner's approval before merging/releasing the consolidated next APK. Do not auto-merge.
 - For every correction, say whether it needs GitHub only, backend only, or the next APK.
 - Continue guardian consent and preview account-lifecycle testing.
 - Domain purchase and automatic guardian emails remain deferred.
