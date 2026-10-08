@@ -51,6 +51,15 @@ export async function getCampusPeeps({limit=100,offset=0}={}){
   });
 }
 
+export async function getDropsFeed({limit=40,offset=0}={}){
+  const {data,error}=await supabase.rpc('studenthood_drops_feed',{
+    p_limit:limit,
+    p_offset:offset
+  });
+  if(error) throw error;
+  return Array.isArray(data)?data:[];
+}
+
 export async function initializeSafetyProfile({dateOfBirth,countryCode,timeZone}){
   const {data,error}=await supabase.rpc('initialize_safety_profile',{
     p_date_of_birth:dateOfBirth,
