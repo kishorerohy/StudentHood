@@ -1,10 +1,8 @@
 import React,{createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} from 'react';
 import {AppState} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import {bindAuthAutoRefresh,clearStoredAuthSession,supabase} from './supabase';
-import {deleteCurrentTestAccount,getAccessPolicy,getEffectiveSafety,getMyProfile,recordPlatformAgeSignal,recordPlatformAgeStatus} from './api';
+import {bindAuthAutoRefresh,supabase} from './supabase';
+import {getAccessPolicy,getEffectiveSafety,getMyProfile,recordPlatformAgeSignal,recordPlatformAgeStatus} from './api';
 import {platformAgeSignalsAvailable,requestPlatformAgeSignal} from './ageAssurance';
-import {TEST_FRESH_START} from './config';
 
 const SessionContext=createContext(null);
 
@@ -105,21 +103,8 @@ export function SessionProvider({children}){
         if(!mounted) return;
         let next=data?.session||null;
 
-        if(TEST_FRESH_START&&next?.access_token){
-          // Only accounts explicitly created as disposable test accounts may be deleted.
-          // Never mark an existing Google or email account disposable on app launch.
-          if(next.user?.user_metadata?.studenthood_test_account===true){
-            try{await deleteCurrentTestAccount()}catch{}
-          }
-          try{await supabase.auth.signOut({scope:'local'})}catch{}
-          try{await clearStoredAuthSession()}catch{}
-          try{
-            const keys=await AsyncStorage.getAllKeys();
-            const studenthoodKeys=keys.filter(key=>key.startsWith('studenthood.'));
-            if(studenthoodKeys.length) await AsyncStorage.multiRemove(studenthoodKeys);
-          }catch{}
-          next=null;
-        }
+        // Keep the stored Supabase session across normal app restarts.
+        // Only an explicit sign-out, account removal or invalid session ends access.
 
         setSession(next);
         sessionRef.current=next;
