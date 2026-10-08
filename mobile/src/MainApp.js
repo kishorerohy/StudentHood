@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {DiscoverIcon,DropsIcon,PingIcon,SceneIcon} from './icons';
-import {getCampusPeeps,getProfileCard} from './api';
+import {getCampusPeeps,getDropsFeed,getProfileCard} from './api';
 import {useSession} from './session';
 import ScenesScreen from './screens/ScenesScreen';
 import ProfileScreen from './screens/ProfileScreen';
@@ -96,6 +96,10 @@ function ActionSheet({visible,name,onClose,onTab,onSheet,onOpenProfile,profile,t
   const [campusPeeps,setCampusPeeps]=useState([]);
   const [peepsLoading,setPeepsLoading]=useState(false);
   const [peepsError,setPeepsError]=useState('');
+  const [dropItems,setDropItems]=useState([]);
+  const [dropsLoading,setDropsLoading]=useState(false);
+  const [dropsError,setDropsError]=useState('');
+  const [dropsRefreshKey,setDropsRefreshKey]=useState(0);
 
   useEffect(()=>{
     let live=true;
@@ -112,6 +116,22 @@ function ActionSheet({visible,name,onClose,onTab,onSheet,onOpenProfile,profile,t
     }).finally(()=>{if(live)setPeepsLoading(false)});
     return()=>{live=false};
   },[visible,name]);
+
+  useEffect(()=>{
+    let live=true;
+    if(!visible||name!=='Drops') return;
+    setDropsLoading(true);
+    setDropsError('');
+    getDropsFeed({limit:50}).then(rows=>{
+      if(live) setDropItems(rows);
+    }).catch(e=>{
+      if(live){
+        setDropItems([]);
+        setDropsError(e?.message||'Could not load activity.');
+      }
+    }).finally(()=>{if(live)setDropsLoading(false)});
+    return()=>{live=false};
+  },[visible,name,dropsRefreshKey]);
 
   if(!name) return null;
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -142,10 +162,30 @@ function ActionSheet({visible,name,onClose,onTab,onSheet,onOpenProfile,profile,t
       </>}
 
       {name==='Drops'&&<>
-        <Text style={[styles.sheetNote,{backgroundColor:theme.surface2,color:theme.muted}]}>Drops contains non-message activity only. New Pings and Ping requests stay inside Ping.</Text>
-        <SheetRow theme={theme} icon="heart" title="Scene activity" copy="Likes, comments and mentions"/>
-        <SheetRow theme={theme} icon="users" title="Peeps" copy="Connection activity"/>
-        <SheetRow theme={theme} icon="calendar" title="Hangs, Crews & Gigs" copy="Community and opportunity updates"/>
+        <View style={[styles.dropsIntro,{backgroundColor:theme.surface2}]}>
+          <Text style={[styles.dropsIntroText,{color:theme.muted}]}>Your latest StudentHood activity, all in one place.</Text>
+          <Pressable
+            onPress={()=>setDropsRefreshKey(key=>key+1)}
+            disabled={dropsLoading}
+            accessibilityLabel="Refresh Drops"
+            style={styles.dropsRefresh}
+          >
+            {dropsLoading?<ActivityIndicator size="small" color={theme.accent}/>:<Feather name="refresh-cw" size={17} color={theme.accent}/>}
+          </Pressable>
+        </View>
+        {!!dropsError?<View style={[styles.emptySheet,{backgroundColor:theme.surface2}]}>
+          <Feather name="alert-circle" size={22} color={theme.danger}/>
+          <Text style={[styles.emptySheetCopy,{color:theme.muted}]}>{dropsError}</Text>
+        </View>:dropsLoading&&dropItems.length===0?<View style={styles.dropsLoading}>
+          <ActivityIndicator color={theme.accent}/>
+          <Text style={[styles.emptySheetCopy,{color:theme.muted}]}>Loading your activity…</Text>
+        </View>:dropItems.length===0?<View style={[styles.emptySheet,{backgroundColor:theme.surface2}]}>
+          <Feather name="bell" size={24} color={theme.accent}/>
+          <Text style={[styles.emptySheetTitle,{color:theme.text}]}>All caught up</Text>
+          <Text style={[styles.emptySheetCopy,{color:theme.muted}]}>Your activity updates will appear here as they happen.</Text>
+        </View>:<ScrollView style={styles.dropsList} showsVerticalScrollIndicator={false}>
+          {dropItems.map(activity=><DropActivityRow key={activity.event_key} activity={activity} theme={theme}/>)}
+        </ScrollView>}
       </>}
 
       {name==='Ping'&&<>
@@ -163,6 +203,30 @@ function ActionSheet({visible,name,onClose,onTab,onSheet,onOpenProfile,profile,t
       </>}
     </View>
   </Modal>;
+}
+
+function DropActivityRow({activity,theme}){
+  const kinds={
+    scene_like:{icon:'heart',verb:'liked your Scene'},
+    scene_comment:{icon:'message-circle',verb:'commented on your Scene'},
+    peep_request:{icon:'user-plus',verb:'sent you a Peep request'},
+    peep_accepted:{icon:'check-circle',verb:'accepted your Peep request'}
+  };
+  const descriptor=kinds[activity.activity_type]||{icon:'bell',verb:'interacted with you'};
+  const name=String(activity.actor_name||'A student');
+  const ms=Date.now()-new Date(activity.happened_at||0).getTime();
+  const mins=Math.max(0,Math.floor(ms/60000));
+  const ago=!Number.isFinite(ms)||ms<0?'':mins<1?'Just now':mins<60?mins+'m ago':mins<1440?Math.floor(mins/60)+'h ago':Math.floor(mins/1440)+'d ago';
+
+  return <View style={[styles.dropActivity,{borderBottomColor:theme.line}]}>
+    <View style={[styles.dropActivityIcon,{backgroundColor:theme.accentSoft}]}>
+      <Feather name={descriptor.icon} size={18} color={theme.accent}/>
+    </View>
+    <View style={{flex:1}}>
+      <Text style={[styles.dropActivityTitle,{color:theme.text}]}>{name} {descriptor.verb}</Text>
+      {!!ago&&<Text style={[styles.dropActivityTime,{color:theme.muted}]}>{ago}</Text>}
+    </View>
+  </View>;
 }
 
 function SheetRow({theme,icon,title,copy}){
@@ -255,6 +319,16 @@ const styles=StyleSheet.create({
   discoverCard:{width:'48%',minHeight:86,borderWidth:1,borderRadius:16,padding:14,gap:10},
   discoverTitle:{fontSize:12,fontWeight:'800'},
   sheetNote:{fontSize:10,lineHeight:15,padding:11,borderRadius:12,marginBottom:6},
+  dropsIntro:{borderRadius:12,paddingLeft:12,paddingRight:5,paddingVertical:6,marginBottom:8,flexDirection:'row',alignItems:'center',gap:8},
+  dropsIntroText:{fontSize:11,lineHeight:16,flex:1},
+  dropsRefresh:{width:42,height:42,alignItems:'center',justifyContent:'center',borderRadius:12},
+  dropsLoading:{alignItems:'center',justifyContent:'center',padding:28,gap:8},
+  dropsList:{maxHeight:450},
+  dropActivity:{minHeight:69,borderBottomWidth:StyleSheet.hairlineWidth,flexDirection:'row',alignItems:'center',gap:11,paddingVertical:12},
+  dropActivityIcon:{width:42,height:42,borderRadius:14,justifyContent:'center',alignItems:'center'},
+  dropActivityTitle:{fontSize:12,lineHeight:18,fontWeight:'700'},
+  dropActivityTime:{fontSize:10,marginTop:4},
+
   sheetRow:{minHeight:60,borderTopWidth:StyleSheet.hairlineWidth,flexDirection:'row',alignItems:'center',gap:10},
   peepRow:{minHeight:62,borderBottomWidth:StyleSheet.hairlineWidth,flexDirection:'row',alignItems:'center',gap:10},
   peepAvatar:{width:40,height:40,borderRadius:20,alignItems:'center',justifyContent:'center',overflow:'hidden'},
