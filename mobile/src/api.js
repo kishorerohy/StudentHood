@@ -46,7 +46,13 @@ export async function saveMyProfileChanges({fullName,bio,city,campusName}){
   const {data,error}=await supabase.from('profiles').update(payload).eq('id',user.id)
     .select('id,full_name,bio,city,campus_name,campus_presence').single();
   if(error) throw error;
-  return data;
+  if(data?.id!==user.id) throw new Error('Profile changes could not be confirmed. Please try again.');
+  const saved=await getMyProfile();
+  const expected={full_name:payload.full_name,bio:payload.bio,city:payload.city,campus_name:payload.campus_name};
+  if(!saved||Object.keys(expected).some(key=>(saved[key]??null)!==(expected[key]??null))){
+    throw new Error('Your profile could not be verified after saving. Please reopen it and check your details.');
+  }
+  return saved;
 }
 
 // Campus status is voluntary and manually chosen from Scenes.
@@ -62,7 +68,10 @@ export async function setCampusPresence(value){
     .select('id,campus_presence')
     .single();
   if(error) throw error;
-  return data;
+  if(data?.id!==user.id||data.campus_presence!==value) throw new Error('Campus status was not saved.');
+  const saved=await getMyProfile();
+  if(saved?.campus_presence!==value) throw new Error('Campus status could not be confirmed. Please refresh your profile.');
+  return saved;
 }
 
 export async function uploadMyAvatar(asset){
@@ -78,11 +87,22 @@ export async function uploadMyAvatar(asset){
   const path=`${user.id}/avatar-${Date.now()}.${ext}`;
   const {error:uploadError}=await supabase.storage.from('profile-avatars').upload(path,bytes,{contentType,upsert:false});
   if(uploadError) throw uploadError;
-  const {error}=await supabase.from('profiles').update({avatar_url:path}).eq('id',user.id);
-  if(error){
-    await supabase.storage.from('profile-avatars').remove([path]);
-    throw error;
+  let updated;
+  let error;
+  try{
+    const result=await supabase.from('profiles')
+      .update({avatar_url:path}).eq('id',user.id)
+      .select('id,avatar_url').single();
+    updated=result.data;
+    error=result.error;
+  }catch(e){
+    error=e;
   }
+  if(error||updated?.id!==user.id||updated?.avatar_url!==path){
+    await supabase.storage.from('profile-avatars').remove([path]).catch(()=>{});
+    throw error||new Error('Your photo could not be linked to the profile.');
+  }
+  // The changed path is already confirmed by the database's own SELECT.
   return path;
 }
 
