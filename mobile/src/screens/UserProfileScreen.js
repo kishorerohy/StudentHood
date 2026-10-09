@@ -3,7 +3,7 @@ import {ActivityIndicator,Image,Pressable,ScrollView,StyleSheet,Text,View} from 
 import {Feather} from '@expo/vector-icons';
 import {getAvatarDisplayUrl,getPeepConnection,getProfileCard,getVisibleProfileScenes,sendPeepRequest} from '../api';
 
-export default function UserProfileScreen({userId,theme,onBack,onPing}){
+export default function UserProfileScreen({userId,currentUserId,theme,onBack,onPing}){
   const [card,setCard]=useState(null);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState('');
@@ -59,8 +59,9 @@ export default function UserProfileScreen({userId,theme,onBack,onPing}){
   const isPeep=!!card?.is_peep||connection?.status==='accepted';
   const outgoing=connection?.status==='pending'&&connection?.requester_id!==userId;
   const incoming=connection?.status==='pending'&&connection?.requester_id===userId;
-  const canRequest=!!card&&!isPeep&&!connection&&peepReady&&!requestBusy;
-  const peepLabel=requestBusy?'Sending…':isPeep?'Peeps':outgoing?'Request sent':incoming?'Request received':connection?'Unavailable':'Add Peep';
+  const isSelf=!!currentUserId&&currentUserId===userId;
+  const canRequest=!!card&&!isSelf&&!isPeep&&!connection&&peepReady&&!requestBusy;
+  const peepLabel=isSelf?'Your profile':requestBusy?'Sending…':isPeep?'Peeps':outgoing?'Request sent':incoming?'Request received':connection?'Unavailable':'Add Peep';
   const canPing=!!card?.can_ping;
   const interests=Array.isArray(card?.interests)?card.interests.filter(value=>typeof value==='string'&&value.trim()):[];
 
