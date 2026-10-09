@@ -13,6 +13,7 @@ import CreateOptionsScreen from './screens/CreateOptionsScreen';
 import CreateSceneSheet from './components/CreateSceneSheet';
 import SlidePage from './components/SlidePage';
 import CampusStatusSlider from './components/CampusStatusSlider';
+import FeatureLandingScreen from './screens/FeatureLandingScreen';
 
 const LOGO_DARK=require('../assets/studenthood-logo.png');
 const LOGO_LIGHT=require('../assets/studenthood-logo-light.png');
@@ -68,6 +69,8 @@ export default function MainApp({theme}){
           onTab={selectTab}
           onOpenProfile={userId=>showPage({type:'student-profile',userId})}
         />;
+      case 'feature':
+        return <FeatureLandingScreen kind={page.kind} theme={theme} profile={profile} onBack={goBack} onDiscover={()=>showPage({type:'hub',kind:'Discover'})}/>;
       case 'student-profile':
         return <UserProfileScreen
           userId={page.userId}
@@ -99,7 +102,7 @@ export default function MainApp({theme}){
           theme={theme}
           onBack={goBack}
           onScene={()=>showPage({type:'create-scene'})}
-          onPulse={()=>selectTab('Pulse')}
+          onPulse={()=>showPage({type:'feature',kind:'Pulse'})}
           onHang={()=>selectTab('Hangs')}
           onGig={()=>selectTab('Gigs')}
         />;
@@ -133,9 +136,9 @@ export default function MainApp({theme}){
       onEdit={()=>showPage({type:'edit-profile'})}
       onEditPicture={()=>showPage({type:'edit-profile',photoOnly:true})}
     />}
-    {tab==='Pulse'&&<Placeholder theme={theme} icon="circle" title="Pulse" copy="Quick campus moments live here. Pulse creation is being wired next."/>}
-    {tab==='Hangs'&&<Placeholder theme={theme} icon="calendar" title="Hangs" copy="Campus plans and meetups live here. Hang creation is being wired next."/>}
-    {tab==='Gigs'&&<Placeholder theme={theme} icon="briefcase" title="Gigs" copy="Student opportunities live here. Gig creation is being wired next."/>}
+
+    {tab==='Hangs'&&<FeatureLandingScreen kind="Hangs" theme={theme} profile={profile} onDiscover={()=>showPage({type:'hub',kind:'Discover'})}/> }
+    {tab==='Gigs'&&<FeatureLandingScreen kind="Gigs" theme={theme} profile={profile} onDiscover={()=>showPage({type:'hub',kind:'Discover'})}/> }
     <BottomDial theme={theme} tab={tab} onTab={selectTab} onCreate={()=>showPage({type:'create-options'})} isTablet={isTablet} screenWidth={width}/>
     {tab==='Scenes'&&<CampusStatusSlider theme={theme} profile={profile} onSaved={afterProfileSaved}/>}
 
