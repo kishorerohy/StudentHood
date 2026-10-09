@@ -35,6 +35,7 @@ export function SessionProvider({children}){
     }
 
     let nextProfile=await getMyProfile();
+    if(sessionRef.current?.user?.id!==nextSession.user.id)return;
 
     if(
       nextProfile?.onboarding_completed
@@ -69,6 +70,7 @@ export function SessionProvider({children}){
       }
     }
 
+    if(sessionRef.current?.user?.id!==nextSession.user.id)return;
     setProfile(nextProfile);
 
     if(nextProfile?.date_of_birth&&nextProfile?.country_code&&nextProfile?.time_zone){
@@ -76,6 +78,7 @@ export function SessionProvider({children}){
         getAccessPolicy(),
         getEffectiveSafety()
       ]);
+      if(sessionRef.current?.user?.id!==nextSession.user.id)return;
       setPolicy(nextPolicy);
       setSafety(nextSafety);
 
@@ -94,6 +97,7 @@ export function SessionProvider({children}){
     }
     // Only mark routing ready after the profile AND policy have been restored.
     // Null profiles for genuinely new accounts are a completed check, not an error.
+    if(sessionRef.current?.user?.id!==nextSession.user.id)return;
     setResolvedUserId(nextSession.user.id);
     setError('');
   },[session,clearRecheck]);
