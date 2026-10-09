@@ -260,6 +260,9 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCo
   const slide=useRef(new Animated.Value(width)).current;
   const [commentsOpen,setCommentsOpen]=useState(false);
   const [shareOpen,setShareOpen]=useState(false);
+  const [moreOpen,setMoreOpen]=useState(false);
+  const [moreAnchor,setMoreAnchor]=useState(null);
+  const moreButton=useRef(null);
   const [shareAnchor,setShareAnchor]=useState(null);
   const shareButton=useRef(null);
   function openShare(){
@@ -270,7 +273,7 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCo
   }
   const start=useRef({x:0,y:0}).current;
 
-  useEffect(()=>{if(!visible){setCommentsOpen(false);setShareOpen(false)}},[visible]);
+  useEffect(()=>{if(!visible){setCommentsOpen(false);setShareOpen(false);setMoreOpen(false)}},[visible]);
   useEffect(()=>{
     if(visible){
       slide.setValue(width);
@@ -302,13 +305,14 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCo
   const scene=scenes[index];
   if(!scene) return null;
 
-  return <Modal visible={visible} animationType="none" statusBarTranslucent onRequestClose={()=>shareOpen?setShareOpen(false):commentsOpen?setCommentsOpen(false):leave()}>
-    <Animated.View style={[styles.viewer,{transform:[{translateX:slide}]}]} {...(!commentsOpen&&!shareOpen?pan.panHandlers:{})}>
+  return <Modal visible={visible} animationType="none" statusBarTranslucent onRequestClose={()=>moreOpen?setMoreOpen(false):shareOpen?setShareOpen(false):commentsOpen?setCommentsOpen(false):leave()}>
+    <Animated.View style={[styles.viewer,{transform:[{translateX:slide}]}]} {...(!commentsOpen&&!shareOpen&&!moreOpen?pan.panHandlers:{})}>
       {commentsOpen?<SceneCommentsPanel scene={scene} theme={theme} onClose={()=>setCommentsOpen(false)} onSent={onCommentSaved}/>:
       <>
       {scene.media_signed_url&&scene.media_type==='image'?<Image source={{uri:scene.media_signed_url}} style={StyleSheet.absoluteFillObject} resizeMode="cover"/>:<View style={[StyleSheet.absoluteFillObject,{backgroundColor:'#08090A',alignItems:'center',justifyContent:'center'}]}>{scene.media_type==='video'?<><Feather name="play-circle" size={72} color="#fff"/><Text style={styles.viewerVideo}>Video Scene</Text></>:<Text style={styles.viewerText}>{scene.body}</Text>}</View>}
       <View style={styles.viewerShade}/>
       <Pressable onPress={()=>leave()} style={styles.viewerClose}><Feather name="x" size={24} color="#fff"/></Pressable>
+      <Pressable ref={moreButton} onPress={()=>moreButton.current?.measureInWindow((x,y,width,height)=>{setMoreAnchor({x,y,width,height});setMoreOpen(true)})} accessibilityRole="button" accessibilityLabel="Scene options" style={[styles.viewerClose,{left:undefined,right:14}]}><Feather name="more-horizontal" size={24} color="#fff"/></Pressable>
       <View style={styles.viewerBottom}>
         <Pressable onPress={()=>leave(()=>onProfile(scene))} style={styles.viewerCreator}><View style={styles.viewerAvatar}>{scene.author_avatar_url?<Image source={{uri:scene.author_avatar_url}} style={styles.avatarImage}/>:<Feather name="user" size={18} color="#fff"/>}</View><View><Text style={styles.viewerName}>{scene.author_name||scene.author_username||'Student'}</Text><Text style={styles.viewerMeta}>{scene.author_campus_name||'Campus'} · {timeAgo(scene.created_at)}</Text></View></Pressable>
         {!!scene.body&&scene.media_type!=='text'&&<Text style={styles.viewerCaption}>{scene.body}</Text>}
@@ -321,6 +325,7 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCo
       </View>
       </>}
       {shareOpen&&<SceneShareRadial scene={scene} theme={theme} anchor={shareAnchor} profileCountry={profileCountry} onClose={()=>setShareOpen(false)}/>}
+      {moreOpen&&<SceneOptionsMenu scene={scene} anchor={moreAnchor} theme={theme} currentUserId={currentUserId} onClose={()=>setMoreOpen(false)} onProfile={userId=>{setMoreOpen(false);leave(()=>onProfile(scene))}} onHide={onHide} onDeleted={onDeleted}/>}
     </Animated.View>
   </Modal>;
 }
