@@ -53,7 +53,7 @@ export default function CreateSceneSheet({visible,onClose,onCreated,theme}){
   }
 
   if(!visible) return null;
-  return <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':undefined} style={[styles.root,{backgroundColor:theme.bg}]}>
+  return <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={[styles.root,{backgroundColor:theme.bg}]}>
       <View style={styles.header}>
         <Pressable onPress={onClose} style={[styles.iconBtn,{backgroundColor:theme.surface}]}><Feather name="x" size={21} color={theme.text}/></Pressable>
         <Text style={[styles.title,{color:theme.text}]}>New Scene</Text>
