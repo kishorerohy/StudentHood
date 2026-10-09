@@ -68,6 +68,7 @@ export default function MainApp({theme}){
           onBack={goBack}
           onTab={selectTab}
           onOpenProfile={userId=>showPage({type:'student-profile',userId})}
+          onOpenFeature={kind=>showPage({type:'feature',kind})}
         />;
       case 'feature':
         return <FeatureLandingScreen kind={page.kind} theme={theme} profile={profile} onBack={goBack} onDiscover={()=>showPage({type:'hub',kind:'Discover'})}/>;
