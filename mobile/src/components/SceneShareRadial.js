@@ -66,7 +66,7 @@ export default function SceneShareRadial({scene,theme,anchor,profileCountry,onCl
         dismiss();
       }else if(item.name==='WhatsApp'){
         await Linking.openURL('whatsapp://send?text='+encodeURIComponent('View this Scene on StudentHood: '+url));
-        onClose();
+        dismiss();
       }else{
         await Clipboard.setStringAsync(url);
         try{
