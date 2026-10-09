@@ -27,7 +27,8 @@
         "backgroundColor": "#0B0D0F",
         "foregroundImage": "assets/studenthood-app-icon-foreground.png"
       },
-      "versionCode": 7
+      "versionCode": 7,
+      "softwareKeyboardLayoutMode": "resize"
     },
     "plugins": [
       [
