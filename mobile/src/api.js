@@ -1,5 +1,30 @@
 import {supabase} from './supabase';
 
+// Count only accepted mutual Peeps for the signed-in account. Existing RLS
+// restricts this query to relationships involving the current user.
+export async function getMyPeepCount(){
+  const {data:{user},error:authError}=await supabase.auth.getUser();
+  if(authError) throw authError;
+  if(!user) return 0;
+  const {count,error}=await supabase.from('peep_connections')
+    .select('id',{count:'exact',head:true})
+    .eq('status','accepted')
+    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
+  if(error) throw error;
+  return Number(count)||0;
+}
+
+// Count only the target's Scenes visible to the signed-in viewer. Never
+// return an unrestricted creator total or bypass the Scene RLS policy.
+export async function getVisibleSceneCount(userId){
+  if(!userId) return 0;
+  const {count,error}=await supabase.from('scenes')
+    .select('id',{count:'exact',head:true})
+    .eq('author_id',userId);
+  if(error) throw error;
+  return Number(count)||0;
+}
+
 export async function getMySceneCount(){
   const {data,error}=await supabase.rpc('studenthood_my_scene_count');
   if(error) throw error;
