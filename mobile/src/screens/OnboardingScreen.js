@@ -16,6 +16,7 @@ import {
 } from '../api';
 import {platformAgeSignalsAvailable,requestPlatformAgeSignal} from '../ageAssurance';
 import {useSession} from '../session';
+import useKeyboardAwareForm from '../hooks/useKeyboardAwareForm';
 
 const LOGO_DARK=require('../../assets/studenthood-logo.png');
 const LOGO_LIGHT=require('../../assets/studenthood-logo-light.png');
@@ -72,6 +73,7 @@ export default function OnboardingScreen({theme}){
   const [campusQuery,setCampusQuery]=useState('');
   const usernameRequest=useRef(0);
   const locationAttempted=useRef(false);
+  const {scrollRef,onFieldFocus,onScrollLayout}=useKeyboardAwareForm();
 
   const timeZone=profile?.time_zone||session?.user?.user_metadata?.time_zone||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
 
@@ -264,9 +266,11 @@ export default function OnboardingScreen({theme}){
 
   return <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':undefined} style={[styles.root,{backgroundColor:theme.bg}]}>
     <ScrollView
+      ref={scrollRef}
+      onLayout={onScrollLayout}
       contentContainerStyle={styles.scroll}
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode={Platform.OS==='ios'?'interactive':'on-drag'}
+      keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'}
       showsVerticalScrollIndicator={false}
     >
       <View style={[styles.card,{backgroundColor:theme.surface,borderColor:theme.line}]}>
@@ -328,8 +332,8 @@ export default function OnboardingScreen({theme}){
 
         {safetyChecked&&<>
           <Text style={[styles.profileSectionTitle,{color:theme.text}]}>Your profile</Text>
-          <Field theme={theme} icon="user" value={fullName} onChangeText={setFullName} placeholder="Full name"/>
-          <Field theme={theme} icon="at-sign" value={username} onChangeText={v=>setUsername(v.toLowerCase().replace(/[^a-z0-9._-]/g,''))} placeholder="Username" autoCapitalize="none"/>
+          <Field theme={theme} onFocus={onFieldFocus} icon="user" value={fullName} onChangeText={setFullName} placeholder="Full name"/>
+          <Field theme={theme} onFocus={onFieldFocus} icon="at-sign" value={username} onChangeText={v=>setUsername(v.toLowerCase().replace(/[^a-z0-9._-]/g,''))} placeholder="Username" autoCapitalize="none"/>
           {usernameState==='checking'&&<Text style={[styles.fieldHint,{color:theme.muted}]}>Checking username...</Text>}
           {usernameState==='available'&&!!username.trim()&&<Text style={[styles.fieldHint,{color:theme.accent}]}>Username available</Text>}
           {usernameState==='taken'&&<Text style={[styles.fieldHint,{color:theme.danger}]}>user name already exist</Text>}
@@ -338,7 +342,7 @@ export default function OnboardingScreen({theme}){
 
           <View style={[styles.field,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
             <Feather name="map-pin" size={18} color={theme.muted}/>
-            <TextInput value={city} onChangeText={setCity} placeholder="City" placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text}]}/>
+            <TextInput value={city} onChangeText={setCity} onFocus={onFieldFocus} placeholder="City" placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text}]}/>
             <Pressable onPress={detectLocation} disabled={locating} hitSlop={8} accessibilityLabel="Detect current city">
               {locating?<ActivityIndicator size="small" color={theme.accent}/>:<Feather name="navigation" size={17} color={theme.accent}/>}
             </Pressable>
@@ -351,8 +355,8 @@ export default function OnboardingScreen({theme}){
             <Feather name="chevron-down" size={17} color={theme.muted}/>
           </Pressable>
           {!!institutionError&&<Text style={[styles.fieldHint,{color:theme.danger}]}>{institutionError}</Text>}
-          <Field theme={theme} icon="edit-3" value={bio} onChangeText={setBio} placeholder="Bio" multiline maxLength={280}/>
-          <Field theme={theme} icon="hash" value={interests} onChangeText={setInterests} placeholder="Interests, separated by commas"/>
+          <Field theme={theme} onFocus={onFieldFocus} icon="edit-3" value={bio} onChangeText={setBio} placeholder="Bio" multiline maxLength={280}/>
+          <Field theme={theme} onFocus={onFieldFocus} icon="hash" value={interests} onChangeText={setInterests} placeholder="Interests, separated by commas"/>
 
           <Text style={[styles.privacy,{color:theme.muted}]}>Your full DOB, country safety state and time zone stay private.</Text>
           {!!error&&<Text style={[styles.error,{color:theme.danger}]}>{error}</Text>}
@@ -397,7 +401,7 @@ export default function OnboardingScreen({theme}){
           <Text style={[styles.pickerCopy,{color:theme.muted}]}>Schools, colleges and universities near your detected location.</Text>
           <View style={[styles.pickerSearch,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
             <Feather name="search" size={17} color={theme.muted}/>
-            <TextInput value={campusQuery} onChangeText={setCampusQuery} placeholder="Search nearby institutions" placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text}]}/>
+            <TextInput value={campusQuery} onChangeText={setCampusQuery} onFocus={onFieldFocus} placeholder="Search nearby institutions" placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text}]}/>
           </View>
           {institutionLoading?<View style={styles.pickerLoading}><ActivityIndicator color={theme.accent}/><Text style={[styles.pickerCopy,{color:theme.muted}]}>Finding nearby institutions...</Text></View>:
             <ScrollView style={{flex:1}} showsVerticalScrollIndicator={false} contentContainerStyle={styles.pickerList}>
@@ -425,7 +429,7 @@ function Field({theme,icon,multiline=false,...props}){
 
 const styles=StyleSheet.create({
   root:{flex:1},
-  scroll:{flexGrow:1,justifyContent:'center',padding:18},
+  scroll:{flexGrow:1,justifyContent:'center',padding:18,paddingBottom:200},
   card:{width:'100%',maxWidth:590,alignSelf:'center',borderWidth:1,borderRadius:28,padding:22},
   logo:{width:180,height:45,alignSelf:'center',marginBottom:20},
   kicker:{fontSize:10,fontWeight:'900',letterSpacing:1.7,textAlign:'center'},

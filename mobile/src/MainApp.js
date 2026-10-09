@@ -1,6 +1,7 @@
 import React,{useCallback,useEffect,useRef,useState} from 'react';
 import {Image,Platform,Pressable,StyleSheet,Text,useWindowDimensions,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import {DiscoverIcon,DropsIcon,PingIcon,SceneIcon} from './icons';
 import {useSession} from './session';
 import ScenesScreen from './screens/ScenesScreen';
@@ -10,11 +11,17 @@ import EditProfileScreen from './screens/EditProfileScreen';
 import ProfileMenuScreen from './screens/ProfileMenuScreen';
 import UserProfileScreen from './screens/UserProfileScreen';
 import CreateOptionsScreen from './screens/CreateOptionsScreen';
+import CreateFeatureScreen from './screens/CreateFeatureScreen';
 import CreateSceneSheet from './components/CreateSceneSheet';
 import SlidePage from './components/SlidePage';
+import CampusStatusSlider from './components/CampusStatusSlider';
+import FeatureLandingScreen from './screens/FeatureLandingScreen';
 
 const LOGO_DARK=require('../assets/studenthood-logo.png');
 const LOGO_LIGHT=require('../assets/studenthood-logo-light.png');
+
+const SHARED_SCENE_LINK=/^studenthood:\/\/scene\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})(?:[/?#]|$)/i;
+function getSharedSceneFromLink(url){return typeof url==='string'?url.match(SHARED_SCENE_LINK)?.[1]||null:null;}
 
 export default function MainApp({theme}){
   const {profile,safety,refreshAccount}=useSession();
@@ -23,6 +30,7 @@ export default function MainApp({theme}){
   const [tab,setTab]=useState('Scenes');
   const [pages,setPages]=useState([]);
   const [reloadKey,setReloadKey]=useState(0);
+  const [focusScene,setFocusScene]=useState(null);
   const nextPageId=useRef(0);
 
   const pushPage=useCallback(page=>{
@@ -46,6 +54,22 @@ export default function MainApp({theme}){
     setPages([]);
   },[]);
 
+  // A shared link only contains a Scene ID; the viewer fetches it through
+  // Supabase RLS before opening, so a forwarded private link grants no access.
+  const openSharedLink=useCallback(url=>{
+    const sceneId=getSharedSceneFromLink(url);
+    if(!sceneId)return;
+    setPages([]);
+    setTab('Scenes');
+    setFocusScene({id:sceneId,token:Date.now()});
+  },[]);
+  useEffect(()=>{
+    let mounted=true;
+    Linking.getInitialURL().then(url=>{if(mounted)openSharedLink(url)}).catch(()=>{});
+    const listener=Linking.addEventListener('url',event=>openSharedLink(event.url));
+    return()=>{mounted=false;listener.remove()};
+  },[openSharedLink]);
+
   const afterProfileSaved=useCallback(async()=>{
     await refreshAccount();
     setReloadKey(x=>x+1);
@@ -62,15 +86,21 @@ export default function MainApp({theme}){
           kind={page.kind}
           theme={theme}
           profile={profile}
+          pingTarget={page.pingTarget||null}
           onBack={goBack}
           onTab={selectTab}
           onOpenProfile={userId=>showPage({type:'student-profile',userId})}
+          onOpenFeature={kind=>showPage({type:'feature',kind})}
         />;
+      case 'feature':
+        return <FeatureLandingScreen kind={page.kind} theme={theme} profile={profile} reloadKey={reloadKey} onBack={goBack} onDiscover={()=>showPage({type:'hub',kind:'Discover'})} onCreate={()=>showPage({type:'create-feature',kind:page.kind})}/>;
       case 'student-profile':
         return <UserProfileScreen
           userId={page.userId}
+          currentUserId={profile?.id}
           theme={theme}
           onBack={goBack}
+          onPing={pingTarget=>showPage({type:'hub',kind:'Ping',pingTarget})}
         />;
       case 'profile-menu':
         return <ProfileMenuScreen
@@ -90,14 +120,17 @@ export default function MainApp({theme}){
           onBack={goBack}
           onSaved={afterProfileSaved}
         />;
+      case 'create-feature':
+        return <CreateFeatureScreen kind={page.kind} theme={theme} profile={profile} onBack={goBack} onSaved={()=>setReloadKey(x=>x+1)}/>;
       case 'create-options':
         return <CreateOptionsScreen
           theme={theme}
           onBack={goBack}
           onScene={()=>showPage({type:'create-scene'})}
-          onPulse={()=>selectTab('Pulse')}
-          onHang={()=>selectTab('Hangs')}
-          onGig={()=>selectTab('Gigs')}
+          onPulse={()=>showPage({type:'create-feature',kind:'Pulse'})}
+          onHang={()=>showPage({type:'create-feature',kind:'Hangs'})}
+          onCrew={()=>showPage({type:'create-feature',kind:'Crews'})}
+          onGig={()=>showPage({type:'create-feature',kind:'Gigs'})}
         />;
       case 'create-scene':
         return <CreateSceneSheet
@@ -118,8 +151,12 @@ export default function MainApp({theme}){
       profile={profile}
       safety={safety}
       reloadKey={reloadKey}
+      focusScene={focusScene}
       onOpenProfile={userId=>showPage({type:'student-profile',userId})}
       onOpenCreate={()=>showPage({type:'create-options'})}
+      onOpenPulse={()=>showPage({type:'feature',kind:'Pulse'})}
+      onOpenDiscover={()=>showPage({type:'hub',kind:'Discover'})}
+      onOpenDiscover={()=>showPage({type:'hub',kind:'Discover'})}
     />}
     {tab==='Profile'&&<ProfileScreen
       theme={theme}
@@ -129,16 +166,18 @@ export default function MainApp({theme}){
       onEdit={()=>showPage({type:'edit-profile'})}
       onEditPicture={()=>showPage({type:'edit-profile',photoOnly:true})}
     />}
-    {tab==='Pulse'&&<Placeholder theme={theme} icon="circle" title="Pulse" copy="Quick campus moments live here. Pulse creation is being wired next."/>}
-    {tab==='Hangs'&&<Placeholder theme={theme} icon="calendar" title="Hangs" copy="Campus plans and meetups live here. Hang creation is being wired next."/>}
-    {tab==='Gigs'&&<Placeholder theme={theme} icon="briefcase" title="Gigs" copy="Student opportunities live here. Gig creation is being wired next."/>}
+
+    {tab==='Hangs'&&<FeatureLandingScreen kind="Hangs" theme={theme} profile={profile} reloadKey={reloadKey} onDiscover={()=>showPage({type:'hub',kind:'Discover'})} onCreate={()=>showPage({type:'create-feature',kind:'Hangs'})}/>}
+    {tab==='Gigs'&&<FeatureLandingScreen kind="Gigs" theme={theme} profile={profile} reloadKey={reloadKey} onDiscover={()=>showPage({type:'hub',kind:'Discover'})} onCreate={()=>showPage({type:'create-feature',kind:'Gigs'})}/>}
     <BottomDial theme={theme} tab={tab} onTab={selectTab} onCreate={()=>showPage({type:'create-options'})} isTablet={isTablet} screenWidth={width}/>
+    {tab==='Scenes'&&<CampusStatusSlider theme={theme} profile={profile} onSaved={afterProfileSaved}/>}
 
     {pages.map((page,index)=><SlidePage
       key={page.key}
       theme={theme}
       active={index===pages.length-1&&!page.closing}
       closing={page.closing}
+      swipeBack={page.type==='student-profile'}
       onBack={goBack}
       onExited={()=>pageExited(page.key)}
     >{makePage(page)}</SlidePage>)}

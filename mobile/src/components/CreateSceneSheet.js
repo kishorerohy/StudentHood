@@ -1,10 +1,11 @@
 import React,{useState} from 'react';
 import {
-  ActivityIndicator,Image,Pressable,ScrollView,StyleSheet,Text,TextInput,View
+  ActivityIndicator,Image,KeyboardAvoidingView,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,View
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import {Feather} from '@expo/vector-icons';
 import {createScene} from '../scenes';
+import useKeyboardAwareForm from '../hooks/useKeyboardAwareForm';
 
 export default function CreateSceneSheet({visible,onClose,onCreated,theme}){
   const [body,setBody]=useState('');
@@ -12,6 +13,7 @@ export default function CreateSceneSheet({visible,onClose,onCreated,theme}){
   const [visibility,setVisibility]=useState('campus');
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
+  const {scrollRef,onFieldFocus,onScrollLayout}=useKeyboardAwareForm();
 
   async function chooseMedia(){
     setError('');
@@ -51,7 +53,7 @@ export default function CreateSceneSheet({visible,onClose,onCreated,theme}){
   }
 
   if(!visible) return null;
-  return <View style={[styles.root,{backgroundColor:theme.bg}]}>
+  return <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':undefined} style={[styles.root,{backgroundColor:theme.bg}]}>
       <View style={styles.header}>
         <Pressable onPress={onClose} style={[styles.iconBtn,{backgroundColor:theme.surface}]}><Feather name="x" size={21} color={theme.text}/></Pressable>
         <Text style={[styles.title,{color:theme.text}]}>New Scene</Text>
@@ -60,10 +62,11 @@ export default function CreateSceneSheet({visible,onClose,onCreated,theme}){
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} onLayout={onScrollLayout} contentContainerStyle={styles.content} keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'} keyboardShouldPersistTaps="handled">
         <TextInput
           value={body}
           onChangeText={setBody}
+          onFocus={onFieldFocus}
           multiline
           maxLength={1200}
           placeholder="What's happening?"
@@ -101,7 +104,7 @@ export default function CreateSceneSheet({visible,onClose,onCreated,theme}){
 
         {!!error&&<Text style={[styles.error,{color:theme.danger}]}>{error}</Text>}
       </ScrollView>
-  </View>;
+  </KeyboardAvoidingView>;
 }
 
 const styles=StyleSheet.create({
@@ -111,7 +114,7 @@ const styles=StyleSheet.create({
   title:{fontSize:18,fontWeight:'800'},
   post:{minWidth:64,height:38,borderRadius:12,alignItems:'center',justifyContent:'center',paddingHorizontal:14},
   postText:{color:'#fff',fontSize:11,fontWeight:'900'},
-  content:{padding:16,paddingBottom:40},
+  content:{padding:16,paddingBottom:160},
   composer:{minHeight:160,borderWidth:1,borderRadius:18,padding:16,fontSize:17,textAlignVertical:'top'},
   preview:{marginTop:12,borderWidth:1,borderRadius:18,overflow:'hidden',position:'relative'},
   previewImage:{width:'100%',height:320},

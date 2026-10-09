@@ -1,5 +1,6 @@
 import {supabase} from './supabase';
-import {getAvatarDisplayUrl} from './api';
+import {getAvatarDisplayUrl,getProfileCard} from './api';
+import {Share} from 'react-native';
 
 const filterMap={
   'For you':'for_you',
@@ -109,4 +110,83 @@ export async function addSceneComment(sceneId,body){
     .single();
   if(error) throw error;
   return data;
+}
+
+
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function sceneShareUrl(sceneId){
+  if(!UUID.test(String(sceneId||''))) throw new Error('Invalid Scene link.');
+  // Landing page carries only a random Scene ID, never profile/media or a
+  // signed private-storage URL. Actual viewing always checks signed-in RLS.
+  return 'https://kishorerohy.github.io/StudentHood/scene.html?id='+sceneId.toLowerCase();
+}
+
+export async function shareScene(sceneId){
+  const url=sceneShareUrl(sceneId);
+  return Share.share({
+    title:'StudentHood Scene',
+    message:'View this Scene on StudentHood: '+url,
+    url
+  });
+}
+
+export async function fetchSharedScene(sceneId){
+  if(!UUID.test(String(sceneId||''))) throw new Error('This Scene link is invalid.');
+  const {data,error}=await supabase.from('scenes')
+    .select('id,author_id,campus_name,body,media_url,media_type,visibility,content_class,moderation_status,created_at')
+    .eq('id',sceneId).maybeSingle();
+  if(error) throw error;
+  // RLS must be satisfied for every recipient; do not leak whether a private
+  // Scene exists if the viewer is ineligible or logged out.
+  if(!data) throw new Error("This Scene isn't available to your account.");
+  let author=null;
+  try{author=await getProfileCard(data.author_id)}catch{}
+  return signMedia({
+    ...data,
+    author_name:author?.full_name||null,
+    author_username:author?.username||null,
+    author_campus_name:author?.campus_name||null,
+    author_avatar_url:author?.avatar_url||null,
+    // Counts are not included in this RLS-scoped single-row request.
+    comment_count:null,
+    like_count:null
+  });
+}
+
+
+export async function deleteOwnScene(sceneId){
+  const {data:{user},error:authError}=await supabase.auth.getUser();
+  if(authError)throw authError;
+  if(!user)throw new Error('Sign in to delete your Scene.');
+  const {data,error}=await supabase.from('scenes')
+    .delete().eq('id',sceneId).eq('author_id',user.id)
+    .select('id').maybeSingle();
+  if(error)throw error;
+  if(data?.id!==sceneId)throw new Error('Could not verify that your Scene was deleted.');
+  return true;
+}
+
+const REPORT_REASONS=['Inappropriate content','Harassment or bullying','Spam or scam','Other safety concern'];
+export {REPORT_REASONS};
+
+export async function reportScene(sceneId,reason){
+  if(!UUID.test(String(sceneId||'')))throw new Error('Invalid Scene.');
+  if(!REPORT_REASONS.includes(reason))throw new Error('Choose a report reason.');
+  const {data:{user},error:authError}=await supabase.auth.getUser();
+  if(authError)throw authError;
+  if(!user?.email)throw new Error('Sign in with a verified email to report a Scene.');
+  const name=String(user.user_metadata?.full_name||user.user_metadata?.name||'StudentHood student').slice(0,100);
+  const {error}=await supabase.from('support_requests').insert({
+    name,
+    email:user.email,
+    category:'report',
+    subject:'StudentHood Scene safety report',
+    message:'Scene ID: '+sceneId+'\nReport reason: '+reason+'\nSubmitted by account: '+user.id,
+    status:'new'
+  });
+  if(error)throw error;
+  // support_requests intentionally has INSERT-only access: successful insert
+  // response is the confirmation. No client can list/report other people.
+  return true;
 }

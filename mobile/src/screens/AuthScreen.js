@@ -14,6 +14,7 @@ import {
 import {Feather} from '@expo/vector-icons';
 import {requestPasswordReset,signInWithEmail,signUpWithEmail,startGoogleAuth} from '../auth';
 import {TEST_FRESH_START} from '../config';
+import useKeyboardAwareForm from '../hooks/useKeyboardAwareForm';
 
 const LOGO_DARK=require('../../assets/studenthood-logo.png');
 const LOGO_LIGHT=require('../../assets/studenthood-logo-light.png');
@@ -26,6 +27,7 @@ export default function AuthScreen({theme}){
   const [status,setStatus]=useState('');
   const [error,setError]=useState('');
   const [busy,setBusy]=useState(false);
+  const {scrollRef,onFieldFocus,onScrollLayout}=useKeyboardAwareForm();
 
   async function submit(){
     setError('');
@@ -86,10 +88,12 @@ export default function AuthScreen({theme}){
 
   return <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':undefined} style={[styles.root,{backgroundColor:theme.bg}]}>
     <ScrollView
+      ref={scrollRef}
+      onLayout={onScrollLayout}
       style={styles.scroll}
       contentContainerStyle={[styles.scrollContent,mode==='signin'&&styles.scrollContentCentered]}
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode={Platform.OS==='ios'?'interactive':'on-drag'}
+      keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'}
       showsVerticalScrollIndicator={false}
       overScrollMode="never"
     >
@@ -107,10 +111,10 @@ export default function AuthScreen({theme}){
           </Pressable>)}
         </View>
 
-        {mode==='signup'&&<Input icon="user" placeholder="Full name" value={fullName} onChangeText={setFullName} theme={theme} autoCapitalize="words"/>}
+        {mode==='signup'&&<Input onFocus={onFieldFocus} icon="user" placeholder="Full name" value={fullName} onChangeText={setFullName} theme={theme} autoCapitalize="words"/>}
 
-        <Input icon="mail" placeholder="Email" value={email} onChangeText={setEmail} theme={theme} keyboardType="email-address" autoCapitalize="none" autoComplete="email"/>
-        <Input icon="lock" placeholder="Password" value={password} onChangeText={setPassword} theme={theme} secureTextEntry autoCapitalize="none"/>
+        <Input onFocus={onFieldFocus} icon="mail" placeholder="Email" value={email} onChangeText={setEmail} theme={theme} keyboardType="email-address" autoCapitalize="none" autoComplete="email"/>
+        <Input onFocus={onFieldFocus} icon="lock" placeholder="Password" value={password} onChangeText={setPassword} theme={theme} secureTextEntry autoCapitalize="none"/>
 
         {mode==='signin'&&<Pressable onPress={resetPassword} disabled={busy}><Text style={[styles.forgot,{color:theme.accent}]}>Forgot password?</Text></Pressable>}
 
@@ -146,7 +150,7 @@ function Input({icon,theme,...props}){
 const styles=StyleSheet.create({
   root:{flex:1},
   scroll:{flex:1},
-  scrollContent:{flexGrow:1,width:'100%',maxWidth:536,alignSelf:'center',paddingHorizontal:18,paddingTop:18,paddingBottom:32},
+  scrollContent:{flexGrow:1,width:'100%',maxWidth:536,alignSelf:'center',paddingHorizontal:18,paddingTop:18,paddingBottom:160},
   scrollContentCentered:{justifyContent:'center'},
   card:{width:'100%',alignSelf:'center',borderWidth:1,borderRadius:28,paddingHorizontal:22,paddingTop:18,paddingBottom:22},
   logo:{width:154,height:38,alignSelf:'center',marginBottom:16},

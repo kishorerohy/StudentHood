@@ -1,64 +1,139 @@
 import React,{useEffect,useState} from 'react';
-import {ActivityIndicator,Image,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
+import {ActivityIndicator,Pressable,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
-import {getAvatarDisplayUrl,getProfileCard} from '../api';
+import {getAvatarDisplayUrl,getPeepConnection,getProfileCard,getVisibleProfileScenes,getVisibleSceneCount,sendPeepRequest} from '../api';
+import StudentProfileView from '../components/StudentProfileView';
 
-export default function UserProfileScreen({userId,theme,onBack}){
- const [card,setCard]=useState(null);
- const [loading,setLoading]=useState(true);
- const [avatar,setAvatar]=useState(null);
- useEffect(()=>{
-  let live=true;
-  setLoading(true);
-  getProfileCard(userId).then(async result=>{
-   if(!live)return;
-   setCard(result);
-   const image=await getAvatarDisplayUrl(result?.avatar_url);
-   if(live)setAvatar(image);
-  }).catch(()=>{if(live)setCard(null)}).finally(()=>{if(live)setLoading(false)});
-  return()=>{live=false};
- },[userId]);
- return <View style={[styles.root,{backgroundColor:theme.bg}]}>
-  <View style={[styles.header,{borderBottomColor:theme.line}]}>
-   <Pressable onPress={onBack} style={styles.back} accessibilityLabel="Back"><Feather name="arrow-left" size={22} color={theme.text}/></Pressable>
-   <Text style={[styles.headerTitle,{color:theme.text}]}>Student profile</Text>
-   <View style={{width:42}}/>
-  </View>
-  <ScrollView contentContainerStyle={styles.content}>
-   {loading?<ActivityIndicator color={theme.accent} style={{marginTop:80}}/>:
-    !card?<Text style={[styles.unavailable,{color:theme.muted}]}>This profile isn't available to you.</Text>:
-    <View style={[styles.hero,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-     <View style={[styles.avatar,{backgroundColor:theme.surface2}]}>
-      {avatar?<Image source={{uri:avatar}} style={styles.avatarImage}/>:<Feather name="user" size={45} color={theme.accent}/>}
-     </View>
-     <Text style={[styles.name,{color:theme.text}]}>{card.full_name||card.username||'Student'}</Text>
-     {!!card.username&&<Text style={[styles.handle,{color:theme.muted}]}>@{card.username}</Text>}
-     {!!card.bio&&<Text style={[styles.bio,{color:theme.muted}]}>{card.bio}</Text>}
-     {!!card.campus_name&&<View style={styles.info}><Feather name="book-open" color={theme.accent} size={16}/><Text style={[styles.infoText,{color:theme.text}]}>{card.campus_name}</Text></View>}
-     {!!card.city&&<View style={styles.info}><Feather name="map-pin" color={theme.accent} size={16}/><Text style={[styles.infoText,{color:theme.text}]}>{card.city}</Text></View>}
-     <View style={[styles.pingState,{backgroundColor:theme.surface2}]}>
-      <Feather name="message-circle" size={17} color={theme.muted}/>
-      <Text style={[styles.pingCopy,{color:theme.muted}]}>{card.can_ping?'Ping messaging is coming soon.':'Ping is available according to Peep and safety permissions.'}</Text>
-     </View>
+export default function UserProfileScreen({userId,currentUserId,theme,onBack,onPing}){
+  const [card,setCard]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState('');
+  const [avatar,setAvatar]=useState(null);
+  const [connection,setConnection]=useState(null);
+  const [peepReady,setPeepReady]=useState(false);
+  const [peepError,setPeepError]=useState('');
+  const [requestBusy,setRequestBusy]=useState(false);
+  const [scenes,setScenes]=useState([]);
+  const [sceneCount,setSceneCount]=useState(null);
+
+  useEffect(()=>{
+    let live=true;
+    setLoading(true);
+    setCard(null);
+    setError('');
+    setAvatar(null);
+    setConnection(null);
+    setPeepReady(false);
+    setPeepError('');
+    setScenes([]);
+    setSceneCount(null);
+
+    (async()=>{
+      try{
+        const result=await getProfileCard(userId);
+        if(!live)return;
+        setCard(result);
+        if(!result)return;
+        const [photo,relationship,recent,count]=await Promise.allSettled([
+          getAvatarDisplayUrl(result.avatar_url),
+          getPeepConnection(userId),
+          getVisibleProfileScenes(userId,{limit:12}),
+          getVisibleSceneCount(userId)
+        ]);
+        if(!live)return;
+        if(photo.status==='fulfilled')setAvatar(photo.value);
+        if(relationship.status==='fulfilled'){
+          setConnection(relationship.value);
+          setPeepReady(true);
+        }else{
+          setPeepError(relationship.reason?.message||'Unable to check Peep status.');
+        }
+        if(recent.status==='fulfilled')setScenes(recent.value);
+        if(count.status==='fulfilled')setSceneCount(count.value);
+      }catch(e){
+        if(live)setError(e?.message||'Unable to load this student profile.');
+      }finally{
+        if(live)setLoading(false);
+      }
+    })();
+    return()=>{live=false};
+  },[userId]);
+
+  const isPeep=!!card?.is_peep||connection?.status==='accepted';
+  const outgoing=connection?.status==='pending'&&connection?.requester_id!==userId;
+  const incoming=connection?.status==='pending'&&connection?.requester_id===userId;
+  const isSelf=!!currentUserId&&currentUserId===userId;
+  const canRequest=!!card&&!isSelf&&!isPeep&&!connection&&peepReady&&!requestBusy;
+  const peepLabel=isSelf?'Your profile':requestBusy?'Sending…':isPeep?'Peeps':outgoing?'Request sent':incoming?'Request received':connection?'Unavailable':'Add Peep';
+  const canPing=!!card?.can_ping;
+
+  async function addPeep(){
+    if(!canRequest)return;
+    setRequestBusy(true);
+    setPeepError('');
+    try{
+      const result=await sendPeepRequest(userId);
+      setConnection(result);
+    }catch(e){
+      setPeepError(e?.message||'Could not send the Peep request.');
+    }finally{
+      setRequestBusy(false);
+    }
+  }
+
+  if(loading)return <View style={[styles.center,{backgroundColor:theme.bg}]}>
+    <ActivityIndicator color={theme.accent}/>
+    <Text style={{color:theme.muted}}>Loading student profile…</Text>
+  </View>;
+  if(error||!card)return <View style={[styles.center,{backgroundColor:theme.bg}]}>
+    <Pressable onPress={onBack} style={styles.back}><Feather name="arrow-left" size={22} color={theme.text}/></Pressable>
+    <Text style={{color:theme.muted,textAlign:'center'}}>{error||"This profile isn't available to you."}</Text>
+  </View>;
+
+  return <StudentProfileView
+    theme={theme}
+    student={card}
+    avatarUrl={avatar}
+    scenes={scenes}
+    sceneCount={sceneCount}
+    onBack={onBack}
+    actions={<View style={styles.actionArea}>
+      <View style={styles.actions}>
+        <Pressable
+          onPress={addPeep}
+          disabled={!canRequest}
+          accessibilityRole="button"
+          accessibilityState={{disabled:!canRequest}}
+          style={[styles.action,{backgroundColor:canRequest?theme.accent:theme.surface2,borderColor:canRequest?theme.accent:theme.line}]}>
+          <Feather name={isPeep?'check':outgoing?'clock':'user-plus'} size={18} color={canRequest?'#fff':theme.muted}/>
+          <Text style={[styles.actionText,{color:canRequest?'#fff':theme.text}]}>{peepLabel}</Text>
+        </Pressable>
+        <Pressable
+          onPress={()=>onPing?.({id:card.id,full_name:card.full_name,username:card.username})}
+          disabled={!canPing}
+          accessibilityRole="button"
+          accessibilityState={{disabled:!canPing}}
+          style={[styles.action,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
+          <Feather name="message-circle" size={18} color={canPing?theme.text:theme.muted}/>
+          <Text style={[styles.actionText,{color:canPing?theme.text:theme.muted}]}>Ping</Text>
+        </Pressable>
+      </View>
+      {!!peepError&&<Text accessibilityRole="alert" style={[styles.note,{color:theme.danger}]}>{peepError}</Text>}
+      {outgoing&&<Text style={[styles.note,{color:theme.muted}]}>Peep request sent. Awaiting acceptance.</Text>}
+      {incoming&&<Text style={[styles.note,{color:theme.muted}]}>This student has already sent you a Peep request.</Text>}
+      <Text style={[styles.note,{color:theme.muted}]}>
+        {canPing?'Ping messaging is coming soon. No message has been sent.':'Ping is restricted by Peep and safety permissions.'}
+      </Text>
     </View>}
-  </ScrollView>
- </View>;
+  />;
 }
+
 const styles=StyleSheet.create({
- root:{flex:1},
- header:{height:64,borderBottomWidth:StyleSheet.hairlineWidth,flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:16},
- back:{height:42,width:42,alignItems:'center',justifyContent:'center'},
- headerTitle:{fontSize:19,fontWeight:'800'},
- content:{padding:18,paddingBottom:60,maxWidth:800,width:'100%',alignSelf:'center'},
- hero:{borderWidth:1,borderRadius:22,padding:22,alignItems:'center'},
- avatar:{width:108,height:108,borderRadius:54,overflow:'hidden',alignItems:'center',justifyContent:'center'},
- avatarImage:{width:'100%',height:'100%'},
- name:{fontSize:25,fontWeight:'900',marginTop:15,textAlign:'center'},
- handle:{fontSize:12,marginTop:6},
- bio:{fontSize:13,marginTop:13,textAlign:'center',lineHeight:19},
- info:{marginTop:13,flexDirection:'row',alignItems:'center',gap:9},
- infoText:{fontSize:12,fontWeight:'700'},
- pingState:{width:'100%',marginTop:25,padding:15,borderRadius:15,flexDirection:'row',alignItems:'center',gap:12},
- pingCopy:{fontSize:11,lineHeight:17,flex:1},
- unavailable:{marginTop:80,textAlign:'center',fontSize:13}
+  center:{flex:1,alignItems:'center',justifyContent:'center',gap:14,padding:25},
+  back:{position:'absolute',top:16,left:16,padding:10},
+  actionArea:{paddingHorizontal:20,paddingTop:23},
+  actions:{flexDirection:'row',gap:12},
+  action:{flex:1,minHeight:50,borderWidth:1,borderRadius:25,paddingHorizontal:8,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8},
+  actionText:{fontWeight:'800',fontSize:12,textAlign:'center'},
+  note:{marginTop:10,textAlign:'center',fontSize:11,lineHeight:16}
 });

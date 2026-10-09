@@ -12,6 +12,7 @@ export function SessionProvider({children}){
   const [policy,setPolicy]=useState(null);
   const [safety,setSafety]=useState(null);
   const [loading,setLoading]=useState(true);
+  const [resolvedUserId,setResolvedUserId]=useState(null);
   const [error,setError]=useState('');
   const recheckTimer=useRef(null);
   const sessionRef=useRef(null);
@@ -29,10 +30,12 @@ export function SessionProvider({children}){
       setProfile(null);
       setPolicy(null);
       setSafety(null);
+      setResolvedUserId(null);
       return;
     }
 
     let nextProfile=await getMyProfile();
+    if(sessionRef.current?.user?.id!==nextSession.user.id)return;
 
     if(
       nextProfile?.onboarding_completed
@@ -67,6 +70,7 @@ export function SessionProvider({children}){
       }
     }
 
+    if(sessionRef.current?.user?.id!==nextSession.user.id)return;
     setProfile(nextProfile);
 
     if(nextProfile?.date_of_birth&&nextProfile?.country_code&&nextProfile?.time_zone){
@@ -74,6 +78,7 @@ export function SessionProvider({children}){
         getAccessPolicy(),
         getEffectiveSafety()
       ]);
+      if(sessionRef.current?.user?.id!==nextSession.user.id)return;
       setPolicy(nextPolicy);
       setSafety(nextSafety);
 
@@ -90,6 +95,11 @@ export function SessionProvider({children}){
       setPolicy(null);
       setSafety(null);
     }
+    // Only mark routing ready after the profile AND policy have been restored.
+    // Null profiles for genuinely new accounts are a completed check, not an error.
+    if(sessionRef.current?.user?.id!==nextSession.user.id)return;
+    setResolvedUserId(nextSession.user.id);
+    setError('');
   },[session,clearRecheck]);
 
   useEffect(()=>{
@@ -118,9 +128,18 @@ export function SessionProvider({children}){
 
     const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,next)=>{
       if(!mounted) return;
+      const previousUserId=sessionRef.current?.user?.id||null;
+      const nextUserId=next?.user?.id||null;
       setSession(next);
       sessionRef.current=next;
       setError('');
+      if(previousUserId!==nextUserId){
+        // Never route based on a previous account's profile on account switch.
+        setProfile(null);
+        setPolicy(null);
+        setSafety(null);
+        setResolvedUserId(null);
+      }
 
       // Supabase auth callbacks run under the auth client's lock.
       // Calling the async Supabase APIs inside this callback can deadlock.
@@ -140,7 +159,10 @@ export function SessionProvider({children}){
         setProfile(null);
         setPolicy(null);
         setSafety(null);
+        setResolvedUserId(null);
       }
+      // Initialization may still be restoring the signed-in profile. App.js
+      // guards on resolvedUserId instead of showing profile setup prematurely.
       setLoading(false);
     });
 
@@ -162,11 +184,12 @@ export function SessionProvider({children}){
 
   const value=useMemo(()=>({
     session,profile,policy,safety,loading,error,
+    resolvedUserId,
     isSignedIn:!!session?.user,
     refreshAccount:()=>refreshAccount(session),
     setProfile,
     setPolicy
-  }),[session,profile,policy,safety,loading,error,refreshAccount]);
+  }),[session,profile,policy,safety,loading,error,resolvedUserId,refreshAccount]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

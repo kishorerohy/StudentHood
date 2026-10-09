@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0b0d0f">
+<title>Shared Scene | StudentHood</title>
+<link rel="icon" href="assets/studenthood-tab-v3-64.png">
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100dvh;background:#0b0d0f;color:#f4f5f6;font:16px/1.5 system-ui,-apple-system,sans-serif;display:grid;place-items:center;padding:24px}
+main{max-width:470px;width:100%;text-align:center;padding:30px 25px;border:1px solid #333942;border-radius:25px;background:#151a20}
+.logo{display:block;width:178px;max-width:75%;height:auto;margin:0 auto 31px}h1{font-size:26px;letter-spacing:-.5px;margin:0 0 12px}p{color:#b3bdc7;margin:0 auto 22px;max-width:360px;font-size:14px}
+a.cta{display:block;background:#e38373;color:#0b0d0f;padding:14px 18px;border-radius:16px;text-decoration:none;font-weight:750;margin:14px 0}
+a.back{color:#c8d1d9;font-size:13px}small{display:block;color:#8793a0;margin-top:20px}
+</style>
+</head>
+<body>
+<main>
+<img class="logo" src="assets/studenthood-logo.png" alt="StudentHood">
+<h1>Someone shared a Scene with you.</h1>
+<p id="description">Open the StudentHood app to view it. Only people with permission can see the Scene.</p>
+<a class="cta" id="open" href="index.html">Open in StudentHood</a>
+<a class="back" href="index.html">Visit StudentHood</a>
+<small>StudentHood doesn't display private Scene content outside your signed-in account.</small>
+</main>
+<script>
+(function(){
+  const id=new URLSearchParams(window.location.search).get('id')||'';
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)){
+    document.getElementById('description').textContent='This Scene link is invalid. Please ask for a new share link.';
+    document.getElementById('open').textContent='Visit StudentHood';
+    return;
+  }
+  // The app validates eligibility using authenticated Supabase RLS.
+  document.getElementById('open').href='studenthood://scene/'+encodeURIComponent(id.toLowerCase());
+})();
+</script>
+</body>
+</html>

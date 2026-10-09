@@ -1,19 +1,20 @@
 import React,{useEffect,useState} from 'react';
-import {ActivityIndicator,Image,KeyboardAvoidingView,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from 'react-native';
+import {ActivityIndicator,Alert,Image,KeyboardAvoidingView,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,ToastAndroid,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import {getAvatarDisplayUrl,saveMyProfileChanges,uploadMyAvatar} from '../api';
+import useKeyboardAwareForm from '../hooks/useKeyboardAwareForm';
 
 export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnly=false}){
   const [fullName,setFullName]=useState(profile?.full_name||'');
   const [bio,setBio]=useState(profile?.bio||'');
   const [city,setCity]=useState(profile?.city||'');
   const [campus,setCampus]=useState(profile?.campus_name||'');
-  const [presence,setPresence]=useState(profile?.campus_presence||'not_shared');
   const [avatar,setAvatar]=useState(null);
   const [newPhoto,setNewPhoto]=useState(null);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
+  const {scrollRef,onFieldFocus,onScrollLayout}=useKeyboardAwareForm();
 
   useEffect(()=>{
     let active=true;
@@ -42,15 +43,40 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
   }
 
   async function save(){
+    if(busy)return;
+    if(photoOnly&&!newPhoto){
+      setError('Choose a profile photo before saving.');
+      return;
+    }
     setBusy(true);
     setError('');
+    let profileSaved=false;
+    let photoSaved=false;
     try{
-      if(!photoOnly) await saveMyProfileChanges({fullName,bio,city,campusName:campus,campusPresence:presence});
-      if(newPhoto) await uploadMyAvatar(newPhoto);
+      // These calls verify the saved record before returning success.
+      if(!photoOnly){
+        await saveMyProfileChanges({fullName,bio,city,campusName:campus});
+        profileSaved=true;
+      }
+      if(newPhoto){
+        await uploadMyAvatar(newPhoto);
+        photoSaved=true;
+        setNewPhoto(null);
+      }
+      // Refresh the profile the student sees after returning from Edit.
       await onSaved?.();
+      if(Platform.OS==='android')ToastAndroid.show('Profile saved successfully',ToastAndroid.SHORT);
+      else Alert.alert('Profile saved','Your updated details are saved on StudentHood.');
       onBack?.();
     }catch(e){
-      setError(e?.message||'Could not update your profile.');
+      const detail=e?.message||'Could not update your profile.';
+      if(profileSaved||photoSaved){
+        setError('Some changes were saved, but the remaining changes or profile refresh failed: '+detail);
+        // Refresh any partial changes, but keep the editor open for retry.
+        try{await onSaved?.()}catch{}
+      }else{
+        setError(detail);
+      }
     }finally{setBusy(false)}
   }
 
@@ -61,11 +87,11 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
         <Feather name="arrow-left" size={22} color={theme.text}/>
       </Pressable>
       <Text style={[styles.headerText,{color:theme.text}]}>{photoOnly?'Profile picture':'Edit profile'}</Text>
-      <Pressable onPress={save} disabled={busy} accessibilityRole="button" style={[styles.save,{backgroundColor:theme.accent}]}>
+      <Pressable onPress={save} disabled={busy} accessibilityRole="button" accessibilityLabel="Save profile changes" accessibilityState={{disabled:busy}} style={[styles.save,{backgroundColor:theme.accent}]}>
         {busy?<ActivityIndicator size="small" color="#fff"/>:<Text style={styles.saveText}>Save</Text>}
       </Pressable>
     </View>
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'} onLayout={onScrollLayout} showsVerticalScrollIndicator={false}>
       <Pressable onPress={choosePhoto} accessibilityLabel="Choose profile photo" style={styles.photoControl}>
         <View style={[styles.avatar,{backgroundColor:theme.surface2}]}>
           {imageUri?<Image source={{uri:imageUri}} style={styles.avatarImage}/>:<Feather name="user" size={45} color={theme.accent}/>}
@@ -74,24 +100,14 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
         <Text style={[styles.photoHint,{color:theme.muted}]}>JPG, PNG or WebP, up to 5 MB</Text>
       </Pressable>
       {!photoOnly&&<>
-        <LabeledInput label="Full name" value={fullName} onChangeText={setFullName} theme={theme}/>
+        <LabeledInput label="Full name" value={fullName} onChangeText={setFullName} onFocus={onFieldFocus} theme={theme}/>
         <LabeledInput label="Username" value={profile?.username||''} editable={false} theme={theme}/>
         <Text style={[styles.hint,{color:theme.muted}]}>Your unique username is managed separately from profile details.</Text>
-        <LabeledInput label="Bio" value={bio} onChangeText={setBio} multiline maxLength={280} theme={theme}/>
-        <LabeledInput label="City" value={city} onChangeText={setCity} theme={theme}/>
-        <LabeledInput label="School, college or university" value={campus} onChangeText={setCampus} theme={theme}/>
+        <LabeledInput label="Bio" value={bio} onChangeText={setBio} multiline maxLength={280} onFocus={onFieldFocus} theme={theme}/>
+        <LabeledInput label="City" value={city} onChangeText={setCity} onFocus={onFieldFocus} theme={theme}/>
+        <LabeledInput label="School, college or university" value={campus} onChangeText={setCampus} onFocus={onFieldFocus} theme={theme} returnKeyType="done"/>
         <Text style={[styles.hint,{color:theme.muted}]}>Use your official institution name so classmates can find the same campus.</Text>
-        <Text style={[styles.fieldTitle,{color:theme.text}]}>Campus status</Text>
-        <View style={styles.statusChoices}>
-          {[
-            ['on_campus','On campus'],
-            ['off_campus','Off campus'],
-            ['not_shared','Not shared']
-          ].map(([value,label])=><Pressable key={value} onPress={()=>setPresence(value)} accessibilityState={{selected:presence===value}} style={[styles.status,{backgroundColor:presence===value?theme.accentSoft:theme.surface,borderColor:presence===value?theme.accent:theme.line}]}>
-            <Text style={[styles.statusText,{color:theme.text}]}>{label}</Text>
-          </Pressable>)}
-        </View>
-        <Text style={[styles.hint,{color:theme.muted}]}>This is a manual indicator, not live GPS tracking.</Text>
+        <Text style={[styles.hint,{color:theme.muted}]}>Choose your campus status from the transparent slider on Scenes.</Text>
       </>}
       {!!error&&<Text style={[styles.error,{color:theme.danger}]}>{error}</Text>}
     </ScrollView>
@@ -113,7 +129,7 @@ const styles=StyleSheet.create({
  headerText:{fontSize:19,fontWeight:'800'},
  save:{height:38,minWidth:64,borderRadius:12,alignItems:'center',justifyContent:'center',paddingHorizontal:12},
  saveText:{fontSize:12,color:'#fff',fontWeight:'800'},
- content:{padding:18,paddingBottom:60,width:'100%',maxWidth:760,alignSelf:'center'},
+ content:{padding:18,paddingBottom:140,width:'100%',maxWidth:760,alignSelf:'center'},
  photoControl:{alignItems:'center',marginVertical:18},
  avatar:{width:108,height:108,borderRadius:54,alignItems:'center',justifyContent:'center',overflow:'hidden'},
  avatarImage:{width:'100%',height:'100%'},
