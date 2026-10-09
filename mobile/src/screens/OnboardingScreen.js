@@ -73,7 +73,7 @@ export default function OnboardingScreen({theme}){
   const [campusQuery,setCampusQuery]=useState('');
   const usernameRequest=useRef(0);
   const locationAttempted=useRef(false);
-  const {scrollRef,onFieldFocus,onScrollLayout}=useKeyboardAwareForm();
+  const {scrollRef,onFieldFocus,onScrollLayout,onScroll,keyboardPadding}=useKeyboardAwareForm();
 
   const timeZone=profile?.time_zone||session?.user?.user_metadata?.time_zone||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
 
@@ -268,7 +268,10 @@ export default function OnboardingScreen({theme}){
     <ScrollView
       ref={scrollRef}
       onLayout={onScrollLayout}
-      contentContainerStyle={styles.scroll}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
+      automaticallyAdjustKeyboardInsets={Platform.OS==='ios'}
+      contentContainerStyle={[styles.scroll,{paddingBottom:200+keyboardPadding}]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'}
       showsVerticalScrollIndicator={false}
@@ -401,7 +404,7 @@ export default function OnboardingScreen({theme}){
           <Text style={[styles.pickerCopy,{color:theme.muted}]}>Schools, colleges and universities near your detected location.</Text>
           <View style={[styles.pickerSearch,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
             <Feather name="search" size={17} color={theme.muted}/>
-            <TextInput value={campusQuery} onChangeText={setCampusQuery} onFocus={onFieldFocus} placeholder="Search nearby institutions" placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text}]}/>
+            <TextInput value={campusQuery} onChangeText={setCampusQuery} placeholder="Search nearby institutions" placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text}]}/>
           </View>
           {institutionLoading?<View style={styles.pickerLoading}><ActivityIndicator color={theme.accent}/><Text style={[styles.pickerCopy,{color:theme.muted}]}>Finding nearby institutions...</Text></View>:
             <ScrollView style={{flex:1}} showsVerticalScrollIndicator={false} contentContainerStyle={styles.pickerList}>
