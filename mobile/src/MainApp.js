@@ -142,6 +142,7 @@ export default function MainApp({theme}){
       theme={theme}
       active={index===pages.length-1&&!page.closing}
       closing={page.closing}
+      swipeBack={page.type==='student-profile'}
       onBack={goBack}
       onExited={()=>pageExited(page.key)}
     >{makePage(page)}</SlidePage>)}
