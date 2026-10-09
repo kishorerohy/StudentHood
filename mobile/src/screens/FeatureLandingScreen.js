@@ -1,7 +1,8 @@
-import React,{useState} from 'react';
-import {Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
+import React,{useEffect,useState} from 'react';
+import {ActivityIndicator,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {SceneIcon} from '../icons';
+import {getMyStudentSubmissions} from '../creation';
 
 // UI shells with honest empty states. Hangs, Gigs, Crews and authored Pulse
 // do not yet have a released data service; never fabricate entries or RSVPs.
@@ -40,9 +41,21 @@ const CONFIG={
   }
 };
 
-export default function FeatureLandingScreen({kind,theme,profile,onDiscover,onBack}){
+export default function FeatureLandingScreen({kind,theme,profile,onDiscover,onBack,onCreate,reloadKey=0}){
   const config=CONFIG[kind]||CONFIG.Hangs;
   const [filter,setFilter]=useState(config.filters[0]);
+  const [submissions,setSubmissions]=useState([]);
+  const [submissionLoading,setSubmissionLoading]=useState(false);
+  const [submissionError,setSubmissionError]=useState('');
+  useEffect(()=>{
+    let active=true;
+    setSubmissionLoading(true);
+    setSubmissionError('');
+    getMyStudentSubmissions(kind).then(rows=>{if(active)setSubmissions(rows)})
+      .catch(error=>{if(active){setSubmissions([]);setSubmissionError(error?.message||'Could not load your submissions.')}})
+      .finally(()=>{if(active)setSubmissionLoading(false)});
+    return()=>{active=false};
+  },[kind,reloadKey]);
   const canDiscover=typeof onDiscover==='function';
   return <ScrollView
     style={[styles.root,{backgroundColor:theme.bg}]}
@@ -77,6 +90,25 @@ export default function FeatureLandingScreen({kind,theme,profile,onDiscover,onBa
         <Text style={[styles.filterText,{color:filter===name?'#fff':theme.text}]}>{name}</Text>
       </Pressable>)}
     </ScrollView>
+    {!!onCreate&&<Pressable onPress={onCreate} accessibilityRole="button" accessibilityLabel={config.action} style={[styles.createAction,{backgroundColor:theme.accent}]}>
+      <Feather name="plus" color="#fff" size={19}/>
+      <Text style={styles.createText}>{config.action}</Text>
+    </Pressable>}
+    <View style={styles.submissionsHeader}>
+      <Text style={[styles.submissionHeading,{color:theme.text}]}>My submissions</Text>
+      <Text style={[styles.submissionHint,{color:theme.muted}]}>Only you can view pending submissions.</Text>
+    </View>
+    {submissionLoading?<ActivityIndicator style={{marginVertical:15}} color={theme.accent}/>:
+      submissionError?<Text accessibilityRole="alert" style={[styles.submissionError,{color:theme.muted}]}>Submissions unavailable: {submissionError}</Text>:
+      submissions.length===0?<Text style={[styles.submissionError,{color:theme.muted}]}>Nothing submitted yet.</Text>:
+      <View style={styles.savedList}>{submissions.map(item=><View key={item.id} style={[styles.savedItem,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+        <View style={[styles.savedIcon,{backgroundColor:theme.accentSoft}]}><Feather name={config.icon} color={theme.accent} size={19}/></View>
+        <View style={{flex:1}}>
+          <Text style={[styles.savedTitle,{color:theme.text}]} numberOfLines={2}>{item.title||item.name||item.body||'Pulse moment'}</Text>
+          <Text style={[styles.savedMeta,{color:theme.muted}]}>{item.category?item.category+' · ':''}{new Date(item.created_at).toLocaleDateString()}</Text>
+        </View>
+        <View style={[styles.pendingBadge,{borderColor:theme.line}]}><Text style={[styles.pendingBadgeText,{color:theme.muted}]}>{item.moderation_status==='pending'?'Pending':item.moderation_status==='approved'?'Approved':'Not approved'}</Text></View>
+      </View>)}</View>}
     <View style={[styles.empty,{backgroundColor:theme.surface,borderColor:theme.line}]}>
       <View style={[styles.emptyBadge,{backgroundColor:theme.accentSoft}]}>
         <Feather name="clock" color={theme.accent} size={22}/>
