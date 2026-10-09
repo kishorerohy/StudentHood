@@ -4,7 +4,7 @@ import {Feather,FontAwesome5} from '@expo/vector-icons';
 import Svg,{Path} from 'react-native-svg';
 import * as Clipboard from 'expo-clipboard';
 import {sceneShareUrl,shareScene} from '../scenes';
-import {availableShareApps,shareLabel,shareRegion} from '../shareAvailability';
+import {availableShareApps} from '../shareAvailability';
 
 const PANEL_W=246;
 const PANEL_H=280;
@@ -27,7 +27,6 @@ export default function SceneShareRadial({scene,theme,anchor,profileCountry,onCl
   const [error,setError]=useState('');
   const animation=useRef(new Animated.Value(0)).current;
   const mounted=useRef(true);
-  const region=shareRegion(profileCountry);
 
   useEffect(()=>{
     mounted.current=true;
@@ -64,7 +63,7 @@ export default function SceneShareRadial({scene,theme,anchor,profileCountry,onCl
         setMessage('Scene link copied.');
       }else if(item.name==='More apps'){
         await shareScene(scene.id);
-        onClose();
+        dismiss();
       }else if(item.name==='WhatsApp'){
         await Linking.openURL('whatsapp://send?text='+encodeURIComponent('View this Scene on StudentHood: '+url));
         onClose();
@@ -72,7 +71,7 @@ export default function SceneShareRadial({scene,theme,anchor,profileCountry,onCl
         await Clipboard.setStringAsync(url);
         try{
           await Linking.openURL(item.scheme);
-          onClose();
+          dismiss();
         }catch{
           setMessage('Link copied. '+item.name+' could not be opened. Try More apps.');
         }
@@ -84,11 +83,15 @@ export default function SceneShareRadial({scene,theme,anchor,profileCountry,onCl
     }
   }
 
+  function dismiss(){
+    Animated.timing(animation,{toValue:0,duration:150,useNativeDriver:true}).start(()=>onClose?.());
+  }
+
   const scale=animation.interpolate({inputRange:[0,1],outputRange:[0.65,1]});
   const opacity=animation.interpolate({inputRange:[0,1],outputRange:[0,1]});
   return <View style={StyleSheet.absoluteFill} accessibilityViewIsModal>
     <Pressable style={[StyleSheet.absoluteFill,{backgroundColor:theme.isLight?'rgba(8,16,24,0.12)':'rgba(1,3,7,0.30)'}]}
-      onPress={onClose} accessibilityRole="button" accessibilityLabel="Close Scene sharing"/>
+      onPress={dismiss} accessibilityRole="button" accessibilityLabel="Close Scene sharing"/>
     <Animated.View style={[styles.fan,{
       left,top,
       opacity,transformOrigin:openRight?'left bottom':'right bottom',
@@ -133,14 +136,11 @@ export default function SceneShareRadial({scene,theme,anchor,profileCountry,onCl
         <Text style={[styles.toastText,{color:theme.danger}]}>{error}</Text>
       </View>}
     </Animated.View>
-    <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Collapse Scene sharing"
+    <Pressable onPress={dismiss} accessibilityRole="button" accessibilityLabel="Collapse Scene sharing"
       style={[styles.hub,{left:Math.max(0,Math.min(screenWidth-48,centerX-24)),top:Math.max(0,centerY-24),
         borderColor:theme.accent,backgroundColor:theme.isLight?'rgba(245,245,245,0.98)':'rgba(20,28,39,0.98)'}]}>
       <Feather name="x" color={theme.text} size={22}/>
     </Pressable>
-    <Text pointerEvents="none" style={[styles.region,{color:theme.muted,backgroundColor:theme.surface}]}>
-      {checking?'Checking installed apps':shareLabel(region)}
-    </Text>
   </View>;
 }
 const styles=StyleSheet.create({
@@ -152,6 +152,5 @@ const styles=StyleSheet.create({
   loadingText:{fontSize:11,fontWeight:'700'},
   hub:{position:'absolute',width:48,height:48,borderRadius:24,borderWidth:2,alignItems:'center',justifyContent:'center'},
   toast:{position:'absolute',left:24,right:10,bottom:28,borderRadius:12,borderWidth:1,padding:9},
-  toastText:{fontSize:10,textAlign:'center'},
-  region:{position:'absolute',bottom:12,alignSelf:'center',fontSize:9,paddingHorizontal:10,paddingVertical:5,borderRadius:30,overflow:'hidden'}
+  toastText:{fontSize:10,textAlign:'center'}
 });
