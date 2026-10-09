@@ -148,7 +148,8 @@ export async function fetchSharedScene(sceneId){
     author_username:author?.username||null,
     author_campus_name:author?.campus_name||null,
     author_avatar_url:author?.avatar_url||null,
-    comment_count:0,
-    like_count:0
+    // Counts are not included in this RLS-scoped single-row request.
+    comment_count:null,
+    like_count:null
   });
 }
