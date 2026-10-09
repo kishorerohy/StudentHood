@@ -6,7 +6,7 @@ import {getLocales} from 'expo-localization';
 // App-install and URL-handler checks are the second gate for every destination.
 const REGION_RESTRICTIONS={
   TikTok:new Set(['IN','CN']),
-  WhatsApp:new Set(['CN'])
+  WhatsApp:new Set(['CN','RU'])
 };
 const SCHEMES={
   Instagram:['instagram://app'],
@@ -30,8 +30,14 @@ export function regionAllowsShareApp(name,region){
 
 export async function availableShareApps(profileCountry,canOpen=Linking.canOpenURL){
   const region=shareRegion(profileCountry);
+  const profileRegion=String(profileCountry||'').trim().toUpperCase();
   const checks=await Promise.all(['Instagram','TikTok','WhatsApp'].map(async name=>{
-    if(!regionAllowsShareApp(name,region))return null;
+    // Both region signals must be acceptable. We must not override a known
+    // restriction simply because a student changes phone locale. If both are
+    // unknown, only generic copy/native sharing remains available.
+    if((!region&&!/^[A-Z]{2}$/.test(profileRegion)) ||
+       !regionAllowsShareApp(name,region) ||
+       !regionAllowsShareApp(name,profileRegion))return null;
     for(const scheme of SCHEMES[name]){
       try{
         if(await canOpen(scheme))return {name,scheme};
