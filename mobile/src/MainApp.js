@@ -10,6 +10,7 @@ import EditProfileScreen from './screens/EditProfileScreen';
 import ProfileMenuScreen from './screens/ProfileMenuScreen';
 import UserProfileScreen from './screens/UserProfileScreen';
 import CreateOptionsScreen from './screens/CreateOptionsScreen';
+import CreateFeatureScreen from './screens/CreateFeatureScreen';
 import CreateSceneSheet from './components/CreateSceneSheet';
 import SlidePage from './components/SlidePage';
 import CampusStatusSlider from './components/CampusStatusSlider';
@@ -98,14 +99,17 @@ export default function MainApp({theme}){
           onBack={goBack}
           onSaved={afterProfileSaved}
         />;
+      case 'create-feature':
+        return <CreateFeatureScreen kind={page.kind} theme={theme} profile={profile} onBack={goBack} onSaved={()=>setReloadKey(x=>x+1)}/>;
       case 'create-options':
         return <CreateOptionsScreen
           theme={theme}
           onBack={goBack}
           onScene={()=>showPage({type:'create-scene'})}
-          onPulse={()=>showPage({type:'feature',kind:'Pulse'})}
-          onHang={()=>selectTab('Hangs')}
-          onGig={()=>selectTab('Gigs')}
+          onPulse={()=>showPage({type:'create-feature',kind:'Pulse'})}
+          onHang={()=>showPage({type:'create-feature',kind:'Hangs'})}
+          onCrew={()=>showPage({type:'create-feature',kind:'Crews'})}
+          onGig={()=>showPage({type:'create-feature',kind:'Gigs'})}
         />;
       case 'create-scene':
         return <CreateSceneSheet
