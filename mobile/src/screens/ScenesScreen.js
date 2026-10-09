@@ -253,7 +253,7 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCo
   const scene=scenes[index];
   if(!scene) return null;
 
-  return <Modal visible={visible} animationType="none" statusBarTranslucent onRequestClose={()=>leave()}>
+  return <Modal visible={visible} animationType="none" statusBarTranslucent onRequestClose={()=>commentsOpen?setCommentsOpen(false):leave()}>
     <Animated.View style={[styles.viewer,{transform:[{translateX:slide}]}]} {...(!commentsOpen?pan.panHandlers:{})}>
       {commentsOpen?<SceneCommentsPanel scene={scene} theme={theme} onClose={()=>setCommentsOpen(false)} onSent={onCommentSaved}/>:
       <>
