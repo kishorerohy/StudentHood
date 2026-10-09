@@ -1,5 +1,6 @@
 import {supabase} from './supabase';
-import {getAvatarDisplayUrl} from './api';
+import {getAvatarDisplayUrl,getProfileCard} from './api';
+import {Share} from 'react-native';
 
 const filterMap={
   'For you':'for_you',
@@ -109,4 +110,45 @@ export async function addSceneComment(sceneId,body){
     .single();
   if(error) throw error;
   return data;
+}
+
+
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function sceneShareUrl(sceneId){
+  if(!UUID.test(String(sceneId||''))) throw new Error('Invalid Scene link.');
+  // Landing page carries only a random Scene ID, never profile/media or a
+  // signed private-storage URL. Actual viewing always checks signed-in RLS.
+  return 'https://kishorerohy.github.io/StudentHood/scene.html?id='+sceneId.toLowerCase();
+}
+
+export async function shareScene(sceneId){
+  const url=sceneShareUrl(sceneId);
+  return Share.share({
+    title:'StudentHood Scene',
+    message:'View this Scene on StudentHood: '+url,
+    url
+  });
+}
+
+export async function fetchSharedScene(sceneId){
+  if(!UUID.test(String(sceneId||''))) throw new Error('This Scene link is invalid.');
+  const {data,error}=await supabase.from('scenes')
+    .select('id,author_id,campus_name,body,media_url,media_type,visibility,content_class,moderation_status,created_at')
+    .eq('id',sceneId).maybeSingle();
+  if(error) throw error;
+  // RLS must be satisfied for every recipient; do not leak whether a private
+  // Scene exists if the viewer is ineligible or logged out.
+  if(!data) throw new Error("This Scene isn't available to your account.");
+  let author=null;
+  try{author=await getProfileCard(data.author_id)}catch{}
+  return signMedia({
+    ...data,
+    author_name:author?.full_name||null,
+    author_username:author?.username||null,
+    author_campus_name:author?.campus_name||null,
+    author_avatar_url:author?.avatar_url||null,
+    comment_count:0,
+    like_count:0
+  });
 }
