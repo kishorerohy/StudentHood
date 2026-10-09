@@ -1,25 +1,29 @@
 import React,{useEffect,useState} from 'react';
 import {
-  ActivityIndicator,Image,Pressable,ScrollView,StyleSheet,Text,View
+  ActivityIndicator,Image,Pressable,ScrollView,StyleSheet,Text,TextInput,View
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {DiscoverIcon,DropsIcon,PingIcon} from '../icons';
 import {getCampusPeeps,getDropsFeed,getPeepConnection,getProfileCard} from '../api';
 import CampusPresenceBadge from '../components/CampusPresenceBadge';
 
-const PING_TABS=['All','Peeps','Hang Chats','Crew Chats'];
+const PING_TABS=['All','Peeps','Requests','Hang Chats','Crew Chats'];
+const DISCOVER_SECTIONS=[{name:'People',icon:'users',copy:'Meet students from your campus'},{name:'Hangs',icon:'calendar',copy:'Find campus plans'},{name:'Crews',icon:'users',copy:'Discover communities'},{name:'Gigs',icon:'briefcase',copy:'Explore student opportunities'}];
+const DROP_FILTERS=['All','Scenes','Peeps'];
 
-export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProfile,pingTarget=null}){
+export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProfile,onOpenFeature,pingTarget=null}){
   const [peeps,setPeeps]=useState([]);
   const [peepsLoading,setPeepsLoading]=useState(false);
   const [peepsError,setPeepsError]=useState('');
-  const [discoverSection,setDiscoverSection]=useState('Peeps');
+  const [discoverSection,setDiscoverSection]=useState('People');
+  const [peopleQuery,setPeopleQuery]=useState('');
   const [pingTab,setPingTab]=useState('All');
   const [pingCampusPresence,setPingCampusPresence]=useState(null);
   const [drops,setDrops]=useState([]);
   const [dropsLoading,setDropsLoading]=useState(false);
   const [dropsError,setDropsError]=useState('');
   const [dropsRefresh,setDropsRefresh]=useState(0);
+  const [dropFilter,setDropFilter]=useState('All');
 
   useEffect(()=>{
     let live=true;
@@ -66,6 +70,9 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
     return ()=>{live=false};
   },[kind,pingTarget?.id]);
 
+  const visibleDrops=drops.filter(item=>dropFilter==='All'||(dropFilter==='Scenes'&&String(item.activity_type||'').startsWith('scene_'))||(dropFilter==='Peeps'&&String(item.activity_type||'').startsWith('peep_')));
+  const visiblePeople=peeps.filter(item=>(item.full_name||'').toLocaleLowerCase().includes(peopleQuery.trim().toLocaleLowerCase())||(item.username||'').toLocaleLowerCase().includes(peopleQuery.trim().toLocaleLowerCase()));
+
   const icon=kind==='Discover'
     ?<DiscoverIcon color={theme.accent} size={22}/>
     :kind==='Drops'
@@ -100,24 +107,42 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
             style={styles.refresh}
           >{dropsLoading?<ActivityIndicator size="small" color={theme.accent}/>:<Feather name="refresh-cw" size={19} color={theme.accent}/>}</Pressable>
         </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dropFilters}>
+          {DROP_FILTERS.map(label=><Pressable key={label} onPress={()=>setDropFilter(label)} accessibilityRole="button" accessibilityState={{selected:dropFilter===label}} style={[styles.filterPill,{backgroundColor:dropFilter===label?theme.accent:theme.surface,borderColor:dropFilter===label?theme.accent:theme.line}]}>
+            <Text style={[styles.filterLabel,{color:dropFilter===label?'#fff':theme.text}]}>{label}</Text>
+          </Pressable>)}
+        </ScrollView>
         {dropsError?<EmptyMessage theme={theme} icon="alert-circle" title="Activity unavailable" copy={dropsError}/>:
           dropsLoading&&drops.length===0?<Loading theme={theme} label="Loading your activity…"/>:
-          drops.length===0?<EmptyMessage theme={theme} icon="bell" title="All caught up" copy="Your activity updates will appear here as they happen."/>:
+          visibleDrops.length===0?<EmptyMessage theme={theme} icon="bell" title="All caught up" copy="No activity in this category yet. Messages and Ping requests remain inside Ping."/>:
           <View style={[styles.panel,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-            {drops.map((activity,index)=><DropRow key={activity.event_key} activity={activity} theme={theme} last={index===drops.length-1}/>)}
+            {visibleDrops.map((activity,index)=><DropRow key={activity.event_key} activity={activity} theme={theme} last={index===visibleDrops.length-1}/>)}
           </View>}
       </>}
 
       {kind==='Discover'&&<>
-        <Text style={[styles.subtitle,{color:theme.muted}]}>Discover students and communities around your campus.</Text>
+        <Text style={[styles.subtitle,{color:theme.muted}]}>Real people and opportunities around your campus, with student privacy respected.</Text>
+        <View style={[styles.searchBox,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+          <Feather name="search" color={theme.muted} size={18}/>
+          <TextInput
+            accessibilityLabel="Search campus students"
+            placeholder="Search students on your campus"
+            placeholderTextColor={theme.muted}
+            value={peopleQuery}
+            onChangeText={text=>{setPeopleQuery(text);setDiscoverSection('People')}}
+            autoCapitalize="none"
+            style={[styles.searchInput,{color:theme.text}]}
+          />
+          {!!peopleQuery&&<Pressable onPress={()=>setPeopleQuery('')} accessibilityLabel="Clear student search">
+            <Feather name="x" color={theme.muted} size={18}/>
+          </Pressable>}
+        </View>
         <View style={styles.grid}>
-          {[
-            {name:'Peeps',icon:'users',copy:'Meet campus students'},
-            {name:'Crews',icon:'users',copy:'Explore communities'}
-          ].map(item=><Pressable
+          {DISCOVER_SECTIONS.map(item=><Pressable
             key={item.name}
             accessibilityRole="button"
-            onPress={()=>setDiscoverSection(item.name)}
+            accessibilityState={{selected:discoverSection===item.name}}
+            onPress={()=>{setDiscoverSection(item.name);if(item.name!=='People')onOpenFeature?.(item.name)}}
             style={[styles.discoverCard,{backgroundColor:theme.surface,borderColor:discoverSection===item.name?theme.accent:theme.line}]}
           >
             <Feather name={item.icon} size={22} color={theme.accent}/>
@@ -125,32 +150,31 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
             <Text style={[styles.discoverCardCopy,{color:theme.muted}]}>{item.copy}</Text>
           </Pressable>)}
         </View>
-        {discoverSection==='Peeps'?<>
-          <View style={styles.sectionHeading}>
-            <Text style={[styles.sectionTitle,{color:theme.text}]}>Your campus Peeps</Text>
-            <Text style={[styles.sectionCaption,{color:theme.muted}]} numberOfLines={1}>{profile?.campus_name||'Your campus'}</Text>
-          </View>
-          {peepsError?<EmptyMessage theme={theme} icon="alert-circle" title="Unable to load Peeps" copy={peepsError}/>:
-            peepsLoading?<Loading theme={theme} label="Finding your campus Peeps…"/>:
-            peeps.length===0?<EmptyMessage theme={theme} icon="users" title="No campus Peeps to show yet" copy="Students from your campus will appear here when their privacy settings allow discovery."/>:
-            <View style={[styles.panel,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-              {peeps.map((peep,index)=><Pressable
-                key={peep.id}
-                accessibilityRole="button"
-                onPress={()=>onOpenProfile(peep.id)}
-                style={[styles.peepRow,{borderBottomColor:theme.line,borderBottomWidth:index===peeps.length-1?0:StyleSheet.hairlineWidth}]}
-              >
-                <View style={[styles.avatar,{backgroundColor:theme.surface2}]}>
-                  {peep.avatar_url?<Image source={{uri:peep.avatar_url}} style={styles.avatarImage}/>:<Feather name="user" size={21} color={theme.accent}/>}
-                </View>
-                <View style={{flex:1}}>
-                  <Text style={[styles.peepName,{color:theme.text}]}>{peep.full_name||peep.username||'Student'}</Text>
-                  {!!peep.username&&<Text style={[styles.peepHandle,{color:theme.muted}]}>@{peep.username}</Text>}
-                </View>
-                <Feather name="chevron-right" color={theme.muted} size={19}/>
-              </Pressable>)}
-            </View>}
-        </>:<EmptyMessage theme={theme} icon="users" title="Crews are coming next" copy="Campus communities will appear here when Crews launches."/>}
+        <View style={styles.sectionHeading}>
+          <Text style={[styles.sectionTitle,{color:theme.text}]}>People from your campus</Text>
+          <Text style={[styles.sectionCaption,{color:theme.muted}]} numberOfLines={1}>{profile?.campus_name||'Your campus'}</Text>
+        </View>
+        {peepsError?<EmptyMessage theme={theme} icon="alert-circle" title="Unable to load students" copy={peepsError}/>:
+          peepsLoading?<Loading theme={theme} label="Finding permitted campus students…"/>:
+          visiblePeople.length===0?<EmptyMessage theme={theme} icon="users" title={peopleQuery?'No matching students':'No students to show yet'} copy={peopleQuery?'Try a different name or username.':'Students from your campus will appear when their privacy settings allow discovery.'}/>:
+          <View style={[styles.panel,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+            {visiblePeople.map((peep,index)=><Pressable
+              key={peep.id}
+              accessibilityRole="button"
+              accessibilityLabel={'View '+(peep.full_name||peep.username||'student')+' profile'}
+              onPress={()=>onOpenProfile?.(peep.id)}
+              style={[styles.peepRow,{borderBottomColor:theme.line,borderBottomWidth:index===visiblePeople.length-1?0:StyleSheet.hairlineWidth}]}
+            >
+              <View style={[styles.avatar,{backgroundColor:theme.surface2}]}>
+                {peep.avatar_url?<Image source={{uri:peep.avatar_url}} style={styles.avatarImage}/>:<Feather name="user" size={21} color={theme.accent}/>}
+              </View>
+              <View style={{flex:1}}>
+                <Text style={[styles.peepName,{color:theme.text}]}>{peep.full_name||peep.username||'Student'}</Text>
+                {!!peep.username&&<Text style={[styles.peepHandle,{color:theme.muted}]}>@{peep.username}</Text>}
+              </View>
+              <Feather name="chevron-right" color={theme.muted} size={19}/>
+            </Pressable>)}
+          </View>}
       </>}
 
       {kind==='Ping'&&<>
@@ -176,7 +200,7 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
           theme={theme}
           icon="message-circle"
           title={pingTab==='All'?'Your Ping inbox':pingTab}
-          copy="Conversations and message requests will appear here when messaging is available."
+          copy={pingTab==='Requests'?'Ping requests will appear here when secure messaging and request moderation launch.':'Conversations and message requests will appear here when messaging is available.'}
         />
       </>}
     </ScrollView>
@@ -242,6 +266,11 @@ const styles=StyleSheet.create({
   dropTitle:{fontSize:12,lineHeight:19,fontWeight:'700'},
   dropTime:{fontSize:10,marginTop:4},
   subtitle:{fontSize:12,lineHeight:18,marginBottom:16},
+  searchBox:{borderWidth:1,borderRadius:16,minHeight:47,paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:9,marginBottom:14},
+  searchInput:{fontSize:12,flex:1,minHeight:44},
+  dropFilters:{gap:9,paddingVertical:12},
+  filterPill:{borderWidth:1,borderRadius:99,paddingHorizontal:14,minHeight:34,alignItems:'center',justifyContent:'center'},
+  filterLabel:{fontWeight:'800',fontSize:11},
   grid:{flexDirection:'row',flexWrap:'wrap',gap:10,marginBottom:24},
   discoverCard:{width:'48%',minHeight:125,borderWidth:1,borderRadius:18,padding:15,justifyContent:'center'},
   discoverCardName:{fontWeight:'900',fontSize:14,marginTop:11},
