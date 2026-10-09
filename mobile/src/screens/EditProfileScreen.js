@@ -3,6 +3,7 @@ import {ActivityIndicator,Alert,Image,KeyboardAvoidingView,Platform,Pressable,Sc
 import {Feather} from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import {getAvatarDisplayUrl,saveMyProfileChanges,uploadMyAvatar} from '../api';
+import useKeyboardAwareForm from '../hooks/useKeyboardAwareForm';
 
 export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnly=false}){
   const [fullName,setFullName]=useState(profile?.full_name||'');
@@ -13,6 +14,7 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
   const [newPhoto,setNewPhoto]=useState(null);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
+  const {scrollRef,onFieldFocus,onScrollLayout}=useKeyboardAwareForm();
 
   useEffect(()=>{
     let active=true;
@@ -89,7 +91,7 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
         {busy?<ActivityIndicator size="small" color="#fff"/>:<Text style={styles.saveText}>Save</Text>}
       </Pressable>
     </View>
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'} onLayout={onScrollLayout} showsVerticalScrollIndicator={false}>
       <Pressable onPress={choosePhoto} accessibilityLabel="Choose profile photo" style={styles.photoControl}>
         <View style={[styles.avatar,{backgroundColor:theme.surface2}]}>
           {imageUri?<Image source={{uri:imageUri}} style={styles.avatarImage}/>:<Feather name="user" size={45} color={theme.accent}/>}
@@ -98,12 +100,12 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
         <Text style={[styles.photoHint,{color:theme.muted}]}>JPG, PNG or WebP, up to 5 MB</Text>
       </Pressable>
       {!photoOnly&&<>
-        <LabeledInput label="Full name" value={fullName} onChangeText={setFullName} theme={theme}/>
+        <LabeledInput label="Full name" value={fullName} onChangeText={setFullName} onFocus={onFieldFocus} theme={theme}/>
         <LabeledInput label="Username" value={profile?.username||''} editable={false} theme={theme}/>
         <Text style={[styles.hint,{color:theme.muted}]}>Your unique username is managed separately from profile details.</Text>
-        <LabeledInput label="Bio" value={bio} onChangeText={setBio} multiline maxLength={280} theme={theme}/>
-        <LabeledInput label="City" value={city} onChangeText={setCity} theme={theme}/>
-        <LabeledInput label="School, college or university" value={campus} onChangeText={setCampus} theme={theme}/>
+        <LabeledInput label="Bio" value={bio} onChangeText={setBio} multiline maxLength={280} onFocus={onFieldFocus} theme={theme}/>
+        <LabeledInput label="City" value={city} onChangeText={setCity} onFocus={onFieldFocus} theme={theme}/>
+        <LabeledInput label="School, college or university" value={campus} onChangeText={setCampus} onFocus={onFieldFocus} theme={theme} returnKeyType="done"/>
         <Text style={[styles.hint,{color:theme.muted}]}>Use your official institution name so classmates can find the same campus.</Text>
         <Text style={[styles.hint,{color:theme.muted}]}>Choose your campus status from the transparent slider on Scenes.</Text>
       </>}
@@ -127,7 +129,7 @@ const styles=StyleSheet.create({
  headerText:{fontSize:19,fontWeight:'800'},
  save:{height:38,minWidth:64,borderRadius:12,alignItems:'center',justifyContent:'center',paddingHorizontal:12},
  saveText:{fontSize:12,color:'#fff',fontWeight:'800'},
- content:{padding:18,paddingBottom:60,width:'100%',maxWidth:760,alignSelf:'center'},
+ content:{padding:18,paddingBottom:140,width:'100%',maxWidth:760,alignSelf:'center'},
  photoControl:{alignItems:'center',marginVertical:18},
  avatar:{width:108,height:108,borderRadius:54,alignItems:'center',justifyContent:'center',overflow:'hidden'},
  avatarImage:{width:'100%',height:'100%'},
