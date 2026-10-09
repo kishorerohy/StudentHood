@@ -125,7 +125,7 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
           {outgoing&&<Text style={[styles.notice,{color:theme.muted}]}>Your Peep request is waiting for a response.</Text>}
           {incoming&&<Text style={[styles.notice,{color:theme.muted}]}>This student has already sent you a Peep request.</Text>}
           <Text style={[styles.notice,{color:theme.muted}]}>
-            {canPing?'Ping messaging is coming soon. No message can be sent yet.':'Ping isn't available under your Peep and safety permissions.'}
+            {canPing?'Ping messaging is coming soon. No message can be sent yet.':"Ping isn't available under your Peep and safety permissions."}
           </Text>
         </View>
 
