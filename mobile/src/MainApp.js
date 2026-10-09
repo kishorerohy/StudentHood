@@ -1,6 +1,7 @@
 import React,{useCallback,useEffect,useRef,useState} from 'react';
 import {Image,Platform,Pressable,StyleSheet,Text,useWindowDimensions,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import {DiscoverIcon,DropsIcon,PingIcon,SceneIcon} from './icons';
 import {useSession} from './session';
 import ScenesScreen from './screens/ScenesScreen';
@@ -19,6 +20,9 @@ import FeatureLandingScreen from './screens/FeatureLandingScreen';
 const LOGO_DARK=require('../assets/studenthood-logo.png');
 const LOGO_LIGHT=require('../assets/studenthood-logo-light.png');
 
+const SHARED_SCENE_LINK=/^studenthood:\/\/scene\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})(?:[/?#]|$)/i;
+function getSharedSceneFromLink(url){return typeof url==='string'?url.match(SHARED_SCENE_LINK)?.[1]||null:null;}
+
 export default function MainApp({theme}){
   const {profile,safety,refreshAccount}=useSession();
   const {width}=useWindowDimensions();
@@ -26,6 +30,7 @@ export default function MainApp({theme}){
   const [tab,setTab]=useState('Scenes');
   const [pages,setPages]=useState([]);
   const [reloadKey,setReloadKey]=useState(0);
+  const [focusScene,setFocusScene]=useState(null);
   const nextPageId=useRef(0);
 
   const pushPage=useCallback(page=>{
@@ -48,6 +53,22 @@ export default function MainApp({theme}){
     setTab(nextTab);
     setPages([]);
   },[]);
+
+  // A shared link only contains a Scene ID; the viewer fetches it through
+  // Supabase RLS before opening, so a forwarded private link grants no access.
+  const openSharedLink=useCallback(url=>{
+    const sceneId=getSharedSceneFromLink(url);
+    if(!sceneId)return;
+    setPages([]);
+    setTab('Scenes');
+    setFocusScene({id:sceneId,token:Date.now()});
+  },[]);
+  useEffect(()=>{
+    let mounted=true;
+    Linking.getInitialURL().then(url=>{if(mounted)openSharedLink(url)}).catch(()=>{});
+    const listener=Linking.addEventListener('url',event=>openSharedLink(event.url));
+    return()=>{mounted=false;listener.remove()};
+  },[openSharedLink]);
 
   const afterProfileSaved=useCallback(async()=>{
     await refreshAccount();
@@ -130,6 +151,7 @@ export default function MainApp({theme}){
       profile={profile}
       safety={safety}
       reloadKey={reloadKey}
+      focusScene={focusScene}
       onOpenProfile={userId=>showPage({type:'student-profile',userId})}
       onOpenCreate={()=>showPage({type:'create-options'})}
       onOpenPulse={()=>showPage({type:'feature',kind:'Pulse'})}
