@@ -264,7 +264,7 @@ export default function OnboardingScreen({theme}){
     }finally{setBusy(false);}
   }
 
-  return <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':undefined} style={[styles.root,{backgroundColor:theme.bg}]}>
+  return <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={[styles.root,{backgroundColor:theme.bg}]}>
     <ScrollView
       ref={scrollRef}
       onLayout={onScrollLayout}
