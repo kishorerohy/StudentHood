@@ -190,3 +190,43 @@ export async function reportScene(sceneId,reason){
   // response is the confirmation. No client can list/report other people.
   return true;
 }
+
+
+export async function deleteMyScene(sceneId){
+  if(!UUID.test(String(sceneId||'')))throw new Error('Invalid Scene.');
+  const {data:{user},error:authError}=await supabase.auth.getUser();
+  if(authError)throw authError;
+  if(!user)throw new Error('Please sign in again.');
+  const {data,error}=await supabase.from('scenes')
+    .delete().eq('id',sceneId).eq('author_id',user.id)
+    .select('id,media_url').maybeSingle();
+  if(error)throw error;
+  if(data?.id!==sceneId)throw new Error('This Scene could not be deleted. It may no longer be available.');
+  if(data.media_url&&!/^https?:\/\//i.test(data.media_url)){
+    // DB deletion is authoritative. Media cleanup is best-effort and cannot
+    // turn an already successful deletion into a misleading failure.
+    try{await supabase.storage.from('scene-media').remove([data.media_url])}catch{}
+  }
+  return true;
+}
+
+export async function reportScene(sceneId,{reason,details='' }={}){
+  if(!UUID.test(String(sceneId||'')))throw new Error('Invalid Scene.');
+  const allowed=['Spam','Harassment','Unsafe content','Other'];
+  if(!allowed.includes(reason))throw new Error('Choose a reason for reporting.');
+  const {data:{user},error:authError}=await supabase.auth.getUser();
+  if(authError)throw authError;
+  if(!user?.email)throw new Error('Sign in with a verified email to report a Scene.');
+  const reportDetails=String(details||'').trim().slice(0,1200);
+  const fullName=String(user.user_metadata?.full_name||user.email.split('@')[0]||'Student').trim().slice(0,100);
+  const {error}=await supabase.from('support_requests').insert({
+    name:fullName||'Student',email:user.email,
+    category:'report',subject:'StudentHood Scene safety report',
+    message:'Scene ID: '+sceneId+'\nReason: '+reason+'\nDetails: '+(reportDetails||'No further description provided.'),
+    status:'new'
+  });
+  if(error)throw error;
+  // support_requests deliberately has INSERT-only RLS. A successful insert
+  // response is confirmation of receipt, not a moderation decision.
+  return true;
+}
