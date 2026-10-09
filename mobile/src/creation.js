@@ -88,6 +88,7 @@ export async function submitStudentCreation(kind,values={},asset=null){
     throw new Error('Gig submissions require an adult account.');
   const input=validate(kind,values,asset);
   let uploadedPath=null;
+  let attemptedInsert=false;
   try{
     if(kind==='Pulse'&&asset?.uri){
       const mime=asset.mimeType||'';
@@ -105,6 +106,7 @@ export async function submitStudentCreation(kind,values={},asset=null){
     }
     const payload={...input,[type.owner]:user.id,moderation_status:'pending'};
     // Campus is assigned by the server from the user's existing profile.
+    attemptedInsert=true;
     const {data,error}=await supabase.from(type.table)
       .insert(payload)
       .select('id,moderation_status,created_at').single();
@@ -118,9 +120,10 @@ export async function submitStudentCreation(kind,values={},asset=null){
       throw new Error('Submission was received but could not be verified; please check My submissions before retrying.');
     return confirmed;
   }catch(e){
-    // Only clean up media when the submission definitely never reached the DB.
-    // In a later uncertain readback failure, preserving the media avoids loss.
-    if(uploadedPath&&(!e?.message||!e.message.includes('could not be verified'))){
+    // A failed network request may still have created the row. Remove orphaned
+    // media only if submission was never attempted; preserve media otherwise
+    // so that an uncertain result cannot break an already-saved Pulse.
+    if(uploadedPath&&!attemptedInsert){
       await supabase.storage.from('pulse-media').remove([uploadedPath]).catch(()=>{});
     }
     throw e;
