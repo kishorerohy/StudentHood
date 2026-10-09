@@ -8,7 +8,7 @@ import {getCampusPeeps,getDropsFeed} from '../api';
 
 const PING_TABS=['All','Peeps','Hang Chats','Crew Chats'];
 
-export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProfile}){
+export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProfile,pingTarget=null}){
   const [peeps,setPeeps]=useState([]);
   const [peepsLoading,setPeepsLoading]=useState(false);
   const [peepsError,setPeepsError]=useState('');
@@ -139,6 +139,11 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
       </>}
 
       {kind==='Ping'&&<>
+        {!!pingTarget?.id&&<View style={[styles.panel,{backgroundColor:theme.surface,borderColor:theme.line,padding:16,marginBottom:12}]}>
+          <Text style={[styles.sectionTitle,{color:theme.text}]}>Ping {pingTarget.full_name||pingTarget.username||'this student'}</Text>
+          {!!pingTarget.username&&<Text style={[styles.subtitle,{color:theme.muted}]}>@{pingTarget.username}</Text>}
+          <Text style={[styles.subtitle,{color:theme.muted}]}>Messaging is not available yet. No Ping has been sent.</Text>
+        </View>}
         <Text style={[styles.subtitle,{color:theme.muted}]}>Your conversations, together in one place.</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pingTabs}>
           {PING_TABS.map(label=><Pressable
