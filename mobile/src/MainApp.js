@@ -156,6 +156,7 @@ export default function MainApp({theme}){
       onOpenCreate={()=>showPage({type:'create-options'})}
       onOpenPulse={()=>showPage({type:'feature',kind:'Pulse'})}
       onOpenDiscover={()=>showPage({type:'hub',kind:'Discover'})}
+      onOpenDiscover={()=>showPage({type:'hub',kind:'Discover'})}
     />}
     {tab==='Profile'&&<ProfileScreen
       theme={theme}
