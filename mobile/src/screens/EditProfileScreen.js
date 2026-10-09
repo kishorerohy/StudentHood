@@ -81,7 +81,7 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
   }
 
   const imageUri=newPhoto?.uri||avatar;
-  return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]} behavior={Platform.OS==='ios'?'padding':undefined}>
+  return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]} behavior={Platform.OS==='ios'?'padding':'height'}>
     <View style={[styles.header,{borderBottomColor:theme.line}]}>
       <Pressable onPress={onBack} disabled={busy} accessibilityLabel="Back" style={styles.headerAction}>
         <Feather name="arrow-left" size={22} color={theme.text}/>
