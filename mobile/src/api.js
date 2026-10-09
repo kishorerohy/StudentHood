@@ -228,7 +228,19 @@ export async function completeProfile({
     .single();
 
   if(error) throw error;
-  return data;
+  if(data?.id!==user.id||data.username!==payload.username||data.onboarding_completed!==true){
+    throw new Error('StudentHood could not confirm your new profile. Please try again.');
+  }
+  const saved=await getMyProfile();
+  if(!saved||saved.id!==user.id||!saved.onboarding_completed||
+     saved.full_name!==payload.full_name||saved.username!==payload.username||
+     (saved.city??null)!==payload.city||(saved.campus_name??null)!==payload.campus_name||
+     (saved.bio??null)!==payload.bio||
+     !Array.isArray(saved.interests)||
+     saved.interests.join('\u0001')!==payload.interests.join('\u0001')){
+    throw new Error('Your profile was submitted but its saved details could not be verified. Please refresh before retrying.');
+  }
+  return saved;
 }
 
 export async function getProfileCard(userId){
