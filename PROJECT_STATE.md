@@ -4,6 +4,14 @@ Last updated: 2026-10-08 (IST)
 
 This file is the durable recovery checkpoint for StudentHood. Keep secrets and private user data out of this document.
 
+## Latest release & running correction ledger (2026-10-10 IST)
+
+**This section supersedes older release/status checkpoints below.** Consolidated Android Preview **v0.1.7 / versionCode 8** was submitted to Expo EAS on 9 October 2026, build ID `c82f47fe-5056-454a-bbe3-d25d86562528`, from merged PR #7. Submission confirmed; verify actual build completion/installation from Expo before claiming that it passed device testing.
+
+**Owner's standing communication instruction:** End **every StudentHood development reply/conversation** with the complete list of active corrections from [`docs/PENDING_CORRECTIONS.md`](docs/PENDING_CORRECTIONS.md), preserving stable IDs and status until the owner explicitly approves the next consolidated APK build. Add newly reported items to that file immediately so nothing is lost across chats. The owner has **NOT** approved a next build as of this checkpoint.
+
+**Current outstanding items:** keyboard overlap v2, city and country institution dropdown in onboarding and Edit Profile (mobile changes in draft PR #8; backend Edge Function v2 already deployed), incomplete Discover personalized cards, canonical global campus IDs and duplicate prevention, and release regression/device QA. Draft PR #8 remains unmerged. Do **not** conflate passing CI with real Android QA or trigger EAS builds merely because there are open corrections.
+
 ## Current checkpoint
 
 - StudentHood is an Expo / React Native student social-network app.
