@@ -72,7 +72,7 @@ export default function MainApp({theme}){
           onOpenFeature={kind=>showPage({type:'feature',kind})}
         />;
       case 'feature':
-        return <FeatureLandingScreen kind={page.kind} theme={theme} profile={profile} onBack={goBack} onDiscover={()=>showPage({type:'hub',kind:'Discover'})}/>;
+        return <FeatureLandingScreen kind={page.kind} theme={theme} profile={profile} reloadKey={reloadKey} onBack={goBack} onDiscover={()=>showPage({type:'hub',kind:'Discover'})} onCreate={()=>showPage({type:'create-feature',kind:page.kind})}/>;
       case 'student-profile':
         return <UserProfileScreen
           userId={page.userId}
@@ -143,8 +143,8 @@ export default function MainApp({theme}){
       onEditPicture={()=>showPage({type:'edit-profile',photoOnly:true})}
     />}
 
-    {tab==='Hangs'&&<FeatureLandingScreen kind="Hangs" theme={theme} profile={profile} onDiscover={()=>showPage({type:'hub',kind:'Discover'})}/> }
-    {tab==='Gigs'&&<FeatureLandingScreen kind="Gigs" theme={theme} profile={profile} onDiscover={()=>showPage({type:'hub',kind:'Discover'})}/> }
+    {tab==='Hangs'&&<FeatureLandingScreen kind="Hangs" theme={theme} profile={profile} reloadKey={reloadKey} onDiscover={()=>showPage({type:'hub',kind:'Discover'})} onCreate={()=>showPage({type:'create-feature',kind:'Hangs'})}/>}
+    {tab==='Gigs'&&<FeatureLandingScreen kind="Gigs" theme={theme} profile={profile} reloadKey={reloadKey} onDiscover={()=>showPage({type:'hub',kind:'Discover'})} onCreate={()=>showPage({type:'create-feature',kind:'Gigs'})}/>}
     <BottomDial theme={theme} tab={tab} onTab={selectTab} onCreate={()=>showPage({type:'create-options'})} isTablet={isTablet} screenWidth={width}/>
     {tab==='Scenes'&&<CampusStatusSlider theme={theme} profile={profile} onSaved={afterProfileSaved}/>}
 
