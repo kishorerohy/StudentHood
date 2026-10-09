@@ -100,7 +100,6 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
           <Text style={[styles.name,{color:theme.text}]}>{card.full_name||card.username||'Student'}</Text>
           {!!card.username&&<Text style={[styles.handle,{color:theme.muted}]}>@{card.username}</Text>}
           <Text style={[styles.studentId,{color:theme.muted}]}>Student ID · {card.id.slice(0,8).toUpperCase()}</Text>
-          {!!card.bio&&<Text style={[styles.bio,{color:theme.text}]}>{card.bio}</Text>}
 
           <View style={styles.actions}>
             <Pressable
