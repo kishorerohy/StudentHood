@@ -1,5 +1,13 @@
 import {supabase} from './supabase';
 
+function validateEditableProfile({full_name,bio,city,campus_name}){
+  if(!full_name||full_name.length>100) throw new Error('Full name must be between 1 and 100 characters.');
+  if(bio&&bio.length>280) throw new Error('Bio must be 280 characters or less.');
+  if(city&&city.length>80) throw new Error('City must be 80 characters or less.');
+  if(!campus_name||campus_name.length>160) throw new Error('Institution name must be between 1 and 160 characters.');
+}
+
+
 // Count only accepted mutual Peeps for the signed-in account. Existing RLS
 // restricts this query to relationships involving the current user.
 export async function getMyPeepCount(){
@@ -41,8 +49,7 @@ export async function saveMyProfileChanges({fullName,bio,city,campusName}){
     city:String(city||'').trim()||null,
     campus_name:String(campusName||'').trim()||null
   };
-  if(!payload.full_name) throw new Error('Your name is required.');
-  if(!payload.campus_name) throw new Error('Your institution is required.');
+  validateEditableProfile(payload);
   const {data,error}=await supabase.from('profiles').update(payload).eq('id',user.id)
     .select('id,full_name,bio,city,campus_name,campus_presence').single();
   if(error) throw error;
@@ -219,6 +226,7 @@ export async function completeProfile({
     interests:(Array.isArray(interests)?interests:[]).map(x=>String(x).trim()).filter(Boolean).slice(0,12),
     onboarding_completed:true
   };
+  validateEditableProfile(payload);
 
   const {data,error}=await supabase
     .from('profiles')
