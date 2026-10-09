@@ -13,13 +13,14 @@ In the installed Android v0.1.6, opening Edit Profile and tapping the lower city
 4. Profile onboarding uses the same keyboard reveal for full name, username, city, bio and interests; its full-height scroll area retains enough space to show the last field.
 5. Pulse, Hangs, Crews and Gigs composers use the same solution for every editable text field. New Scene composer receives keyboard avoidance, focused-field scroll, and extra padding.
 6. Scene comments retain a keyboard-resized composer above the keyboard and no forced keyboard dismissal on Android.
+7. Sign-in and Sign-up also use the shared keyboard-aware input focus and extra scrolling clearance so email/password inputs cannot be obscured on smaller screens.
 
 ## Testing required on real device
 - Small Android handset and iOS: focus city and university at the bottom of Edit Profile. Input label and typed text must be visible above the raised keyboard.
 - Focus / unfocus each input in order and in reverse order, including multiline bio, with both Gboard and third-party keyboards where available.
 - Confirm the user can scroll while the keyboard is open and the Save button remains reachable.
 - Dismiss keyboard using Back; no jump to the top or lost unsaved edits.
-- Repeat on onboarding (interests), Scene composer, Pulse, Hangs (location/capacity), Crews (description), Gigs (pay/currency), and Scene comments.
+- Repeat on sign-in/sign-up (email/password), onboarding (interests), Scene composer, Pulse, Hangs (location/capacity), Crews (description), Gigs (pay/currency), and Scene comments.
 - Test screen rotation and font-size/accessibility scaling; iPad and landscape where supported.
 - Confirm app Save and submission values still persist; keyboard UI changes are unrelated to Supabase permissions.
 - Run Expo Doctor, Android Expo config introspection and JavaScript bundle export on PR head. These are static checks, NOT proof of keyboard layout on a real device.
