@@ -63,7 +63,7 @@ export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
         <Feather name="refresh-cw" size={18} color={theme.muted}/>
       </Pressable>
     </View>
-    <ScrollView style={styles.list} contentContainerStyle={styles.listContent} keyboardShouldPersistTaps="handled">
+    <ScrollView style={styles.list} contentContainerStyle={styles.listContent} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'}>
       {loading?<View style={styles.state}><ActivityIndicator color={theme.accent}/><Text style={[styles.small,{color:theme.muted}]}>Loading comments…</Text></View>:
         rows.length===0?<View style={styles.state}>
           <Feather name="message-circle" size={32} color={theme.accent}/>
