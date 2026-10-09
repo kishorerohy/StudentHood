@@ -1,6 +1,6 @@
 # StudentHood premium profile rollout checklist
 
-Status: proposed implementation on draft PR #6. **Not released.**
+Status: mobile implementation remains in draft PR #6 (not released); the approved permission-filtered profile-status RPC update is deployed in production.
 
 ## User-approved design
 The profile reference specifies a full-screen campus-themed header with centered avatar, display name, username, manually set campus status badge, genuine statistics, bio/interests, university/city, wide profile actions, and a row of circular photo highlights. Both the owner profile and other permitted student profiles should share the same visual treatment. Navigation from a Scene must open the full page rather than a centered card.
@@ -15,7 +15,7 @@ The profile reference specifies a full-screen campus-themed header with centered
 - Android JS export and Expo Doctor checks via GitHub CI.
 
 ## Release dependencies — require human review before production change
-1. The existing `studenthood_profile_card(p_target_user uuid)` SECURITY DEFINER function currently does **not** return `campus_presence`. Extend only its returned JSON with a nullable property based on `profiles.campus_presence`, showing `on_campus` / `off_campus` and otherwise returning NULL. Keep its existing tests, permissions, `studenthood_can_discover_profile`, accepted-Peep check, teen profile restrictions, and location redactions unchanged. No permissive profiles SELECT policy.
+1. **Completed in production 2026-10-09:** `studenthood_profile_card(p_target_user uuid)` now returns an optional `campus_presence` JSON property (only `on_campus` / `off_campus`; `not_shared` is returned as NULL). Migration `profile_card_optional_campus_presence` was applied successfully. Verified SECURITY DEFINER, authenticated-only EXECUTE, existing discover/Peep authorization, city redaction, and unchanged profiles RLS policies. The corresponding migration is tracked in `supabase/migrations/20261009165000_profile_card_optional_campus_presence.sql`.
 2. A dedicated editable cover photo requires a new nullable `profiles.cover_url` path, a tenant-specific upload, safe storage owner policy and a viewing policy that checks either the owner or that the target is discoverable / an accepted Peep. Do not apply these security-sensitive changes without SQL review and approval. Until then the cover is derived from a viewer-permitted Scene or a neutral background.
 3. An optional profile website/Instagram link should use a dedicated validated field, reasonable link-safety restrictions and a reviewed nullable column. The current UI only renders a URL if such trusted data becomes available.
 4. Verification check marks require a verified identity/status workflow and privileged authoritative flag; they must not be invented from an avatar or sign-in provider.
