@@ -1,7 +1,7 @@
 import React,{useState} from 'react';
 import {ActivityIndicator,Linking,Platform,Pressable,StyleSheet,Text,View} from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import {Feather} from '@expo/vector-icons';
+import {Feather,FontAwesome5} from '@expo/vector-icons';
 import {sceneShareUrl,shareScene} from '../scenes';
 
 // StudentHood owns the order of this transparent panel. The native chooser
@@ -56,9 +56,9 @@ export default function SceneSharePanel({scene,theme,onClose}){
   }
 
   const choices=[
-    {name:'Instagram',icon:'camera',label:'Copy link & open Instagram'},
-    {name:'TikTok',icon:'music',label:'Copy link & open TikTok'},
-    {name:'WhatsApp',icon:'message-circle',label:'Open WhatsApp with link'},
+    {name:'Instagram',icon:'instagram',brand:true,label:'Copy link & open Instagram'},
+    {name:'TikTok',icon:'tiktok',brand:true,label:'Copy link & open TikTok'},
+    {name:'WhatsApp',icon:'whatsapp',brand:true,label:'Open WhatsApp with link'},
     {name:'More apps',icon:'share-2',label:'Device sharing options'}
   ];
 
@@ -83,7 +83,7 @@ export default function SceneSharePanel({scene,theme,onClose}){
           style={[styles.choice,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
           <View style={[styles.iconWrap,{backgroundColor:theme.isLight?'#FFFFFF':'rgba(255,255,255,0.07)'}]}>
             {busy===item.name?<ActivityIndicator size="small" color={theme.accent}/>:
-              <Feather name={item.icon} size={22} color={theme.text}/>}
+              item.brand?<FontAwesome5 name={item.icon} size={22} color={theme.text}/>:<Feather name={item.icon} size={22} color={theme.text}/>}
           </View>
           <Text style={[styles.choiceLabel,{color:theme.text}]}>{item.name}</Text>
           {index<2&&<Text style={[styles.helper,{color:theme.muted}]}>Link</Text>}
