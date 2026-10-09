@@ -11,7 +11,7 @@ import CountryPicker,{CountryPickerPage} from '../components/CountryPicker';
 import SlidePage from '../components/SlidePage';
 import {localeRegion} from '../countries';
 import {
-  checkUsernameAvailability,completeProfile,findNearbyInstitutions,initializeSafetyProfile,
+  checkUsernameAvailability,completeProfile,findNearbyInstitutions,findInstitutionsByCity,initializeSafetyProfile,
   recordPlatformAgeSignal,recordPlatformAgeStatus
 } from '../api';
 import {platformAgeSignalsAvailable,requestPlatformAgeSignal} from '../ageAssurance';
@@ -73,6 +73,7 @@ export default function OnboardingScreen({theme}){
   const [campusQuery,setCampusQuery]=useState('');
   const usernameRequest=useRef(0);
   const locationAttempted=useRef(false);
+  const institutionRequest=useRef(0);
   const {scrollRef,onFieldFocus,onScrollLayout,onScroll,keyboardPadding}=useKeyboardAwareForm();
 
   const timeZone=profile?.time_zone||session?.user?.user_metadata?.time_zone||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
@@ -121,6 +122,48 @@ export default function OnboardingScreen({theme}){
     }
   }
 
+  async function loadCityInstitutions(cityName=city,countryName=country){
+    const request=++institutionRequest.current;
+    const chosenCity=String(cityName||'').trim();
+    setInstitutionError('');
+    setInstitutionLoading(true);
+    try{
+      const rows=await findInstitutionsByCity({
+        city:chosenCity,countryCode:countryName
+      });
+      if(request!==institutionRequest.current)return;
+      setInstitutions(rows);
+      if(!rows.length)setInstitutionError('No mapped institutions were found for this city. Try another city spelling or search nearby.');
+    }catch(e){
+      if(request!==institutionRequest.current)return;
+      setInstitutions([]);
+      setInstitutionError(e?.message||'Could not search institutions for that city.');
+    }finally{
+      if(request===institutionRequest.current)setInstitutionLoading(false);
+    }
+  }
+
+  function updateCity(value){
+    setCity(value);
+    setCampus('');
+    setInstitutions([]);
+    setInstitutionError('');
+    institutionRequest.current++;
+  }
+
+  function openInstitutionPicker(){
+    setSelector('campus');
+    setCampusQuery('');
+    if(city.trim().length>=2){
+      loadCityInstitutions(city,country);
+    }else if(currentCoords){
+      loadInstitutions(currentCoords);
+    }else{
+      setInstitutions([]);
+      setInstitutionError('Enter a city to see its schools, colleges and universities. GPS is optional.');
+    }
+  }
+
   async function detectLocation(){
     setLocating(true);
     setLocationNote('');
@@ -148,9 +191,14 @@ export default function OnboardingScreen({theme}){
       const addresses=await Location.reverseGeocodeAsync(coords);
       const address=addresses?.[0];
       const detectedCity=String(address?.city||address?.district||address?.subregion||'').trim();
-      if(detectedCity) setCity(detectedCity);
-      setLocationNote(detectedCity?'City detected from your current location.':'Location found. Choose your institution below.');
-      await loadInstitutions(coords);
+      if(detectedCity){
+        updateCity(detectedCity);
+        setLocationNote('City detected. Select your institution to load the city directory.');
+        await loadCityInstitutions(detectedCity,country);
+      }else{
+        setLocationNote('Location found. Choose your institution below.');
+        await loadInstitutions(coords);
+      }
     }catch(e){
       setLocationNote(e?.message||'Could not detect your location. You can retry.');
     }finally{
@@ -172,6 +220,9 @@ export default function OnboardingScreen({theme}){
 
   function changeCountry(value){
     setCountry(value);
+    setCampus('');
+    setInstitutions([]);
+    institutionRequest.current++;
     setSafetyChecked(false);
     setSafetyNote('');
   }
@@ -345,14 +396,14 @@ export default function OnboardingScreen({theme}){
 
           <View style={[styles.field,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
             <Feather name="map-pin" size={18} color={theme.muted}/>
-            <TextInput value={city} onChangeText={setCity} onFocus={onFieldFocus} placeholder="City" placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text}]}/>
+            <TextInput value={city} onChangeText={updateCity} onFocus={onFieldFocus} placeholder="City" placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text}]}/>
             <Pressable onPress={detectLocation} disabled={locating} hitSlop={8} accessibilityLabel="Detect current city">
               {locating?<ActivityIndicator size="small" color={theme.accent}/>:<Feather name="navigation" size={17} color={theme.accent}/>}
             </Pressable>
           </View>
           {!!locationNote&&<Text style={[styles.fieldHint,{color:theme.muted}]}>{locationNote}</Text>}
 
-          <Pressable onPress={()=>{setSelector('campus');if(currentCoords&&institutions.length===0&&!institutionLoading)loadInstitutions(currentCoords)}} style={[styles.field,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
+          <Pressable onPress={openInstitutionPicker} style={[styles.field,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
             <Feather name="book-open" size={18} color={theme.muted}/>
             <Text numberOfLines={1} style={[styles.fieldText,{color:campus?theme.text:theme.muted}]}>{campus||'Campus or institution'}</Text>
             <Feather name="chevron-down" size={17} color={theme.muted}/>
@@ -401,7 +452,7 @@ export default function OnboardingScreen({theme}){
             <Text style={[styles.pickerTitle,{color:theme.text}]}>Choose your institution</Text>
             <View style={{width:42}}/>
           </View>
-          <Text style={[styles.pickerCopy,{color:theme.muted}]}>Schools, colleges and universities near your detected location.</Text>
+          <Text style={[styles.pickerCopy,{color:theme.muted}]}>Schools, colleges and universities listed for {city.trim()||'your location'} in the selected country. Results use OpenStreetMap and may be incomplete.</Text>
           <View style={[styles.pickerSearch,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
             <Feather name="search" size={17} color={theme.muted}/>
             <TextInput value={campusQuery} onChangeText={setCampusQuery} placeholder="Search nearby institutions" placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text}]}/>
@@ -416,7 +467,7 @@ export default function OnboardingScreen({theme}){
                 </View>
                 {campus===item.name&&<Feather name="check" size={18} color={theme.accent}/>}
               </Pressable>)}
-              {!filteredInstitutions.length&&!institutionLoading&&<View style={styles.pickerLoading}><Text style={[styles.pickerCopy,{color:theme.muted}]}>No matching institution found. Retry location to refresh nearby institutions.</Text></View>}
+              {!filteredInstitutions.length&&!institutionLoading&&<View style={styles.pickerLoading}><Text style={[styles.pickerCopy,{color:theme.muted}]}>{institutionError||'No matching institution found. Check the city spelling or retry the directory search.'}</Text><Pressable onPress={()=>loadCityInstitutions(city,country)} style={[styles.safetyButton,{backgroundColor:theme.accent}]}><Text style={styles.primaryText}>Search city again</Text></Pressable></View>}
             </ScrollView>}
         </View>}
     </SlidePage>}
