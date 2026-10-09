@@ -3,12 +3,13 @@ import {Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {SceneIcon} from '../icons';
 
-export default function CreateOptionsScreen({theme,onBack,onScene,onPulse,onHang,onGig}){
+export default function CreateOptionsScreen({theme,onBack,onScene,onPulse,onHang,onCrew,onGig}){
  const options=[
   {name:'Post a Scene',icon:'scene',copy:'Share a photo, video or post',onPress:onScene},
-  {name:'Add to Pulse',icon:'circle',copy:'Quick campus moments',onPress:onPulse},
-  {name:'Start a Hang',icon:'calendar',copy:'Campus meetups',onPress:onHang},
-  {name:'Post a Gig',icon:'briefcase',copy:'Student opportunities',onPress:onGig}
+  {name:'Add to Pulse',icon:'circle',copy:'Share a moment with your campus circle',onPress:onPulse},
+  {name:'Start a Hang',icon:'calendar',copy:'Create an event or campus meetup',onPress:onHang},
+  {name:'Create a Crew',icon:'users',copy:'Start a community for students',onPress:onCrew},
+  {name:'Post a Gig',icon:'briefcase',copy:'Submit a student opportunity for review',onPress:onGig}
  ];
  return <View style={[styles.root,{backgroundColor:theme.bg}]}>
   <View style={[styles.header,{borderBottomColor:theme.line}]}>
@@ -17,7 +18,7 @@ export default function CreateOptionsScreen({theme,onBack,onScene,onPulse,onHang
    <View style={{width:42}}/>
   </View>
   <ScrollView contentContainerStyle={styles.content}>
-   <Text style={[styles.intro,{color:theme.muted}]}>What would you like to share with your campus?</Text>
+   <Text style={[styles.intro,{color:theme.muted}]}>Choose what you want to create. Every option opens its own editor; nothing is published without a successful save and safety review.</Text>
    {options.map(option=><Pressable key={option.name} onPress={option.onPress} accessibilityRole="button" style={[styles.row,{backgroundColor:theme.surface,borderColor:theme.line}]}>
     <View style={[styles.icon,{backgroundColor:theme.accentSoft}]}>
      {option.icon==='scene'?<SceneIcon color={theme.accent} size={23}/>:<Feather name={option.icon} size={23} color={theme.accent}/>}
