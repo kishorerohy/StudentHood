@@ -44,7 +44,20 @@
           "locationWhenInUsePermission": "StudentHood uses your location during profile setup to find your city and nearby schools, colleges and universities. Your precise location is not stored."
         }
       ],
-      "./plugins/withSocialShareQueries"
+      "./plugins/withSocialShareQueries",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F5F4F0",
+          "image": "./assets/studenthood-logo-light.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#0B0D0F",
+            "image": "./assets/studenthood-logo.png"
+          }
+        }
+      ]
     ],
     "extra": {
       "privacyUrl": "https://kishorerohy.github.io/StudentHood/privacy.html",
