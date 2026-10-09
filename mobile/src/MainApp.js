@@ -128,6 +128,7 @@ export default function MainApp({theme}){
       reloadKey={reloadKey}
       onOpenProfile={userId=>showPage({type:'student-profile',userId})}
       onOpenCreate={()=>showPage({type:'create-options'})}
+      onOpenPulse={()=>showPage({type:'feature',kind:'Pulse'})}
     />}
     {tab==='Profile'&&<ProfileScreen
       theme={theme}
