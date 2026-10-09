@@ -6,7 +6,7 @@ export async function getMySceneCount(){
   return Number(data)||0;
 }
 
-export async function saveMyProfileChanges({fullName,bio,city,campusName,campusPresence}){
+export async function saveMyProfileChanges({fullName,bio,city,campusName}){
   const {data:{user},error:userError}=await supabase.auth.getUser();
   if(userError) throw userError;
   if(!user) throw new Error('Please sign in again.');
@@ -14,14 +14,28 @@ export async function saveMyProfileChanges({fullName,bio,city,campusName,campusP
     full_name:String(fullName||'').trim(),
     bio:String(bio||'').trim()||null,
     city:String(city||'').trim()||null,
-    campus_name:String(campusName||'').trim()||null,
-    campus_presence:campusPresence
+    campus_name:String(campusName||'').trim()||null
   };
   if(!payload.full_name) throw new Error('Your name is required.');
   if(!payload.campus_name) throw new Error('Your institution is required.');
-  if(!['on_campus','off_campus','not_shared'].includes(campusPresence)) throw new Error('Invalid campus status.');
   const {data,error}=await supabase.from('profiles').update(payload).eq('id',user.id)
     .select('id,full_name,bio,city,campus_name,campus_presence').single();
+  if(error) throw error;
+  return data;
+}
+
+// Campus status is voluntary and manually chosen from Scenes.
+// Only the authenticated student's own row is updated; existing RLS applies.
+export async function setCampusPresence(value){
+  if(!['on_campus','off_campus','not_shared'].includes(value)) throw new Error('Invalid campus status.');
+  const {data:{user},error:userError}=await supabase.auth.getUser();
+  if(userError) throw userError;
+  if(!user) throw new Error('Please sign in again.');
+  const {data,error}=await supabase.from('profiles')
+    .update({campus_presence:value})
+    .eq('id',user.id)
+    .select('id,campus_presence')
+    .single();
   if(error) throw error;
   return data;
 }
