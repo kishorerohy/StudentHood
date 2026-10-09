@@ -9,7 +9,6 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
   const [bio,setBio]=useState(profile?.bio||'');
   const [city,setCity]=useState(profile?.city||'');
   const [campus,setCampus]=useState(profile?.campus_name||'');
-  const [presence,setPresence]=useState(profile?.campus_presence||'not_shared');
   const [avatar,setAvatar]=useState(null);
   const [newPhoto,setNewPhoto]=useState(null);
   const [busy,setBusy]=useState(false);
@@ -45,7 +44,7 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
     setBusy(true);
     setError('');
     try{
-      if(!photoOnly) await saveMyProfileChanges({fullName,bio,city,campusName:campus,campusPresence:presence});
+      if(!photoOnly) await saveMyProfileChanges({fullName,bio,city,campusName:campus});
       if(newPhoto) await uploadMyAvatar(newPhoto);
       await onSaved?.();
       onBack?.();
@@ -81,17 +80,7 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
         <LabeledInput label="City" value={city} onChangeText={setCity} theme={theme}/>
         <LabeledInput label="School, college or university" value={campus} onChangeText={setCampus} theme={theme}/>
         <Text style={[styles.hint,{color:theme.muted}]}>Use your official institution name so classmates can find the same campus.</Text>
-        <Text style={[styles.fieldTitle,{color:theme.text}]}>Campus status</Text>
-        <View style={styles.statusChoices}>
-          {[
-            ['on_campus','On campus'],
-            ['off_campus','Off campus'],
-            ['not_shared','Not shared']
-          ].map(([value,label])=><Pressable key={value} onPress={()=>setPresence(value)} accessibilityState={{selected:presence===value}} style={[styles.status,{backgroundColor:presence===value?theme.accentSoft:theme.surface,borderColor:presence===value?theme.accent:theme.line}]}>
-            <Text style={[styles.statusText,{color:theme.text}]}>{label}</Text>
-          </Pressable>)}
-        </View>
-        <Text style={[styles.hint,{color:theme.muted}]}>This is a manual indicator, not live GPS tracking.</Text>
+        <Text style={[styles.hint,{color:theme.muted}]}>Choose your campus status from the transparent slider on Scenes.</Text>
       </>}
       {!!error&&<Text style={[styles.error,{color:theme.danger}]}>{error}</Text>}
     </ScrollView>

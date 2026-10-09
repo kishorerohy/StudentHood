@@ -12,6 +12,7 @@ import UserProfileScreen from './screens/UserProfileScreen';
 import CreateOptionsScreen from './screens/CreateOptionsScreen';
 import CreateSceneSheet from './components/CreateSceneSheet';
 import SlidePage from './components/SlidePage';
+import CampusStatusSlider from './components/CampusStatusSlider';
 
 const LOGO_DARK=require('../assets/studenthood-logo.png');
 const LOGO_LIGHT=require('../assets/studenthood-logo-light.png');
@@ -62,6 +63,7 @@ export default function MainApp({theme}){
           kind={page.kind}
           theme={theme}
           profile={profile}
+          pingTarget={page.pingTarget||null}
           onBack={goBack}
           onTab={selectTab}
           onOpenProfile={userId=>showPage({type:'student-profile',userId})}
@@ -69,8 +71,10 @@ export default function MainApp({theme}){
       case 'student-profile':
         return <UserProfileScreen
           userId={page.userId}
+          currentUserId={profile?.id}
           theme={theme}
           onBack={goBack}
+          onPing={pingTarget=>showPage({type:'hub',kind:'Ping',pingTarget})}
         />;
       case 'profile-menu':
         return <ProfileMenuScreen
@@ -133,12 +137,14 @@ export default function MainApp({theme}){
     {tab==='Hangs'&&<Placeholder theme={theme} icon="calendar" title="Hangs" copy="Campus plans and meetups live here. Hang creation is being wired next."/>}
     {tab==='Gigs'&&<Placeholder theme={theme} icon="briefcase" title="Gigs" copy="Student opportunities live here. Gig creation is being wired next."/>}
     <BottomDial theme={theme} tab={tab} onTab={selectTab} onCreate={()=>showPage({type:'create-options'})} isTablet={isTablet} screenWidth={width}/>
+    {tab==='Scenes'&&<CampusStatusSlider theme={theme} profile={profile} onSaved={afterProfileSaved}/>}
 
     {pages.map((page,index)=><SlidePage
       key={page.key}
       theme={theme}
       active={index===pages.length-1&&!page.closing}
       closing={page.closing}
+      swipeBack={page.type==='student-profile'}
       onBack={goBack}
       onExited={()=>pageExited(page.key)}
     >{makePage(page)}</SlidePage>)}

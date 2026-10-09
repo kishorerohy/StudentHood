@@ -4,16 +4,18 @@ import {
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {DiscoverIcon,DropsIcon,PingIcon} from '../icons';
-import {getCampusPeeps,getDropsFeed} from '../api';
+import {getCampusPeeps,getDropsFeed,getPeepConnection,getProfileCard} from '../api';
+import CampusPresenceBadge from '../components/CampusPresenceBadge';
 
 const PING_TABS=['All','Peeps','Hang Chats','Crew Chats'];
 
-export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProfile}){
+export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProfile,pingTarget=null}){
   const [peeps,setPeeps]=useState([]);
   const [peepsLoading,setPeepsLoading]=useState(false);
   const [peepsError,setPeepsError]=useState('');
   const [discoverSection,setDiscoverSection]=useState('Peeps');
   const [pingTab,setPingTab]=useState('All');
+  const [pingCampusPresence,setPingCampusPresence]=useState(null);
   const [drops,setDrops]=useState([]);
   const [dropsLoading,setDropsLoading]=useState(false);
   const [dropsError,setDropsError]=useState('');
@@ -50,6 +52,19 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
     }).finally(()=>{if(live) setDropsLoading(false)});
     return ()=>{live=false};
   },[kind,dropsRefresh]);
+
+  useEffect(()=>{
+    let live=true;
+    setPingCampusPresence(null);
+    if(kind!=='Ping'||!pingTarget?.id) return ()=>{live=false};
+    // Recipient's status appears in Ping only for accepted Peeps, never for requests.
+    Promise.all([getPeepConnection(pingTarget.id),getProfileCard(pingTarget.id)])
+      .then(([connection,card])=>{
+        if(live&&connection?.status==='accepted'&&card?.is_peep)
+          setPingCampusPresence(card.campus_presence||null);
+      }).catch(()=>{});
+    return ()=>{live=false};
+  },[kind,pingTarget?.id]);
 
   const icon=kind==='Discover'
     ?<DiscoverIcon color={theme.accent} size={22}/>
@@ -139,6 +154,12 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
       </>}
 
       {kind==='Ping'&&<>
+        {!!pingTarget?.id&&<View style={[styles.panel,{backgroundColor:theme.surface,borderColor:theme.line,padding:16,marginBottom:12}]}>
+          <Text style={[styles.sectionTitle,{color:theme.text}]}>Ping {pingTarget.full_name||pingTarget.username||'this student'}</Text>
+          {!!pingTarget.username&&<Text style={[styles.subtitle,{color:theme.muted}]}>@{pingTarget.username}</Text>}
+          <CampusPresenceBadge status={pingCampusPresence} theme={theme}/>
+          <Text style={[styles.subtitle,{color:theme.muted}]}>Messaging is not available yet. No Ping has been sent.</Text>
+        </View>}
         <Text style={[styles.subtitle,{color:theme.muted}]}>Your conversations, together in one place.</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pingTabs}>
           {PING_TABS.map(label=><Pressable
