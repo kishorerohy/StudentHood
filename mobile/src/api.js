@@ -276,7 +276,7 @@ export async function getVisibleProfileScenes(targetUserId,{limit=12}={}){
   if(error) throw error;
   return Promise.all((data||[]).map(async scene=>{
     if(!scene.media_url) return {...scene,media_signed_url:null};
-    if(/^https?:\\/\\//i.test(scene.media_url)) return {...scene,media_signed_url:scene.media_url};
+    if(scene.media_url.startsWith('https://')||scene.media_url.startsWith('http://')) return {...scene,media_signed_url:scene.media_url};
     const signed=await supabase.storage.from('scene-media')
       .createSignedUrl(scene.media_url,3600);
     return {...scene,media_signed_url:signed.error?null:signed.data?.signedUrl||null};
