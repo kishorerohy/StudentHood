@@ -155,6 +155,7 @@ export default function MainApp({theme}){
       onOpenProfile={userId=>showPage({type:'student-profile',userId})}
       onOpenCreate={()=>showPage({type:'create-options'})}
       onOpenPulse={()=>showPage({type:'feature',kind:'Pulse'})}
+      onOpenDiscover={()=>showPage({type:'hub',kind:'Discover'})}
     />}
     {tab==='Profile'&&<ProfileScreen
       theme={theme}
