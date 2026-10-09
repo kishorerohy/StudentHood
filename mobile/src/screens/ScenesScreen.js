@@ -6,7 +6,8 @@ import {
 import {Feather} from '@expo/vector-icons';
 import {SceneIcon} from '../icons';
 import {getCampusPeeps} from '../api';
-import {fetchScenes,fetchSharedScene,shareScene,toggleSceneLike} from '../scenes';
+import {fetchScenes,fetchSharedScene,toggleSceneLike} from '../scenes';
+import SceneSharePanel from '../components/SceneSharePanel';
 import SceneCommentsPanel from '../components/SceneCommentsPanel';
 
 const FILTERS=['For you','Viral','Nearby','Campus','Live now'];
@@ -19,6 +20,7 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
   const [error,setError]=useState('');
   const [viewerIndex,setViewerIndex]=useState(null);
   const [commentScene,setCommentScene]=useState(null);
+  const [shareTarget,setShareTarget]=useState(null);
   const [sharedScene,setSharedScene]=useState(null);
   const [sharedLoading,setSharedLoading]=useState(false);
   const [pulsePeeps,setPulsePeeps]=useState([]);
@@ -69,9 +71,8 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
     return()=>{active=false};
   },[focusScene?.id,focusScene?.token]);
 
-  async function handleShare(scene){
-    try{await shareScene(scene.id)}
-    catch(e){setError(e?.message||'Could not open your device share options.');}
+  function handleShare(scene){
+    setShareTarget(scene);
   }
 
   async function like(sceneId){
@@ -174,13 +175,15 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
       onCommentSaved={(sceneId,saved)=>{
         if(saved?.moderation_status==='approved')setItems(current=>current.map(row=>row.id===sceneId?{...row,comment_count:Number(row.comment_count||0)+1}:row));
       }}
-      onShare={handleShare}
       theme={theme}
     />
     <Modal visible={!!commentScene} animationType="slide" presentationStyle="fullScreen" onRequestClose={()=>setCommentScene(null)}>
       {!!commentScene&&<SceneCommentsPanel scene={commentScene} theme={theme} onClose={()=>setCommentScene(null)} onSent={(sceneId,saved)=>{
         if(saved?.moderation_status==='approved')setItems(current=>current.map(row=>row.id===sceneId?{...row,comment_count:Number(row.comment_count||0)+1}:row));
       }}/>} 
+    </Modal>
+    <Modal visible={!!shareTarget} transparent animationType="fade" onRequestClose={()=>setShareTarget(null)}>
+      {!!shareTarget&&<SceneSharePanel scene={shareTarget} theme={theme} onClose={()=>setShareTarget(null)}/>}
     </Modal>
   </View>;
 }
@@ -215,13 +218,14 @@ function SceneCard({scene,theme,onOpen,onProfile,onLike,onComments,onShare}){
   </View>;
 }
 
-function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCommentSaved,onShare,theme}){
+function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCommentSaved,theme}){
   const {width}=useWindowDimensions();
   const slide=useRef(new Animated.Value(width)).current;
   const [commentsOpen,setCommentsOpen]=useState(false);
+  const [shareOpen,setShareOpen]=useState(false);
   const start=useRef({x:0,y:0}).current;
 
-  useEffect(()=>{if(!visible)setCommentsOpen(false)},[visible]);
+  useEffect(()=>{if(!visible){setCommentsOpen(false);setShareOpen(false)}},[visible]);
   useEffect(()=>{
     if(visible){
       slide.setValue(width);
@@ -253,8 +257,8 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCo
   const scene=scenes[index];
   if(!scene) return null;
 
-  return <Modal visible={visible} animationType="none" statusBarTranslucent onRequestClose={()=>commentsOpen?setCommentsOpen(false):leave()}>
-    <Animated.View style={[styles.viewer,{transform:[{translateX:slide}]}]} {...(!commentsOpen?pan.panHandlers:{})}>
+  return <Modal visible={visible} animationType="none" statusBarTranslucent onRequestClose={()=>shareOpen?setShareOpen(false):commentsOpen?setCommentsOpen(false):leave()}>
+    <Animated.View style={[styles.viewer,{transform:[{translateX:slide}]}]} {...(!commentsOpen&&!shareOpen?pan.panHandlers:{})}>
       {commentsOpen?<SceneCommentsPanel scene={scene} theme={theme} onClose={()=>setCommentsOpen(false)} onSent={onCommentSaved}/>:
       <>
       {scene.media_signed_url&&scene.media_type==='image'?<Image source={{uri:scene.media_signed_url}} style={StyleSheet.absoluteFillObject} resizeMode="cover"/>:<View style={[StyleSheet.absoluteFillObject,{backgroundColor:'#08090A',alignItems:'center',justifyContent:'center'}]}>{scene.media_type==='video'?<><Feather name="play-circle" size={72} color="#fff"/><Text style={styles.viewerVideo}>Video Scene</Text></>:<Text style={styles.viewerText}>{scene.body}</Text>}</View>}
@@ -268,9 +272,10 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCo
       <View style={styles.viewerActions}>
         <Pressable onPress={()=>onLike(scene)} style={styles.viewerAction}><Feather name="heart" size={24} color={scene.liked_by_me?theme.accent:'#fff'}/><Text style={styles.viewerActionText}>{compact(scene.like_count)}</Text></Pressable>
         <Pressable onPress={()=>setCommentsOpen(true)} accessibilityRole="button" accessibilityLabel="View comments" style={styles.viewerAction}><Feather name="message-circle" size={24} color="#fff"/><Text style={styles.viewerActionText}>{compact(scene.comment_count)}</Text></Pressable>
-        <Pressable onPress={()=>onShare?.(scene)} accessibilityRole="button" accessibilityLabel="Share Scene" style={styles.viewerAction}><Feather name="send" size={24} color="#fff"/><Text style={styles.viewerActionText}>Share Scene</Text></Pressable>
+        <Pressable onPress={()=>setShareOpen(true)} accessibilityRole="button" accessibilityLabel="Share Scene" style={styles.viewerAction}><Feather name="send" size={24} color="#fff"/><Text style={styles.viewerActionText}>Share Scene</Text></Pressable>
       </View>
       </>}
+      {shareOpen&&<SceneSharePanel scene={scene} theme={theme} onClose={()=>setShareOpen(false)}/>}
     </Animated.View>
   </Modal>;
 }
