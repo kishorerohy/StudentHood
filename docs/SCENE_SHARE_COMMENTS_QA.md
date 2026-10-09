@@ -36,3 +36,24 @@ The owner requested **Instagram first, TikTok second, WhatsApp third, then the r
 - **Copy Scene link:** clipboard-only choice, with confirmation or error.
 
 No social SDK keys, direct posting permissions, third-party tracking, private media URLs, or bypass of Scene RLS are introduced. Uses `expo-clipboard` compatible with Expo SDK 54. Native app switch and deep-link behavior must be tested on Android/iOS devices after an authorized APK release; Expo Doctor and JS export cannot verify recipient-app installation or handoff. Draft PR #7 only. **No merge, deployment, or EAS build.**
+
+## Share radial and region availability update — 2026-10-09
+
+Owner approved the **right-side Share-button-anchored half-circle fan**, not a bottom sheet. The control must expand above the button tapped, whether it lives in a Scene card or the immersive viewer. The previously staged `SceneSharePanel` is no longer used by these controls.
+
+### Implementation
+- `SceneCard` and `SceneViewer` measure the actual tapped Share control with `measureInWindow` and pass its anchor into the new `SceneShareRadial` overlay.
+- The radial is glass/translucent and spring-animated in both themes, fades closed and dismisses on background tap or the original Share position. It mirrors for left-edge controls and reflows the visible actions.
+- Visual action priority: Instagram, TikTok, WhatsApp, then Copy link and More apps. Instagram/TikTok copy link before opening the selected installed app; WhatsApp opens prefilled link; More apps opens the native chooser. No direct social media post is claimed.
+- `shareAvailability.js` uses device locale region and stored country conservatively: if *either* signals a known restriction, the destination is hidden. It also requires a positive `Linking.canOpenURL` result for the app's registered scheme. Both methods are imperfect: neither establishes current physical location, live government rules, network reachability or legal availability; update the restricted-region rules as verified changes occur.
+- Currently recognized conservative restrictions: TikTok hidden for IN/CN; WhatsApp hidden for CN/RU. Other countries depend on detected app handler support and future restrictions-review updates. Unknown country and app detection failures fall back to Copy link and More apps.
+- Dedicated Expo iOS `LSApplicationQueriesSchemes` and a narrow Android manifest `queries` config plugin were added. This native configuration **requires an EAS APK/device build** before installed app checks can work. It does not use broad Android package-list access or GPS.
+- Keep the exact StudentHood brand logo/colours intact, preserve privacy/RLS Scene links, do not allow age restrictions to be bypassed.
+
+### QA after explicit owner build approval
+1. Dark/light, Scene feed and immersive viewer, tap Share: semicircle appears immediately **above the same button**, not at the bottom, on various display sizes/rotations.
+2. Tap anywhere outside or the Share/X hub: collapse. Tap on an app: only launch when installed and eligible; if app disappears or fails to open, do not claim completion.
+3. Test account and device regions: IN -> TikTok hidden; CN -> TikTok/WhatsApp hidden; RU -> WhatsApp hidden; supported regions with installed apps -> display accordingly; absent app -> hidden.
+4. Test airplane mode and stale app state, correct fallback of native chooser and copy-link handoff, no personal data or private media in shared URL.
+5. Test with teen privacy accounts and private Scene links; forwarded link must never override RLS. Verify platform schemes with actual devices on Android 11+ and iOS.
+6. Expo Doctor and Android JavaScript export validate code syntax; they cannot verify native app detectability, UI layout, or external app handoff. **No EAS APK build requested**.
