@@ -4,15 +4,17 @@ import {
   StyleSheet,Text,useWindowDimensions,View
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {SceneIcon} from '../icons';
 import {getCampusPeeps} from '../api';
 import {fetchScenes,fetchSharedScene,toggleSceneLike} from '../scenes';
 import SceneShareRadial from '../components/SceneShareRadial';
 import SceneCommentsPanel from '../components/SceneCommentsPanel';
+import SceneOptionsMenu from '../components/SceneOptionsMenu';
 
 const FILTERS=['For you','Viral','Nearby','Campus','Live now'];
 
-export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenCreate,onOpenPulse,focusScene,reloadKey=0}){
+export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenCreate,onOpenPulse,onOpenDiscover,focusScene,reloadKey=0}){
   const [filter,setFilter]=useState('For you');
   const [items,setItems]=useState([]);
   const [loading,setLoading]=useState(true);
@@ -21,6 +23,8 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
   const [viewerIndex,setViewerIndex]=useState(null);
   const [commentScene,setCommentScene]=useState(null);
   const [shareTarget,setShareTarget]=useState(null);
+  const [optionsTarget,setOptionsTarget]=useState(null);
+  const [hiddenIds,setHiddenIds]=useState([]);
   const [sharedScene,setSharedScene]=useState(null);
   const [sharedLoading,setSharedLoading]=useState(false);
   const [pulsePeeps,setPulsePeeps]=useState([]);
@@ -55,6 +59,26 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
   },[filter]);
 
   useEffect(()=>{load(filter)},[filter,reloadKey]);
+  useEffect(()=>{
+    let live=true;
+    setHiddenIds([]);
+    if(!profile?.id)return;
+    AsyncStorage.getItem('studenthood:hidden-scenes:'+profile.id)
+      .then(value=>{if(live){const parsed=JSON.parse(value||'[]');setHiddenIds(Array.isArray(parsed)?parsed:[]);}})
+      .catch(()=>{if(live)setHiddenIds([])});
+    return()=>{live=false};
+  },[profile?.id]);
+  async function hideScene(sceneId){
+    if(!profile?.id)throw new Error('Sign in to hide Scenes.');
+    const next=[...new Set([...hiddenIds,sceneId])];
+    await AsyncStorage.setItem('studenthood:hidden-scenes:'+profile.id,JSON.stringify(next));
+    setHiddenIds(next);
+    setViewerIndex(null);
+  }
+  function handleDeleted(sceneId){
+    setItems(current=>current.filter(item=>item.id!==sceneId));
+    setViewerIndex(null);
+  }
   useEffect(()=>{loadPulse()},[loadPulse,reloadKey]);
 
   useEffect(()=>{
@@ -112,7 +136,7 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
       </View>
 
       <View style={[styles.panel,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-        <View style={styles.sectionHead}><Text style={[styles.h2,{color:theme.text}]}>Campus people</Text><Pressable accessibilityRole="button" accessibilityLabel="Explore Pulse" onPress={onOpenPulse}><Text style={[styles.link,{color:theme.accent}]}>Explore Pulse →</Text></Pressable></View>
+        <View style={styles.sectionHead}><Text style={[styles.h2,{color:theme.text}]}>Campus people</Text><Pressable accessibilityRole="button" accessibilityLabel="See all campus people" onPress={onOpenDiscover}><Text style={[styles.link,{color:theme.accent}]}>See all →</Text></Pressable></View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pulseRow}>
           <Pressable onPress={onOpenPulse} style={styles.pulse}>
             <View style={[styles.pulseRing,{borderColor:theme.line,backgroundColor:theme.surface2}]}><Feather name="plus" size={22} color={theme.accent}/></View>
@@ -160,7 +184,7 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
           <Text style={[styles.emptyCopy,{color:theme.muted}]}>Be the first to post a Scene. New Scenes are moderated before broader distribution.</Text>
           <Pressable onPress={onOpenCreate} style={[styles.emptyButton,{backgroundColor:theme.accent}]}><Text style={styles.emptyButtonText}>Create a Scene</Text></Pressable>
         </View>:
-        <View style={styles.feed}>{items.map((scene,index)=><SceneCard key={scene.id} scene={scene} theme={theme} onOpen={()=>{setSharedScene(null);setViewerIndex(index)}} onProfile={()=>onOpenProfile?.(scene.author_id)} onLike={()=>like(scene.id)} onComments={()=>setCommentScene(scene)} onShare={anchor=>handleShare(scene,anchor)}/>)}</View>
+        <View style={styles.feed}>{items.filter(scene=>!hiddenIds.includes(scene.id)).map(scene=><SceneCard key={scene.id} scene={scene} theme={theme} onOpen={()=>{setSharedScene(null);setViewerIndex(items.findIndex(row=>row.id===scene.id))}} onProfile={()=>onOpenProfile?.(scene.author_id)} onLike={()=>like(scene.id)} onComments={()=>setCommentScene(scene)} onShare={anchor=>handleShare(scene,anchor)} onMore={anchor=>setOptionsTarget({scene,anchor})}/>)}</View>
       }
     </ScrollView>
 
@@ -173,6 +197,9 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
       onClose={()=>{setViewerIndex(null);setSharedScene(null)}}
       onProfile={scene=>onOpenProfile?.(scene.author_id)}
       onLike={scene=>like(scene.id)}
+      currentUserId={profile?.id}
+      onHide={hideScene}
+      onDeleted={handleDeleted}
       profileCountry={profile?.country_code}
       onCommentSaved={(sceneId,saved)=>{
         if(saved?.moderation_status==='approved')setItems(current=>current.map(row=>row.id===sceneId?{...row,comment_count:Number(row.comment_count||0)+1}:row));
@@ -187,11 +214,15 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
     <Modal visible={!!shareTarget} transparent statusBarTranslucent animationType="none" onRequestClose={()=>setShareTarget(null)}>
       {!!shareTarget&&<SceneShareRadial scene={shareTarget.scene} anchor={shareTarget.anchor} profileCountry={profile?.country_code} theme={theme} onClose={()=>setShareTarget(null)}/>}
     </Modal>
+    <Modal visible={!!optionsTarget} transparent statusBarTranslucent animationType="fade" onRequestClose={()=>setOptionsTarget(null)}>
+      {!!optionsTarget&&<SceneOptionsMenu scene={optionsTarget.scene} anchor={optionsTarget.anchor} theme={theme} currentUserId={profile?.id} onClose={()=>setOptionsTarget(null)} onProfile={userId=>onOpenProfile?.(userId)} onHide={hideScene} onDeleted={handleDeleted}/>}
+    </Modal>
   </View>;
 }
 
-function SceneCard({scene,theme,onOpen,onProfile,onLike,onComments,onShare}){
+function SceneCard({scene,theme,onOpen,onProfile,onLike,onComments,onShare,onMore}){
   const shareButton=useRef(null);
+  const moreButton=useRef(null);
   const pressShare=()=>{
     shareButton.current?.measureInWindow((x,y,width,height)=>onShare?.({x,y,width,height}));
   };
@@ -206,7 +237,7 @@ function SceneCard({scene,theme,onOpen,onProfile,onLike,onComments,onShare}){
           <Text style={[styles.meta,{color:theme.muted}]}>{scene.author_campus_name||'Campus'} · {timeAgo(scene.created_at)}</Text>
         </View>
       </Pressable>
-      <Pressable style={styles.more}><Feather name="more-horizontal" size={20} color={theme.muted}/></Pressable>
+      <Pressable ref={moreButton} onPress={()=>moreButton.current?.measureInWindow((x,y,width,height)=>onMore?.({x,y,width,height}))} accessibilityRole="button" accessibilityLabel="Scene options" style={styles.more}><Feather name="more-horizontal" size={20} color={theme.muted}/></Pressable>
     </View>
 
     <Pressable onPress={onOpen} style={[styles.media,{backgroundColor:theme.surface2}]}>
@@ -224,7 +255,7 @@ function SceneCard({scene,theme,onOpen,onProfile,onLike,onComments,onShare}){
   </View>;
 }
 
-function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCommentSaved,profileCountry,theme}){
+function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCommentSaved,onHide,onDeleted,currentUserId,profileCountry,theme}){
   const {width}=useWindowDimensions();
   const slide=useRef(new Animated.Value(width)).current;
   const [commentsOpen,setCommentsOpen]=useState(false);
