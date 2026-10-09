@@ -1,5 +1,5 @@
 import React,{useEffect,useState} from 'react';
-import {ActivityIndicator,Image,KeyboardAvoidingView,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from 'react-native';
+import {ActivityIndicator,Alert,Image,KeyboardAvoidingView,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,ToastAndroid,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import {getAvatarDisplayUrl,saveMyProfileChanges,uploadMyAvatar} from '../api';
@@ -41,15 +41,40 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
   }
 
   async function save(){
+    if(busy)return;
+    if(photoOnly&&!newPhoto){
+      setError('Choose a profile photo before saving.');
+      return;
+    }
     setBusy(true);
     setError('');
+    let profileSaved=false;
+    let photoSaved=false;
     try{
-      if(!photoOnly) await saveMyProfileChanges({fullName,bio,city,campusName:campus});
-      if(newPhoto) await uploadMyAvatar(newPhoto);
+      // These calls verify the saved record before returning success.
+      if(!photoOnly){
+        await saveMyProfileChanges({fullName,bio,city,campusName:campus});
+        profileSaved=true;
+      }
+      if(newPhoto){
+        await uploadMyAvatar(newPhoto);
+        photoSaved=true;
+        setNewPhoto(null);
+      }
+      // Refresh the profile the student sees after returning from Edit.
       await onSaved?.();
+      if(Platform.OS==='android')ToastAndroid.show('Profile saved successfully',ToastAndroid.SHORT);
+      else Alert.alert('Profile saved','Your updated details are saved on StudentHood.');
       onBack?.();
     }catch(e){
-      setError(e?.message||'Could not update your profile.');
+      const detail=e?.message||'Could not update your profile.';
+      if(profileSaved||photoSaved){
+        setError('Some changes were saved, but the remaining changes or profile refresh failed: '+detail);
+        // Refresh any partial changes, but keep the editor open for retry.
+        try{await onSaved?.()}catch{}
+      }else{
+        setError(detail);
+      }
     }finally{setBusy(false)}
   }
 
@@ -60,7 +85,7 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
         <Feather name="arrow-left" size={22} color={theme.text}/>
       </Pressable>
       <Text style={[styles.headerText,{color:theme.text}]}>{photoOnly?'Profile picture':'Edit profile'}</Text>
-      <Pressable onPress={save} disabled={busy} accessibilityRole="button" style={[styles.save,{backgroundColor:theme.accent}]}>
+      <Pressable onPress={save} disabled={busy} accessibilityRole="button" accessibilityLabel="Save profile changes" accessibilityState={{disabled:busy}} style={[styles.save,{backgroundColor:theme.accent}]}>
         {busy?<ActivityIndicator size="small" color="#fff"/>:<Text style={styles.saveText}>Save</Text>}
       </Pressable>
     </View>
