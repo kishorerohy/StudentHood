@@ -62,6 +62,7 @@ export default function MainApp({theme}){
           kind={page.kind}
           theme={theme}
           profile={profile}
+          pingTarget={page.pingTarget||null}
           onBack={goBack}
           onTab={selectTab}
           onOpenProfile={userId=>showPage({type:'student-profile',userId})}
@@ -69,8 +70,10 @@ export default function MainApp({theme}){
       case 'student-profile':
         return <UserProfileScreen
           userId={page.userId}
+          currentUserId={profile?.id}
           theme={theme}
           onBack={goBack}
+          onPing={pingTarget=>showPage({type:'hub',kind:'Ping',pingTarget})}
         />;
       case 'profile-menu':
         return <ProfileMenuScreen
