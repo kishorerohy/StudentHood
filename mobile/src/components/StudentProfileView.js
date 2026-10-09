@@ -1,5 +1,5 @@
-import React,{useRef} from 'react';
-import {Image,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
+import React,{useRef,useState} from 'react';
+import {Image,Modal,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import CampusPresenceBadge from './CampusPresenceBadge';
 
@@ -10,6 +10,7 @@ export default function StudentProfileView({
   onBack,onMenu,onEdit,onEditPhoto,actions=null,footer=null,own=false
 }){
   const scroll=useRef(null);
+  const [openScene,setOpenScene]=useState(null);
   const interests=Array.isArray(student?.interests)?
     student.interests.filter(value=>typeof value==='string'&&value.trim()):[];
   const photoScene=scenes.find(item=>item.media_type==='image'&&item.media_signed_url);
@@ -20,7 +21,7 @@ export default function StudentProfileView({
   const status=student?.campus_presence;
   const peeps=peepCount===null?'—':formatCount(peepCount);
   const posted=sceneCount===null?'—':formatCount(sceneCount);
-  return <ScrollView
+  return <><ScrollView
     ref={scroll}
     style={[styles.scroll,{backgroundColor:theme.bg}]}
     contentContainerStyle={styles.content}
@@ -31,9 +32,9 @@ export default function StudentProfileView({
       <View style={styles.coverShade}/>
       {!coverUrl&&<Feather name="book-open" size={80} color="rgba(255,255,255,0.10)" style={styles.coverPlaceholder}/>}
       <View style={styles.topBar}>
-        <Pressable onPress={onBack} style={styles.topAction} accessibilityRole="button" accessibilityLabel="Back to Scenes">
+        {!!onBack?<Pressable onPress={onBack} style={styles.topAction} accessibilityRole="button" accessibilityLabel="Back to Scenes">
           <Feather name="arrow-left" size={24} color="#fff"/>
-        </Pressable>
+        </Pressable>:<View style={{width:43}}/>}
         {!!onMenu&&<Pressable onPress={onMenu} style={styles.topAction} accessibilityRole="button" accessibilityLabel="Profile options">
           <Feather name="more-horizontal" size={25} color="#fff"/>
         </Pressable>}
@@ -95,7 +96,7 @@ export default function StudentProfileView({
 
     <View style={styles.moments} accessibilityLabel="Recent Scenes">
       {scenes.filter(scene=>!!scene.media_signed_url&&scene.media_type==='image').slice(0,4).map(scene=>
-        <Pressable key={scene.id} onPress={()=>scroll.current?.scrollToEnd({animated:true})} style={styles.moment} accessibilityRole="button" accessibilityLabel="View recent Scenes">
+        <Pressable key={scene.id} onPress={()=>setOpenScene(scene)} style={styles.moment} accessibilityRole="button" accessibilityLabel="View Scene">
           <View style={[styles.momentRing,{borderColor:theme.muted}]}>
             <Image source={{uri:scene.media_signed_url}} style={styles.momentImage}/>
           </View>
@@ -109,17 +110,29 @@ export default function StudentProfileView({
       {scenes.length===0?
         <Text style={[styles.empty,{color:theme.muted}]}>No visible Scenes yet.</Text>:
         <View style={styles.grid}>
-          {scenes.map(scene=><View key={scene.id} style={[styles.tile,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+          {scenes.map(scene=><Pressable onPress={()=>setOpenScene(scene)} accessibilityRole="button" key={scene.id} style={[styles.tile,{backgroundColor:theme.surface,borderColor:theme.line}]}>
             {scene.media_type==='image'&&scene.media_signed_url?
               <Image source={{uri:scene.media_signed_url}} style={styles.scenePhoto}/>:
               <View style={styles.fallback}>
                 <Feather name={scene.media_type==='video'?'play-circle':'file-text'} size={30} color={theme.accent}/>
               </View>}
             {!!scene.body&&<Text numberOfLines={2} style={[styles.sceneCaption,{color:theme.text}]}>{scene.body}</Text>}
-          </View>)}
+          </Pressable>)}
         </View>}
     </View>
-  </ScrollView>;
+  </ScrollView>
+  <Modal visible={!!openScene} animationType="fade" statusBarTranslucent onRequestClose={()=>setOpenScene(null)}>
+    <View style={styles.sceneOverlay}>
+      <Pressable onPress={()=>setOpenScene(null)} accessibilityRole="button" accessibilityLabel="Close Scene" style={styles.closeScene}>
+        <Feather name="x" size={27} color="#fff"/>
+      </Pressable>
+      {openScene?.media_type==='image'&&openScene?.media_signed_url?
+        <Image resizeMode="contain" source={{uri:openScene.media_signed_url}} style={styles.openSceneImage}/>:
+        <Feather name={openScene?.media_type==='video'?'play-circle':'file-text'} size={65} color="#fff"/>}
+      {!!openScene?.body&&<Text style={styles.openSceneText}>{openScene.body}</Text>}
+      {openScene?.media_type==='video'&&<Text style={styles.openSceneText}>Video playback will be enabled when Scenes media playback is available.</Text>}
+    </View>
+  </Modal></>;
 }
 
 function Stat({value,label,theme}){
@@ -184,5 +197,9 @@ const styles=StyleSheet.create({
   tile:{width:'48%',borderWidth:1,borderRadius:14,overflow:'hidden',minHeight:115},
   scenePhoto:{width:'100%',height:148},
   fallback:{height:110,alignItems:'center',justifyContent:'center'},
-  sceneCaption:{padding:8,fontSize:12,lineHeight:17}
+  sceneCaption:{padding:8,fontSize:12,lineHeight:17},
+  sceneOverlay:{flex:1,backgroundColor:'#090B0D',alignItems:'center',justifyContent:'center',padding:24},
+  closeScene:{position:'absolute',top:55,right:19,zIndex:2,padding:10},
+  openSceneImage:{height:'74%',width:'100%'},
+  openSceneText:{color:'#fff',fontSize:14,lineHeight:21,marginTop:15,textAlign:'center'}
 });
