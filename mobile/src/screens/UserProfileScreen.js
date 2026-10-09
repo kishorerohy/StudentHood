@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {ActivityIndicator,Image,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
+import CampusPresenceBadge from '../components/CampusPresenceBadge';
 import {getAvatarDisplayUrl,getPeepConnection,getProfileCard,getVisibleProfileScenes,sendPeepRequest} from '../api';
 
 export default function UserProfileScreen({userId,currentUserId,theme,onBack,onPing}){
@@ -100,6 +101,7 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
           <Text style={[styles.name,{color:theme.text}]}>{card.full_name||card.username||'Student'}</Text>
           {!!card.username&&<Text style={[styles.handle,{color:theme.muted}]}>@{card.username}</Text>}
           <Text style={[styles.studentId,{color:theme.muted}]}>Student ID · {card.id.slice(0,8).toUpperCase()}</Text>
+          <View style={{marginTop:12}}><CampusPresenceBadge status={card.campus_presence} theme={theme}/></View>
 
           <View style={styles.actions}>
             <Pressable
