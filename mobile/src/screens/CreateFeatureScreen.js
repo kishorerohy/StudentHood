@@ -88,7 +88,7 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
     }
   }
 
-  return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]} behavior={Platform.OS==='ios'?'padding':undefined}>
+  return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]} behavior={Platform.OS==='ios'?'padding':'height'}>
     <View style={[styles.header,{borderBottomColor:theme.line}]}>
       <Pressable accessibilityRole="button" accessibilityLabel="Back to Create" onPress={onBack} style={styles.back}>
         <Feather name="arrow-left" size={21} color={theme.text}/>
