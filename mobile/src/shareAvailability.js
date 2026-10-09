@@ -3,9 +3,11 @@ import {getLocales} from 'expo-localization';
 
 // Explicit, narrowly documented region restrictions. This is not a claim to
 // enumerate every country's constantly changing availability rules.
-// App-install and URL-handler checks are the second gate for every destination.
+// Reviewed Oct 2026; restrictions may change and this list needs ongoing
+// maintenance. App-install and URL-handler checks are a second gate.
 const REGION_RESTRICTIONS={
-  TikTok:new Set(['IN','CN']),
+  Instagram:new Set(['CN','RU','IR']),
+  TikTok:new Set(['IN','CN','AF','IR','JO','KP','UZ','SO','SN','TJ','KG','GA']),
   WhatsApp:new Set(['CN','RU'])
 };
 const SCHEMES={
