@@ -6,17 +6,21 @@ import {
 import {Feather} from '@expo/vector-icons';
 import {SceneIcon} from '../icons';
 import {getCampusPeeps} from '../api';
-import {fetchScenes,toggleSceneLike} from '../scenes';
+import {fetchScenes,fetchSharedScene,shareScene,toggleSceneLike} from '../scenes';
+import SceneCommentsPanel from '../components/SceneCommentsPanel';
 
 const FILTERS=['For you','Viral','Nearby','Campus','Live now'];
 
-export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenCreate,onOpenPulse,reloadKey=0}){
+export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenCreate,onOpenPulse,focusScene,reloadKey=0}){
   const [filter,setFilter]=useState('For you');
   const [items,setItems]=useState([]);
   const [loading,setLoading]=useState(true);
   const [refreshing,setRefreshing]=useState(false);
   const [error,setError]=useState('');
   const [viewerIndex,setViewerIndex]=useState(null);
+  const [commentScene,setCommentScene]=useState(null);
+  const [sharedScene,setSharedScene]=useState(null);
+  const [sharedLoading,setSharedLoading]=useState(false);
   const [pulsePeeps,setPulsePeeps]=useState([]);
 
   const loadPulse=useCallback(async()=>{
@@ -50,6 +54,25 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
 
   useEffect(()=>{load(filter)},[filter,reloadKey]);
   useEffect(()=>{loadPulse()},[loadPulse,reloadKey]);
+
+  useEffect(()=>{
+    if(!focusScene?.id)return;
+    let active=true;
+    setSharedLoading(true);
+    fetchSharedScene(focusScene.id).then(scene=>{
+      if(!active)return;
+      setSharedScene(scene);
+      setViewerIndex(0);
+    }).catch(e=>{
+      if(active)setError(e?.message||'This Scene cannot be opened.');
+    }).finally(()=>{if(active)setSharedLoading(false)});
+    return()=>{active=false};
+  },[focusScene?.id,focusScene?.token]);
+
+  async function handleShare(scene){
+    try{await shareScene(scene.id)}
+    catch(e){setError(e?.message||'Could not open your device share options.');}
+  }
 
   async function like(sceneId){
     try{
@@ -135,24 +158,32 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
           <Text style={[styles.emptyCopy,{color:theme.muted}]}>Be the first to post a Scene. New Scenes are moderated before broader distribution.</Text>
           <Pressable onPress={onOpenCreate} style={[styles.emptyButton,{backgroundColor:theme.accent}]}><Text style={styles.emptyButtonText}>Create a Scene</Text></Pressable>
         </View>:
-        <View style={styles.feed}>{items.map((scene,index)=><SceneCard key={scene.id} scene={scene} theme={theme} onOpen={()=>setViewerIndex(index)} onProfile={()=>onOpenProfile?.(scene.author_id)} onLike={()=>like(scene.id)}/>)}</View>
+        <View style={styles.feed}>{items.map((scene,index)=><SceneCard key={scene.id} scene={scene} theme={theme} onOpen={()=>{setSharedScene(null);setViewerIndex(index)}} onProfile={()=>onOpenProfile?.(scene.author_id)} onLike={()=>like(scene.id)} onComments={()=>setCommentScene(scene)} onShare={()=>handleShare(scene)}/>)}</View>
       }
     </ScrollView>
 
+    {sharedLoading&&<View style={[styles.message,{backgroundColor:theme.surface,borderColor:theme.line}]}><ActivityIndicator color={theme.accent}/><Text style={{color:theme.muted}}>Opening shared Scene…</Text></View>}
     <SceneViewer
       visible={viewerIndex!==null}
-      scenes={items}
+      scenes={sharedScene?[sharedScene]:items}
       index={viewerIndex??0}
       onIndex={setViewerIndex}
-      onClose={()=>setViewerIndex(null)}
+      onClose={()=>{setViewerIndex(null);setSharedScene(null)}}
       onProfile={scene=>onOpenProfile?.(scene.author_id)}
       onLike={scene=>like(scene.id)}
+      onComments={scene=>{setViewerIndex(null);setSharedScene(null);setCommentScene(scene)}}
+      onShare={handleShare}
       theme={theme}
     />
+    <Modal visible={!!commentScene} animationType="slide" presentationStyle="fullScreen" onRequestClose={()=>setCommentScene(null)}>
+      {!!commentScene&&<SceneCommentsPanel scene={commentScene} theme={theme} onClose={()=>setCommentScene(null)} onSent={(sceneId,saved)=>{
+        if(saved?.moderation_status==='approved')setItems(current=>current.map(row=>row.id===sceneId?{...row,comment_count:Number(row.comment_count||0)+1}:row));
+      }}/>} 
+    </Modal>
   </View>;
 }
 
-function SceneCard({scene,theme,onOpen,onProfile,onLike}){
+function SceneCard({scene,theme,onOpen,onProfile,onLike,onComments,onShare}){
   return <View style={[styles.sceneCard,{backgroundColor:theme.surface,borderColor:theme.line}]}>
     <View style={styles.sceneHead}>
       <Pressable onPress={onProfile} style={styles.creator}>
@@ -175,14 +206,14 @@ function SceneCard({scene,theme,onOpen,onProfile,onLike}){
 
     <View style={styles.actions}>
       <Pressable onPress={onLike} style={styles.action}><Feather name="heart" size={19} color={scene.liked_by_me?theme.accent:theme.muted}/><Text style={[styles.actionText,{color:scene.liked_by_me?theme.accent:theme.muted}]}>{compact(scene.like_count)}</Text></Pressable>
-      <Pressable onPress={onOpen} style={styles.action}><Feather name="message-circle" size={19} color={theme.muted}/><Text style={[styles.actionText,{color:theme.muted}]}>{compact(scene.comment_count)}</Text></Pressable>
-      <Pressable style={styles.action}><Feather name="send" size={19} color={theme.muted}/><Text style={[styles.actionText,{color:theme.muted}]}>Share Scene</Text></Pressable>
+      <Pressable onPress={onComments} accessibilityRole="button" accessibilityLabel="View and add comments" style={styles.action}><Feather name="message-circle" size={19} color={theme.muted}/><Text style={[styles.actionText,{color:theme.muted}]}>{compact(scene.comment_count)}</Text></Pressable>
+      <Pressable onPress={onShare} accessibilityRole="button" accessibilityLabel="Share Scene" style={styles.action}><Feather name="send" size={19} color={theme.muted}/><Text style={[styles.actionText,{color:theme.muted}]}>Share Scene</Text></Pressable>
       <Feather name="bookmark" size={19} color={theme.muted} style={{marginLeft:'auto'}}/>
     </View>
   </View>;
 }
 
-function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,theme}){
+function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onComments,onShare,theme}){
   const {width}=useWindowDimensions();
   const slide=useRef(new Animated.Value(width)).current;
   const start=useRef({x:0,y:0}).current;
@@ -199,11 +230,13 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,them
       .start(()=>{onClose();next?.()});
   }
   const pan=useMemo(()=>PanResponder.create({
-    onStartShouldSetPanResponder:()=>true,
+    // Only claim an actual swipe; taps belong to the action Pressables.
+    onStartShouldSetPanResponder:()=>false,
+    onMoveShouldSetPanResponder:(_,g)=>Math.abs(g.dx)>25||Math.abs(g.dy)>25,
     onPanResponderGrant:(_,g)=>{start.x=g.x0;start.y=g.y0},
     onPanResponderRelease:(_,g)=>{
-      const dx=g.moveX-start.x;
-      const dy=g.moveY-start.y;
+      const dx=g.dx;
+      const dy=g.dy;
       if(Math.max(Math.abs(dx),Math.abs(dy))<45) return;
       if(Math.abs(dx)>Math.abs(dy)&&dx<0){leave(()=>onProfile(scenes[index]));return;}
       if(Math.abs(dy)>=Math.abs(dx)){
@@ -228,8 +261,8 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,them
       </View>
       <View style={styles.viewerActions}>
         <Pressable onPress={()=>onLike(scene)} style={styles.viewerAction}><Feather name="heart" size={24} color={scene.liked_by_me?theme.accent:'#fff'}/><Text style={styles.viewerActionText}>{compact(scene.like_count)}</Text></Pressable>
-        <View style={styles.viewerAction}><Feather name="message-circle" size={24} color="#fff"/><Text style={styles.viewerActionText}>{compact(scene.comment_count)}</Text></View>
-        <View style={styles.viewerAction}><Feather name="send" size={24} color="#fff"/><Text style={styles.viewerActionText}>Share</Text></View>
+        <Pressable onPress={()=>onComments?.(scene)} accessibilityRole="button" accessibilityLabel="View comments" style={styles.viewerAction}><Feather name="message-circle" size={24} color="#fff"/><Text style={styles.viewerActionText}>{compact(scene.comment_count)}</Text></Pressable>
+        <Pressable onPress={()=>onShare?.(scene)} accessibilityRole="button" accessibilityLabel="Share Scene" style={styles.viewerAction}><Feather name="send" size={24} color="#fff"/><Text style={styles.viewerActionText}>Share Scene</Text></Pressable>
       </View>
     </Animated.View>
   </Modal>;
