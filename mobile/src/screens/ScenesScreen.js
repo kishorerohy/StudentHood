@@ -10,7 +10,7 @@ import {fetchScenes,toggleSceneLike} from '../scenes';
 
 const FILTERS=['For you','Viral','Nearby','Campus','Live now'];
 
-export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenCreate,reloadKey=0}){
+export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenCreate,onOpenPulse,reloadKey=0}){
   const [filter,setFilter]=useState('For you');
   const [items,setItems]=useState([]);
   const [loading,setLoading]=useState(true);
@@ -87,11 +87,11 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
       </View>
 
       <View style={[styles.panel,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-        <View style={styles.sectionHead}><Text style={[styles.h2,{color:theme.text}]}>Pulse</Text><Text style={[styles.link,{color:theme.accent}]}>See all</Text></View>
+        <View style={styles.sectionHead}><Text style={[styles.h2,{color:theme.text}]}>Campus people</Text><Pressable accessibilityRole="button" accessibilityLabel="Explore Pulse" onPress={onOpenPulse}><Text style={[styles.link,{color:theme.accent}]}>Explore Pulse →</Text></Pressable></View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pulseRow}>
-          <Pressable onPress={onOpenCreate} style={styles.pulse}>
+          <Pressable onPress={onOpenPulse} style={styles.pulse}>
             <View style={[styles.pulseRing,{borderColor:theme.line,backgroundColor:theme.surface2}]}><Feather name="plus" size={22} color={theme.accent}/></View>
-            <Text style={[styles.pulseName,{color:theme.muted}]}>Your Pulse</Text>
+            <Text style={[styles.pulseName,{color:theme.muted}]}>Pulse soon</Text>
           </Pressable>
           {pulsePeeps.map(item=><Pressable key={item.id} onPress={()=>onOpenProfile?.(item.id)} style={styles.pulse}>
             <View style={[styles.pulseRing,{borderColor:theme.accent,backgroundColor:theme.surface2}]}>
@@ -102,7 +102,7 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
         </ScrollView>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters} accessibilityLabel="Scenes filters">
         {FILTERS.map(name=><Pressable key={name} onPress={()=>setFilter(name)} style={[styles.chip,{backgroundColor:filter===name?theme.accent:theme.surface,borderColor:filter===name?theme.accent:theme.line}]}>
           <Text style={[styles.chipText,{color:filter===name?'#fff':theme.muted}]}>{name}</Text>
         </Pressable>)}
