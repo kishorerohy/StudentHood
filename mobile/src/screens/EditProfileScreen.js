@@ -14,7 +14,7 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
   const [newPhoto,setNewPhoto]=useState(null);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
-  const {scrollRef,onFieldFocus,onScrollLayout}=useKeyboardAwareForm();
+  const {scrollRef,onFieldFocus,onScrollLayout,onScroll,keyboardPadding}=useKeyboardAwareForm();
 
   useEffect(()=>{
     let active=true;
@@ -91,7 +91,7 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
         {busy?<ActivityIndicator size="small" color="#fff"/>:<Text style={styles.saveText}>Save</Text>}
       </Pressable>
     </View>
-    <ScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'} onLayout={onScrollLayout} showsVerticalScrollIndicator={false}>
+    <ScrollView ref={scrollRef} style={{flex:1}} contentContainerStyle={[styles.content,{paddingBottom:140+keyboardPadding}]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'} onLayout={onScrollLayout} onScroll={onScroll} scrollEventThrottle={16} automaticallyAdjustKeyboardInsets={Platform.OS==='ios'} showsVerticalScrollIndicator={false}>
       <Pressable onPress={choosePhoto} accessibilityLabel="Choose profile photo" style={styles.photoControl}>
         <View style={[styles.avatar,{backgroundColor:theme.surface2}]}>
           {imageUri?<Image source={{uri:imageUri}} style={styles.avatarImage}/>:<Feather name="user" size={45} color={theme.accent}/>}
