@@ -12,6 +12,7 @@ import UserProfileScreen from './screens/UserProfileScreen';
 import CreateOptionsScreen from './screens/CreateOptionsScreen';
 import CreateSceneSheet from './components/CreateSceneSheet';
 import SlidePage from './components/SlidePage';
+import CampusStatusSlider from './components/CampusStatusSlider';
 
 const LOGO_DARK=require('../assets/studenthood-logo.png');
 const LOGO_LIGHT=require('../assets/studenthood-logo-light.png');
@@ -136,6 +137,7 @@ export default function MainApp({theme}){
     {tab==='Hangs'&&<Placeholder theme={theme} icon="calendar" title="Hangs" copy="Campus plans and meetups live here. Hang creation is being wired next."/>}
     {tab==='Gigs'&&<Placeholder theme={theme} icon="briefcase" title="Gigs" copy="Student opportunities live here. Gig creation is being wired next."/>}
     <BottomDial theme={theme} tab={tab} onTab={selectTab} onCreate={()=>showPage({type:'create-options'})} isTablet={isTablet} screenWidth={width}/>
+    {tab==='Scenes'&&<CampusStatusSlider theme={theme} profile={profile} onSaved={afterProfileSaved}/>}
 
     {pages.map((page,index)=><SlidePage
       key={page.key}
