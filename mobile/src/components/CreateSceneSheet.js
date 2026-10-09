@@ -13,7 +13,7 @@ export default function CreateSceneSheet({visible,onClose,onCreated,theme}){
   const [visibility,setVisibility]=useState('campus');
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
-  const {scrollRef,onFieldFocus,onScrollLayout}=useKeyboardAwareForm();
+  const {scrollRef,onFieldFocus,onScrollLayout,onScroll,keyboardPadding}=useKeyboardAwareForm();
 
   async function chooseMedia(){
     setError('');
@@ -62,7 +62,7 @@ export default function CreateSceneSheet({visible,onClose,onCreated,theme}){
         </Pressable>
       </View>
 
-      <ScrollView ref={scrollRef} onLayout={onScrollLayout} contentContainerStyle={styles.content} keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} onLayout={onScrollLayout} onScroll={onScroll} scrollEventThrottle={16} automaticallyAdjustKeyboardInsets={Platform.OS==='ios'} contentContainerStyle={[styles.content,{paddingBottom:160+keyboardPadding}]} keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'} keyboardShouldPersistTaps="handled">
         <TextInput
           value={body}
           onChangeText={setBody}
