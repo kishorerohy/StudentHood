@@ -42,7 +42,7 @@ jobs:
         run: npx expo-doctor@latest
 
       - name: Validate Android native configuration
-        run: npx expo config --type introspect --platform android --json > /tmp/studenthood-expo-android-config.json
+        run: npx expo config --type introspect --json > /tmp/studenthood-expo-native-config.json
 
       - name: Export Android bundle
         run: npx expo export --platform android --output-dir dist
