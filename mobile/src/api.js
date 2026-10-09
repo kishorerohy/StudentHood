@@ -220,3 +220,65 @@ export async function deleteCurrentTestAccount(){
   if(error) throw error;
   return data;
 }
+
+
+// Read only the Peep relationship involving the signed-in viewer. Database RLS
+// remains authoritative; no other student's relationship data is returned.
+export async function getPeepConnection(targetUserId){
+  const {data:{user},error:userError}=await supabase.auth.getUser();
+  if(userError) throw userError;
+  if(!user) throw new Error('Please sign in to view Peep requests.');
+  const target=String(targetUserId||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(target)) throw new Error('Invalid student profile.');
+  if(user.id===target) return null;
+  const filter=`and(requester_id.eq.${user.id},addressee_id.eq.${target}),and(requester_id.eq.${target},addressee_id.eq.${user.id})`;
+  const {data,error}=await supabase.from('peep_connections')
+    .select('id,requester_id,addressee_id,status')
+    .or(filter).maybeSingle();
+  if(error) throw error;
+  return data||null;
+}
+
+export async function sendPeepRequest(targetUserId){
+  const {data:{user},error:userError}=await supabase.auth.getUser();
+  if(userError) throw userError;
+  if(!user) throw new Error('Please sign in to send a Peep request.');
+  const target=String(targetUserId||'').trim();
+  if(target===user.id) throw new Error('You cannot add yourself as a Peep.');
+  // The profile card checks the target's discovery and age restrictions.
+  const allowedProfile=await getProfileCard(target);
+  if(!allowedProfile?.id) throw new Error('This student cannot receive your Peep request.');
+  const existing=await getPeepConnection(target);
+  if(existing) return existing;
+  const {data,error}=await supabase.from('peep_connections')
+    .insert({requester_id:user.id,addressee_id:target,status:'pending'})
+    .select('id,requester_id,addressee_id,status')
+    .single();
+  if(error){
+    if(error.code==='23505'){
+      const latest=await getPeepConnection(target);
+      if(latest) return latest;
+    }
+    throw error;
+  }
+  return data;
+}
+
+// Fetch only Scenes the viewer is permitted to see under the existing RLS
+// policy, with short-lived media URLs rather than exposing storage paths.
+export async function getVisibleProfileScenes(targetUserId,{limit=12}={}){
+  const target=String(targetUserId||'').trim();
+  const {data,error}=await supabase.from('scenes')
+    .select('id,body,media_url,media_type,created_at')
+    .eq('author_id',target)
+    .order('created_at',{ascending:false})
+    .limit(Math.min(18,Math.max(1,Number(limit)||12)));
+  if(error) throw error;
+  return Promise.all((data||[]).map(async scene=>{
+    if(!scene.media_url) return {...scene,media_signed_url:null};
+    if(/^https?:\\/\\//i.test(scene.media_url)) return {...scene,media_signed_url:scene.media_url};
+    const signed=await supabase.storage.from('scene-media')
+      .createSignedUrl(scene.media_url,3600);
+    return {...scene,media_signed_url:signed.error?null:signed.data?.signedUrl||null};
+  }));
+}
