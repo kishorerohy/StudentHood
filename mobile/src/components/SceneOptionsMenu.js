@@ -23,7 +23,13 @@ export default function SceneOptionsMenu({scene,anchor,theme,currentUserId,onClo
     setError('');
     setFeedback('');
     if(name==='profile'){onClose();onProfile?.(scene.author_id);return;}
-    if(name==='hide'){await onHide?.(scene.id);onClose();return;}
+    if(name==='hide'){
+      setBusy('hide');
+      try{await onHide?.(scene.id);onClose();}
+      catch(e){setError(e?.message||'Could not hide this Scene.');}
+      finally{setBusy('');}
+      return;
+    }
     if(name==='delete'){
       Alert.alert('Delete Scene?','This removes your Scene from StudentHood and cannot be undone.',[
         {text:'Cancel',style:'cancel'},
