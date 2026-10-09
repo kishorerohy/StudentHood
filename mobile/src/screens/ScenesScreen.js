@@ -269,6 +269,7 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCo
 }
 
 function compact(value){
+  if(value===null||value===undefined) return '—';
   const n=Number(value||0);
   if(n>=1000000) return (n/1000000).toFixed(n>=10000000?0:1).replace('.0','')+'M';
   if(n>=1000) return (n/1000).toFixed(n>=10000?0:1).replace('.0','')+'K';
