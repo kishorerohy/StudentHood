@@ -11,6 +11,14 @@
       "bundleIdentifier": "com.studenthood.app",
       "entitlements": {
         "com.apple.developer.declared-age-range": true
+      },
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "instagram",
+          "snssdk1233",
+          "tiktok",
+          "whatsapp"
+        ]
       }
     },
     "android": {
@@ -34,7 +42,8 @@
         {
           "locationWhenInUsePermission": "StudentHood uses your location during profile setup to find your city and nearby schools, colleges and universities. Your precise location is not stored."
         }
-      ]
+      ],
+      "./plugins/withSocialShareQueries"
     ],
     "extra": {
       "privacyUrl": "https://kishorerohy.github.io/StudentHood/privacy.html",
