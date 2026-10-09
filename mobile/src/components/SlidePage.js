@@ -1,7 +1,7 @@
-import React,{useEffect,useRef} from 'react';
-import {Animated,BackHandler,Dimensions,StyleSheet,View} from 'react-native';
+import React,{useEffect,useMemo,useRef} from 'react';
+import {Animated,BackHandler,Dimensions,PanResponder,StyleSheet,View} from 'react-native';
 
-export default function SlidePage({active=true,closing=false,onBack,onExited,children,theme}){
+export default function SlidePage({active=true,closing=false,swipeBack=false,onBack,onExited,children,theme}){
   const width=Dimensions.get('window').width;
   const slide=useRef(new Animated.Value(width)).current;
   const exiting=useRef(false);
@@ -23,7 +23,14 @@ export default function SlidePage({active=true,closing=false,onBack,onExited,chi
     return()=>sub.remove();
   },[active,onBack]);
 
-  return <Animated.View style={[styles.page,{backgroundColor:theme.bg,transform:[{translateX:slide}]}]} pointerEvents={active?'auto':'none'}>
+  const swipeResponder=useMemo(()=>PanResponder.create({
+    onStartShouldSetPanResponder:()=>false,
+    onMoveShouldSetPanResponder:(_,gesture)=>swipeBack&&active&&!closing&&gesture.dx>65&&Math.abs(gesture.dx)>Math.abs(gesture.dy)*1.3,
+    onPanResponderRelease:(_,gesture)=>{if(gesture.dx>90)onBack?.()},
+    onPanResponderTerminationRequest:()=>true
+  }),[swipeBack,active,closing,onBack]);
+
+  return <Animated.View style={[styles.page,{backgroundColor:theme.bg,transform:[{translateX:slide}]}]} pointerEvents={active?'auto':'none'} {...(swipeBack?swipeResponder.panHandlers:{})}>
     <View style={styles.body}>{children}</View>
   </Animated.View>;
 }
