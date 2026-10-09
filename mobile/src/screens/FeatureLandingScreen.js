@@ -1,5 +1,5 @@
-import React,{useMemo,useState} from 'react';
-import {Image,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
+import React,{useState} from 'react';
+import {Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {SceneIcon} from '../icons';
 
@@ -40,7 +40,7 @@ const CONFIG={
   }
 };
 
-export default function FeatureLandingScreen({kind,theme,profile,onDiscover}){
+export default function FeatureLandingScreen({kind,theme,profile,onDiscover,onBack}){
   const config=CONFIG[kind]||CONFIG.Hangs;
   const [filter,setFilter]=useState(config.filters[0]);
   const canDiscover=typeof onDiscover==='function';
@@ -49,6 +49,7 @@ export default function FeatureLandingScreen({kind,theme,profile,onDiscover}){
     contentContainerStyle={styles.content}
     showsVerticalScrollIndicator={false}>
     <View style={styles.heading}>
+      {!!onBack&&<Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel="Back" style={[styles.back,{backgroundColor:theme.surface,borderColor:theme.line}]}><Feather name="arrow-left" color={theme.text} size={20}/></Pressable>}
       <Text style={[styles.eyebrow,{color:theme.accent}]}>{config.eyebrow}</Text>
       <Text style={[styles.headingText,{color:theme.text}]}>{config.title}</Text>
       <Text style={[styles.intro,{color:theme.muted}]}>{config.intro}</Text>
@@ -105,6 +106,7 @@ const styles=StyleSheet.create({
   root:{flex:1},
   content:{maxWidth:900,width:'100%',alignSelf:'center',paddingHorizontal:14,paddingTop:20,paddingBottom:120},
   heading:{marginBottom:22},
+  back:{borderRadius:14,borderWidth:1,height:43,width:43,alignItems:'center',justifyContent:'center',marginBottom:14},
   eyebrow:{fontSize:10,fontWeight:'900',letterSpacing:1.4,marginBottom:6},
   headingText:{fontSize:36,fontWeight:'900',letterSpacing:-1.2},
   intro:{fontSize:13,lineHeight:20,marginTop:6},
