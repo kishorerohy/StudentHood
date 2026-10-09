@@ -7,6 +7,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import {Feather} from '@expo/vector-icons';
 import {submitStudentCreation} from '../creation';
+import useKeyboardAwareForm from '../hooks/useKeyboardAwareForm';
 
 const SETTINGS={
   Pulse:{heading:'Add to Pulse',subheading:'A quick moment with your campus circle.',cta:'Submit Pulse'},
@@ -38,6 +39,7 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
   const [media,setMedia]=useState(null);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
+  const {scrollRef,onFieldFocus,onScrollLayout}=useKeyboardAwareForm();
   const [submitted,setSubmitted]=useState(null);
   const set=(field,value)=>setValues(current=>({...current,[field]:value}));
   const isPulse=kind==='Pulse';
@@ -94,7 +96,7 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
       <Text style={[styles.headerTitle,{color:theme.text}]}>{config.heading}</Text>
       <View style={{width:43}}/>
     </View>
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    <ScrollView ref={scrollRef} onLayout={onScrollLayout} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'} showsVerticalScrollIndicator={false}>
       {!!submitted?<View style={[styles.confirm,{backgroundColor:theme.surface,borderColor:theme.line}]}>
         <View style={[styles.confirmIcon,{backgroundColor:theme.accentSoft}]}><Feather name="check-circle" color={theme.success} size={34}/></View>
         <Text style={[styles.confirmTitle,{color:theme.text}]}>Saved for review</Text>
@@ -116,7 +118,7 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
         </View>}
 
         {kind==='Pulse'&&<>
-          <Field theme={theme} label="What's happening?" value={values.body} onChangeText={text=>set('body',text)} maxLength={500} multiline placeholder="A moment worth sharing…" />
+          <Field theme={theme} onFocus={onFieldFocus} label="What's happening?" value={values.body} onChangeText={text=>set('body',text)} maxLength={500} multiline placeholder="A moment worth sharing…" />
           <Pressable onPress={chooseMedia} style={[styles.mediaButton,{backgroundColor:theme.surface,borderColor:theme.line}]} accessibilityRole="button">
             <Feather name="image" color={theme.accent} size={20}/>
             <Text style={[styles.mediaText,{color:theme.text}]}>{media?'Change photo or video':'Add photo or video'}</Text>
@@ -130,9 +132,9 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
         </>}
 
         {kind==='Hangs'&&<>
-          <Field theme={theme} label="Hang title" value={values.title} onChangeText={text=>set('title',text)} maxLength={100} placeholder="Coffee and study afternoon"/>
+          <Field theme={theme} onFocus={onFieldFocus} label="Hang title" value={values.title} onChangeText={text=>set('title',text)} maxLength={100} placeholder="Coffee and study afternoon"/>
           <Choices theme={theme} label="Type of Hang" options={sections.map(x=>[x,x])} value={values.category} onChange={v=>set('category',v)}/>
-          <Field theme={theme} label="What's the plan?" value={values.description} onChangeText={text=>set('description',text)} multiline maxLength={2000} placeholder="Tell students what they'll do and who can join…"/>
+          <Field theme={theme} onFocus={onFieldFocus} label="What's the plan?" value={values.description} onChangeText={text=>set('description',text)} multiline maxLength={2000} placeholder="Tell students what they'll do and who can join…"/>
           <View style={styles.dual}>
             <Pressable accessibilityRole="button" onPress={()=>setPicker('date')} style={[styles.dateButton,{backgroundColor:theme.surface,borderColor:theme.line}]}><Feather name="calendar" color={theme.accent} size={18}/><Text style={{color:theme.text,fontWeight:'700'}}>Choose date</Text></Pressable>
             <Pressable accessibilityRole="button" onPress={()=>setPicker('time')} style={[styles.dateButton,{backgroundColor:theme.surface,borderColor:theme.line}]}><Feather name="clock" color={theme.accent} size={18}/><Text style={{color:theme.text,fontWeight:'700'}}>Choose time</Text></Pressable>
@@ -140,27 +142,27 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
           <Text style={[styles.dateNote,{color:theme.muted}]}>{futureTime}</Text>
           {!!picker&&<DateTimePicker value={date} mode={picker} minimumDate={picker==='date'?new Date():undefined} display={Platform.OS==='ios'?'spinner':'default'} onChange={updateDate}/>}
           {Platform.OS==='ios'&&!!picker&&<Pressable onPress={()=>setPicker(null)}><Text style={[styles.done,{color:theme.accent}]}>Done</Text></Pressable>}
-          <Field theme={theme} label="Meeting point" value={values.locationHint} onChangeText={text=>set('locationHint',text)} maxLength={120} placeholder="Library lobby or a public campus location"/>
-          <Field theme={theme} label="Maximum attendees (optional)" value={values.capacity} onChangeText={text=>set('capacity',text)} keyboardType="number-pad" placeholder="Leave empty for no set limit"/>
+          <Field theme={theme} onFocus={onFieldFocus} label="Meeting point" value={values.locationHint} onChangeText={text=>set('locationHint',text)} maxLength={120} placeholder="Library lobby or a public campus location"/>
+          <Field theme={theme} onFocus={onFieldFocus} label="Maximum attendees (optional)" value={values.capacity} onChangeText={text=>set('capacity',text)} keyboardType="number-pad" placeholder="Leave empty for no set limit"/>
           <Choices theme={theme} label="Audience" options={[['campus','Campus'],['peeps','Peeps']]} value={values.visibility} onChange={v=>set('visibility',v)}/>
         </>}
 
         {kind==='Crews'&&<>
-          <Field theme={theme} label="Crew name" value={values.name} onChangeText={text=>set('name',text)} maxLength={80} placeholder="Campus photography circle"/>
+          <Field theme={theme} onFocus={onFieldFocus} label="Crew name" value={values.name} onChangeText={text=>set('name',text)} maxLength={80} placeholder="Campus photography circle"/>
           <Choices theme={theme} label="Crew category" options={sections.map(x=>[x,x])} value={values.category} onChange={v=>set('category',v)}/>
-          <Field theme={theme} label="About your Crew" value={values.description} onChangeText={text=>set('description',text)} multiline maxLength={1500} placeholder="Describe your interests, purpose and who can join…"/>
+          <Field theme={theme} onFocus={onFieldFocus} label="About your Crew" value={values.description} onChangeText={text=>set('description',text)} multiline maxLength={1500} placeholder="Describe your interests, purpose and who can join…"/>
           <Choices theme={theme} label="Visibility" options={[['campus','Campus'],['invite_only','Invite only']]} value={values.visibility} onChange={v=>set('visibility',v)}/>
         </>}
 
         {kind==='Gigs'&&<>
           <View style={[styles.note,{borderColor:theme.line,backgroundColor:theme.surface2}]}><Feather name="shield" color={theme.accent} size={17}/><Text style={[styles.info,{color:theme.muted,flex:1}]}>Gig submission is restricted to adults, with review before publishing. No employer is labeled verified without verification.</Text></View>
-          <Field theme={theme} label="Role / Gig title" value={values.title} onChangeText={text=>set('title',text)} maxLength={100} placeholder="Weekend research assistant"/>
-          <Field theme={theme} label="Employer or organisation" value={values.employerName} onChangeText={text=>set('employerName',text)} maxLength={120} placeholder="Official business name"/>
+          <Field theme={theme} onFocus={onFieldFocus} label="Role / Gig title" value={values.title} onChangeText={text=>set('title',text)} maxLength={100} placeholder="Weekend research assistant"/>
+          <Field theme={theme} onFocus={onFieldFocus} label="Employer or organisation" value={values.employerName} onChangeText={text=>set('employerName',text)} maxLength={120} placeholder="Official business name"/>
           <Choices theme={theme} label="Opportunity type" options={sections.map(x=>[x,x])} value={values.category} onChange={v=>set('category',v)}/>
-          <Field theme={theme} label="Job description and requirements" value={values.description} onChangeText={text=>set('description',text)} multiline maxLength={2500} placeholder="Describe duties, hours, eligibility and conditions…"/>
-          <Field theme={theme} label="Work location" value={values.locationHint} onChangeText={text=>set('locationHint',text)} maxLength={120} placeholder="City, campus or Remote"/>
-          <Field theme={theme} label="Pay amount" value={values.payAmount} onChangeText={text=>set('payAmount',text)} keyboardType="decimal-pad" placeholder="e.g. 15.50"/>
-          <Field theme={theme} label="Pay currency (ISO code)" value={values.payCurrency} onChangeText={text=>set('payCurrency',text.toUpperCase())} maxLength={3} autoCapitalize="characters" placeholder="GBP, INR, USD…"/>
+          <Field theme={theme} onFocus={onFieldFocus} label="Job description and requirements" value={values.description} onChangeText={text=>set('description',text)} multiline maxLength={2500} placeholder="Describe duties, hours, eligibility and conditions…"/>
+          <Field theme={theme} onFocus={onFieldFocus} label="Work location" value={values.locationHint} onChangeText={text=>set('locationHint',text)} maxLength={120} placeholder="City, campus or Remote"/>
+          <Field theme={theme} onFocus={onFieldFocus} label="Pay amount" value={values.payAmount} onChangeText={text=>set('payAmount',text)} keyboardType="decimal-pad" placeholder="e.g. 15.50"/>
+          <Field theme={theme} onFocus={onFieldFocus} label="Pay currency (ISO code)" value={values.payCurrency} onChangeText={text=>set('payCurrency',text.toUpperCase())} maxLength={3} autoCapitalize="characters" placeholder="GBP, INR, USD…"/>
           <Choices theme={theme} label="Pay period" options={[['hour','Per hour'],['day','Per day'],['project','Per project']]} value={values.payUnit} onChange={v=>set('payUnit',v)}/>
         </>}
 
@@ -199,7 +201,7 @@ const styles=StyleSheet.create({
   header:{height:64,borderBottomWidth:StyleSheet.hairlineWidth,flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:15},
   back:{height:43,width:43,alignItems:'center',justifyContent:'center'},
   headerTitle:{fontSize:18,fontWeight:'800'},
-  content:{maxWidth:830,width:'100%',alignSelf:'center',padding:18,paddingBottom:120},
+  content:{maxWidth:830,width:'100%',alignSelf:'center',padding:18,paddingBottom:200},
   eyebrow:{fontSize:10,fontWeight:'900',letterSpacing:1.4},
   intro:{fontSize:13,lineHeight:20,marginTop:9,marginBottom:17},
   campus:{minHeight:64,borderRadius:16,borderWidth:1,flexDirection:'row',alignItems:'center',gap:12,padding:12,marginBottom:9},
