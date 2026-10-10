@@ -39,7 +39,7 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
   const [media,setMedia]=useState(null);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
-  const {scrollRef,onFieldFocus,onScrollLayout}=useKeyboardAwareForm();
+  const {scrollRef,onFieldFocus,onScrollLayout,onScroll,keyboardPadding}=useKeyboardAwareForm();
   const [submitted,setSubmitted]=useState(null);
   const set=(field,value)=>setValues(current=>({...current,[field]:value}));
   const isPulse=kind==='Pulse';
@@ -88,7 +88,7 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
     }
   }
 
-  return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]} behavior={Platform.OS==='ios'?'padding':undefined}>
+  return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]} behavior={Platform.OS==='ios'?'padding':'height'}>
     <View style={[styles.header,{borderBottomColor:theme.line}]}>
       <Pressable accessibilityRole="button" accessibilityLabel="Back to Create" onPress={onBack} style={styles.back}>
         <Feather name="arrow-left" size={21} color={theme.text}/>
@@ -96,7 +96,7 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
       <Text style={[styles.headerTitle,{color:theme.text}]}>{config.heading}</Text>
       <View style={{width:43}}/>
     </View>
-    <ScrollView ref={scrollRef} onLayout={onScrollLayout} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'} showsVerticalScrollIndicator={false}>
+    <ScrollView ref={scrollRef} onLayout={onScrollLayout} onScroll={onScroll} scrollEventThrottle={16} automaticallyAdjustKeyboardInsets={Platform.OS==='ios'} contentContainerStyle={[styles.content,{paddingBottom:200+keyboardPadding}]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'} showsVerticalScrollIndicator={false}>
       {!!submitted?<View style={[styles.confirm,{backgroundColor:theme.surface,borderColor:theme.line}]}>
         <View style={[styles.confirmIcon,{backgroundColor:theme.accentSoft}]}><Feather name="check-circle" color={theme.success} size={34}/></View>
         <Text style={[styles.confirmTitle,{color:theme.text}]}>Saved for review</Text>

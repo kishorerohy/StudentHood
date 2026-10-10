@@ -27,7 +27,7 @@ export default function AuthScreen({theme}){
   const [status,setStatus]=useState('');
   const [error,setError]=useState('');
   const [busy,setBusy]=useState(false);
-  const {scrollRef,onFieldFocus,onScrollLayout}=useKeyboardAwareForm();
+  const {scrollRef,onFieldFocus,onScrollLayout,onScroll,keyboardPadding}=useKeyboardAwareForm();
 
   async function submit(){
     setError('');
@@ -86,12 +86,15 @@ export default function AuthScreen({theme}){
     }
   }
 
-  return <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':undefined} style={[styles.root,{backgroundColor:theme.bg}]}>
+  return <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={[styles.root,{backgroundColor:theme.bg}]}>
     <ScrollView
       ref={scrollRef}
       onLayout={onScrollLayout}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
+      automaticallyAdjustKeyboardInsets={Platform.OS==='ios'}
       style={styles.scroll}
-      contentContainerStyle={[styles.scrollContent,mode==='signin'&&styles.scrollContentCentered]}
+      contentContainerStyle={[styles.scrollContent,mode==='signin'&&styles.scrollContentCentered,{paddingBottom:160+keyboardPadding}]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'}
       showsVerticalScrollIndicator={false}

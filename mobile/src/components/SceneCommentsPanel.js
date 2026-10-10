@@ -50,7 +50,7 @@ export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
     finally{setSending(false);}
   }
 
-  return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]} behavior={Platform.OS==='ios'?'padding':undefined}>
+  return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]} behavior={Platform.OS==='ios'?'padding':'height'}>
     <View style={[styles.header,{borderBottomColor:theme.line}]}>
       <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close comments" style={[styles.close,{backgroundColor:theme.surface,borderColor:theme.line}]}>
         <Feather name="arrow-left" color={theme.text} size={21}/>

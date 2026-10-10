@@ -152,9 +152,39 @@ export async function findNearbyInstitutions({latitude,longitude,radiusMeters=18
   const {data,error}=await supabase.functions.invoke('institution-search',{
     body:{latitude:lat,longitude:lon,radiusMeters}
   });
-  if(error) throw error;
+  if(error) throw await institutionLookupError(error);
   if(data?.error) throw new Error(data.error);
   return Array.isArray(data?.institutions)?data.institutions:[];
+}
+
+// Supabase FunctionsHttpError otherwise displays the opaque "non-2xx" message.
+// Preserve the service's actionable error while keeping unexpected failures friendly.
+async function institutionLookupError(error){
+  try{
+    const response=error?.context;
+    if(response&&typeof response.json==='function'){
+      const payload=await response.json();
+      if(typeof payload?.error==='string'&&payload.error.trim())return new Error(payload.error);
+    }
+  }catch(_ignored){}
+  return new Error('Campus directory is temporarily unavailable. Please retry shortly.');
+}
+
+// City-based institution lookup works without phone GPS permission. The
+// Supabase Edge Function caches public OpenStreetMap matches by city/country.
+// This is a manually submitted lookup, never per-keystroke autocomplete.
+export async function findInstitutionsByCity({city,countryCode}={}){
+  const term=String(city||'').trim().replace(/\s+/g,' ');
+  const country=String(countryCode||'').trim().toUpperCase();
+  if(term.length<2)throw new Error('Enter your city to find schools, colleges and universities.');
+  if(!/^[A-Z]{2}$/.test(country))throw new Error('Choose your country before searching institutions.');
+  const {data,error}=await supabase.functions.invoke('institution-search',{
+    body:{city:term,countryCode:country}
+  });
+  if(error)throw await institutionLookupError(error);
+  if(data?.error)throw new Error(data.error);
+  if(!Array.isArray(data?.institutions))throw new Error('The institution directory did not return a valid list.');
+  return data.institutions;
 }
 
 export async function getCampusPeeps({limit=100,offset=0}={}){
