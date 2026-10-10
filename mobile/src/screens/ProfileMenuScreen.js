@@ -3,6 +3,7 @@ import {Alert,Linking,Pressable,ScrollView,StyleSheet,Text,View} from 'react-nat
 import {Feather} from '@expo/vector-icons';
 import {signOut} from '../auth';
 import {LEGAL_URLS} from '../config';
+import {useSession} from '../session';
 
 const NAV={
  menu:[
@@ -21,6 +22,8 @@ const NAV={
 };
 
 export default function ProfileMenuScreen({page='menu',theme,profile,safety,onBack,onNavigate,onDrops}){
+  const {session}=useSession();
+  const canSeeModeration=session?.user?.app_metadata?.studenthood_moderator===true;
   const titleMap={menu:'Profile menu',privacy:'Privacy',safety:'Safety',notifications:'Notifications',account:'Account & security',platform:'Platform age signal',legal:'Legal documents'};
   const label=titleMap[page]||'Profile settings';
   const intro={
@@ -66,6 +69,11 @@ export default function ProfileMenuScreen({page='menu',theme,profile,safety,onBa
           <Feather name="chevron-right" size={19} color={theme.muted}/>
         </Pressable>
       )}
+      {page==='menu'&&canSeeModeration&&<Pressable onPress={()=>onNavigate('moderation')} accessibilityRole="button" accessibilityLabel="Scene moderation queue" style={[styles.row,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+        <View style={[styles.rowIcon,{backgroundColor:theme.accentSoft}]}><Feather name="shield" size={19} color={theme.accent}/></View>
+        <View style={{flex:1}}><Text style={[styles.rowTitle,{color:theme.text}]}>Scene review</Text><Text style={[styles.rowCopy,{color:theme.muted}]}>Review pending Scenes with verified adult moderator access</Text></View>
+        <Feather name="chevron-right" size={19} color={theme.muted}/>
+      </Pressable>}
       {page==='privacy'&&<>
         <Summary theme={theme} title="Profile visibility" value={profile?.profile_visibility||'Default privacy settings'}/>
         <Summary theme={theme} title="Location sharing" value={profile?.location_visibility||'Not shared'}/>
