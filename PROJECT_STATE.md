@@ -13,7 +13,8 @@ This file is the durable recovery checkpoint for StudentHood. Keep secrets and p
 - Keep the complete 12-correction register in `docs/PENDING_CORRECTIONS.md`, and show it at end of StudentHood development conversations.
 - Production Supabase institution-search **v3 ACTIVE** with a secondary Overpass endpoint; live authenticated city search and Android device tests remain required.
 - New private cover photo storage, moderated Scene sharing via Ping, human Scene review audit and campus-label normalization have production migrations applied. No existing pending Scenes have been silently approved.
-- The next action is to validate the latest PR #9 CI, inspect security/permissions, merge the approved release when ready, and submit one owner-approved Expo EAS build respecting the daily IST limit.
+- **v0.1.8 PR #9 merged** into main, GitHub Android CI passed. **One approved Expo EAS preview APK submitted 10 October 2026** (IST) via workflow run `38050929041`; EAS build `ef509aea-4f0b-4385-a6dc-ee7c376010bb` (https://expo.dev/accounts/studenthood-0920/projects/studenthood/builds/ef509aea-4f0b-4385-a6dc-ee7c376010bb). Build success / APK readiness must still be checked on Expo; do not submit another EAS APK today.
+- Next: wait for EAS to finish, install the APK and run real-device QA. Human moderator review and worldwide canonical institution aliases remain operational/product follow-ups.
 
 ## Build policy
 
