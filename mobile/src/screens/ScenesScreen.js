@@ -8,14 +8,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {SceneIcon} from '../icons';
 import {getCampusPeeps} from '../api';
 import {fetchScenes,fetchSharedScene,toggleSceneLike} from '../scenes';
-import SceneShareRadial from '../components/SceneShareRadial';
+import SceneShareSheet from '../components/SceneShareSheet';
 import SceneCommentsPanel from '../components/SceneCommentsPanel';
 import SceneOptionsMenu from '../components/SceneOptionsMenu';
 
-const FILTERS=['For you','Viral','Nearby','Campus','Live now'];
+const FILTERS=['Campus','Viral','Nearby','Live now'];
 
 export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenCreate,onOpenPulse,onOpenDiscover,focusScene,reloadKey=0}){
-  const [filter,setFilter]=useState('For you');
+  const [filter,setFilter]=useState('Campus');
   const [items,setItems]=useState([]);
   const [loading,setLoading]=useState(true);
   const [refreshing,setRefreshing]=useState(false);
@@ -181,7 +181,7 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
         items.length===0?<View style={[styles.empty,{backgroundColor:theme.surface,borderColor:theme.line}]}>
           <View style={[styles.emptyIcon,{backgroundColor:theme.accentSoft}]}><SceneIcon size={28} color={theme.accent}/></View>
           <Text style={[styles.emptyTitle,{color:theme.text}]}>Your campus is quiet here.</Text>
-          <Text style={[styles.emptyCopy,{color:theme.muted}]}>Be the first to post a Scene. New Scenes are moderated before broader distribution.</Text>
+          <Text style={[styles.emptyCopy,{color:theme.muted}]}>Be the first to post a Scene. Other students’ Scenes appear when their privacy settings allow them and moderation is complete.</Text>
           <Pressable onPress={onOpenCreate} style={[styles.emptyButton,{backgroundColor:theme.accent}]}><Text style={styles.emptyButtonText}>Create a Scene</Text></Pressable>
         </View>:
         <View style={styles.feed}>{items.filter(scene=>!hiddenIds.includes(scene.id)).map(scene=><SceneCard key={scene.id} scene={scene} theme={theme} onOpen={()=>{setSharedScene(null);setViewerIndex(items.findIndex(row=>row.id===scene.id))}} onProfile={()=>onOpenProfile?.(scene.author_id)} onLike={()=>like(scene.id)} onComments={()=>setCommentScene(scene)} onShare={anchor=>handleShare(scene,anchor)} onMore={anchor=>setOptionsTarget({scene,anchor})}/>)}</View>
@@ -212,7 +212,7 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
       }}/>} 
     </Modal>
     <Modal visible={!!shareTarget} transparent statusBarTranslucent animationType="none" onRequestClose={()=>setShareTarget(null)}>
-      {!!shareTarget&&<SceneShareRadial scene={shareTarget.scene} anchor={shareTarget.anchor} profileCountry={profile?.country_code} theme={theme} onClose={()=>setShareTarget(null)}/>}
+      {!!shareTarget&&<SceneShareSheet scene={shareTarget.scene} profileCountry={profile?.country_code} theme={theme} onClose={()=>setShareTarget(null)}/>}
     </Modal>
     <Modal visible={!!optionsTarget} transparent statusBarTranslucent animationType="fade" onRequestClose={()=>setOptionsTarget(null)}>
       {!!optionsTarget&&<SceneOptionsMenu scene={optionsTarget.scene} anchor={optionsTarget.anchor} theme={theme} currentUserId={profile?.id} onClose={()=>setOptionsTarget(null)} onProfile={userId=>onOpenProfile?.(userId)} onHide={hideScene} onDeleted={handleDeleted}/>}
@@ -288,13 +288,14 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCo
   const pan=useMemo(()=>PanResponder.create({
     // Only claim an actual swipe; taps belong to the action Pressables.
     onStartShouldSetPanResponder:()=>false,
-    onMoveShouldSetPanResponder:(_,g)=>Math.abs(g.dx)>25||Math.abs(g.dy)>25,
+    onMoveShouldSetPanResponder:(_,g)=>Math.abs(g.dx)>18||Math.abs(g.dy)>24,
+    onMoveShouldSetPanResponderCapture:(_,g)=>g.dx< -18&&Math.abs(g.dx)>Math.abs(g.dy)*1.25,
     onPanResponderGrant:(_,g)=>{start.x=g.x0;start.y=g.y0},
     onPanResponderRelease:(_,g)=>{
       const dx=g.dx;
       const dy=g.dy;
       if(Math.max(Math.abs(dx),Math.abs(dy))<45) return;
-      if(Math.abs(dx)>Math.abs(dy)&&dx<0){leave(()=>onProfile(scenes[index]));return;}
+      if(dx< -65&&Math.abs(dx)>Math.abs(dy)*1.25){const creator=scenes[index];if(creator?.author_id)leave(()=>onProfile(creator));return;}
       if(Math.abs(dy)>=Math.abs(dx)){
         const next=(index+(dy<0?1:-1)+scenes.length)%scenes.length;
         onIndex(next);
@@ -314,7 +315,7 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCo
       <Pressable onPress={()=>leave()} style={styles.viewerClose}><Feather name="x" size={24} color="#fff"/></Pressable>
       <Pressable ref={moreButton} onPress={()=>moreButton.current?.measureInWindow((x,y,width,height)=>{setMoreAnchor({x,y,width,height});setMoreOpen(true)})} accessibilityRole="button" accessibilityLabel="Scene options" style={[styles.viewerClose,{left:undefined,right:14}]}><Feather name="more-horizontal" size={24} color="#fff"/></Pressable>
       <View style={styles.viewerBottom}>
-        <Pressable onPress={()=>leave(()=>onProfile(scene))} style={styles.viewerCreator}><View style={styles.viewerAvatar}>{scene.author_avatar_url?<Image source={{uri:scene.author_avatar_url}} style={styles.avatarImage}/>:<Feather name="user" size={18} color="#fff"/>}</View><View><Text style={styles.viewerName}>{scene.author_name||scene.author_username||'Student'}</Text><Text style={styles.viewerMeta}>{scene.author_campus_name||'Campus'} · {timeAgo(scene.created_at)}</Text></View></Pressable>
+        <Pressable onPress={()=>leave(()=>onProfile(scene))} accessibilityRole="button" accessibilityLabel="Open Scene creator profile" style={styles.viewerCreator}><View style={styles.viewerAvatar}>{scene.author_avatar_url?<Image source={{uri:scene.author_avatar_url}} style={styles.avatarImage}/>:<Feather name="user" size={18} color="#fff"/>}</View><View><Text style={styles.viewerName}>{scene.author_name||scene.author_username||'Student'}</Text><Text style={styles.viewerMeta}>{scene.author_campus_name||'Campus'} · {timeAgo(scene.created_at)}</Text></View></Pressable>
         {!!scene.body&&scene.media_type!=='text'&&<Text style={styles.viewerCaption}>{scene.body}</Text>}
         <Text style={styles.viewerHint}>Swipe left for profile · Swipe up for next Scene</Text>
       </View>
@@ -324,7 +325,7 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCo
         <Pressable ref={shareButton} onPress={openShare} accessibilityRole="button" accessibilityLabel="Share Scene" style={styles.viewerAction}><Feather name="send" size={24} color="#fff"/><Text style={styles.viewerActionText}>Share Scene</Text></Pressable>
       </View>
       </>}
-      {shareOpen&&<SceneShareRadial scene={scene} theme={theme} anchor={shareAnchor} profileCountry={profileCountry} onClose={()=>setShareOpen(false)}/>}
+      {shareOpen&&<SceneShareSheet scene={scene} theme={theme} profileCountry={profileCountry} onClose={()=>setShareOpen(false)}/>}
       {moreOpen&&<SceneOptionsMenu scene={scene} anchor={moreAnchor} theme={theme} currentUserId={currentUserId} onClose={()=>setMoreOpen(false)} onProfile={userId=>{setMoreOpen(false);leave(()=>onProfile(scene))}} onHide={onHide} onDeleted={onDeleted}/>}
     </Animated.View>
   </Modal>;

@@ -10,6 +10,7 @@ import TopHubScreen from './screens/TopHubScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
 import ProfileMenuScreen from './screens/ProfileMenuScreen';
 import UserProfileScreen from './screens/UserProfileScreen';
+import SceneModerationScreen from './screens/SceneModerationScreen';
 import CreateOptionsScreen from './screens/CreateOptionsScreen';
 import CreateFeatureScreen from './screens/CreateFeatureScreen';
 import CreateSceneSheet from './components/CreateSceneSheet';
@@ -91,6 +92,7 @@ export default function MainApp({theme}){
           onTab={selectTab}
           onOpenProfile={userId=>showPage({type:'student-profile',userId})}
           onOpenFeature={kind=>showPage({type:'feature',kind})}
+          onOpenScene={sceneId=>openSharedLink('studenthood://scene/'+sceneId)}
         />;
       case 'feature':
         return <FeatureLandingScreen kind={page.kind} theme={theme} profile={profile} reloadKey={reloadKey} onBack={goBack} onDiscover={()=>showPage({type:'hub',kind:'Discover'})} onCreate={()=>showPage({type:'create-feature',kind:page.kind})}/>;
@@ -109,9 +111,11 @@ export default function MainApp({theme}){
           profile={profile}
           safety={safety}
           onBack={goBack}
-          onNavigate={section=>showPage({type:'profile-menu',section})}
+          onNavigate={section=>showPage(section==='moderation'?{type:'moderation'}:{type:'profile-menu',section})}
           onDrops={()=>showPage({type:'hub',kind:'Drops'})}
         />;
+      case 'moderation':
+        return <SceneModerationScreen theme={theme} onBack={goBack}/>;
       case 'edit-profile':
         return <EditProfileScreen
           theme={theme}
@@ -155,7 +159,6 @@ export default function MainApp({theme}){
       onOpenProfile={userId=>showPage({type:'student-profile',userId})}
       onOpenCreate={()=>showPage({type:'create-options'})}
       onOpenPulse={()=>showPage({type:'feature',kind:'Pulse'})}
-      onOpenDiscover={()=>showPage({type:'hub',kind:'Discover'})}
       onOpenDiscover={()=>showPage({type:'hub',kind:'Discover'})}
     />}
     {tab==='Profile'&&<ProfileScreen

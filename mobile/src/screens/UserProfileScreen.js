@@ -1,8 +1,9 @@
 import React,{useEffect,useState} from 'react';
-import {ActivityIndicator,Pressable,StyleSheet,Text,View} from 'react-native';
+import {ActivityIndicator,Modal,Pressable,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {getAvatarDisplayUrl,getPeepConnection,getProfileCard,getVisibleProfileScenes,getVisibleSceneCount,sendPeepRequest} from '../api';
 import StudentProfileView from '../components/StudentProfileView';
+import {supabase} from '../supabase';
 
 export default function UserProfileScreen({userId,currentUserId,theme,onBack,onPing}){
   const [card,setCard]=useState(null);
@@ -15,6 +16,9 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
   const [requestBusy,setRequestBusy]=useState(false);
   const [scenes,setScenes]=useState([]);
   const [sceneCount,setSceneCount]=useState(null);
+  const [profileOptionsOpen,setProfileOptionsOpen]=useState(false);
+  const [reportBusy,setReportBusy]=useState(false);
+  const [reportNotice,setReportNotice]=useState('');
 
   useEffect(()=>{
     let live=true;
@@ -34,14 +38,16 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
         if(!live)return;
         setCard(result);
         if(!result)return;
-        const [photo,relationship,recent,count]=await Promise.allSettled([
+        const [photo,relationship,recent,count,cover]=await Promise.allSettled([
           getAvatarDisplayUrl(result.avatar_url),
           getPeepConnection(userId),
           getVisibleProfileScenes(userId,{limit:12}),
-          getVisibleSceneCount(userId)
+          getVisibleSceneCount(userId),
+          getAvatarDisplayUrl(result.cover_url)
         ]);
         if(!live)return;
         if(photo.status==='fulfilled')setAvatar(photo.value);
+        if(cover.status==='fulfilled')setCard({...result,cover_signed_url:cover.value});
         if(relationship.status==='fulfilled'){
           setConnection(relationship.value);
           setPeepReady(true);
@@ -81,6 +87,20 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
     }
   }
 
+  async function report(reason){
+    if(reportBusy)return;
+    setReportBusy(true);setReportNotice('');
+    try{
+      const {data,error}=await supabase.rpc('studenthood_report_profile',{
+        p_target_user:userId,p_reason:reason
+      });
+      if(error)throw error;
+      setProfileOptionsOpen(false);
+      setReportNotice(data?'Profile report submitted for safety review.':'You already reported this profile.');
+    }catch(e){setPeepError(e?.message||'Unable to submit this profile report.');}
+    finally{setReportBusy(false);}
+  }
+
   if(loading)return <View style={[styles.center,{backgroundColor:theme.bg}]}>
     <ActivityIndicator color={theme.accent}/>
     <Text style={{color:theme.muted}}>Loading student profile…</Text>
@@ -90,7 +110,7 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
     <Text style={{color:theme.muted,textAlign:'center'}}>{error||"This profile isn't available to you."}</Text>
   </View>;
 
-  return <StudentProfileView
+  return <><StudentProfileView
     theme={theme}
     student={card}
     avatarUrl={avatar}
@@ -117,7 +137,14 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
           <Feather name="message-circle" size={18} color={canPing?theme.text:theme.muted}/>
           <Text style={[styles.actionText,{color:canPing?theme.text:theme.muted}]}>Ping</Text>
         </Pressable>
+        <Pressable
+          onPress={()=>{setPeepError('');setProfileOptionsOpen(true)}}
+          accessibilityRole="button" accessibilityLabel="Student profile options"
+          style={[styles.more,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
+          <Feather name="more-vertical" size={21} color={theme.text}/>
+        </Pressable>
       </View>
+      {!!reportNotice&&<Text accessibilityRole="alert" style={[styles.note,{color:theme.accent}]}>{reportNotice}</Text>}
       {!!peepError&&<Text accessibilityRole="alert" style={[styles.note,{color:theme.danger}]}>{peepError}</Text>}
       {outgoing&&<Text style={[styles.note,{color:theme.muted}]}>Peep request sent. Awaiting acceptance.</Text>}
       {incoming&&<Text style={[styles.note,{color:theme.muted}]}>This student has already sent you a Peep request.</Text>}
@@ -125,7 +152,30 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
         {canPing?'Ping messaging is coming soon. No message has been sent.':'Ping is restricted by Peep and safety permissions.'}
       </Text>
     </View>}
-  />;
+  />
+  <Modal visible={profileOptionsOpen} transparent animationType="fade" onRequestClose={()=>setProfileOptionsOpen(false)}>
+    <View style={styles.optionsOverlay}>
+      <Pressable onPress={()=>setProfileOptionsOpen(false)} accessibilityRole="button" accessibilityLabel="Close profile options" style={StyleSheet.absoluteFillObject}/>
+      <View style={[styles.optionsCard,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+        <Text style={[styles.optionsTitle,{color:theme.text}]}>Profile options</Text>
+        <Text style={[styles.optionsCopy,{color:theme.muted}]}>Report safety concerns. Reports are private and reviewed, not published.</Text>
+        {[
+          ['Harassment or bullying','harassment'],
+          ['Spam','spam'],
+          ['Impersonation','impersonation'],
+          ['Unsafe content or behaviour','unsafe'],
+          ['Other concern','other']
+        ].map(([label,reason])=><Pressable key={reason} onPress={()=>report(reason)} disabled={reportBusy} accessibilityRole="button" accessibilityLabel={'Report '+label}
+          style={[styles.reportOption,{borderBottomColor:theme.line}]}>
+          <Feather name="flag" size={16} color={theme.danger}/>
+          <Text style={{color:theme.text,fontSize:13,flex:1}}>{label}</Text>
+          {reportBusy?<ActivityIndicator size="small" color={theme.accent}/>:<Feather name="chevron-right" color={theme.muted} size={16}/>}
+        </Pressable>)}
+        <Pressable onPress={()=>setProfileOptionsOpen(false)} accessibilityRole="button" style={[styles.cancel,{backgroundColor:theme.surface2}]}><Text style={{color:theme.text,fontWeight:'800'}}>Cancel</Text></Pressable>
+      </View>
+    </View>
+  </Modal>
+  </>;
 }
 
 const styles=StyleSheet.create({
@@ -135,5 +185,12 @@ const styles=StyleSheet.create({
   actions:{flexDirection:'row',gap:12},
   action:{flex:1,minHeight:50,borderWidth:1,borderRadius:25,paddingHorizontal:8,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8},
   actionText:{fontWeight:'800',fontSize:12,textAlign:'center'},
+  more:{height:50,width:48,borderWidth:1,borderRadius:25,alignItems:'center',justifyContent:'center'},
+  optionsOverlay:{flex:1,backgroundColor:'rgba(0,0,0,.6)',justifyContent:'flex-end'},
+  optionsCard:{borderWidth:1,borderTopLeftRadius:24,borderTopRightRadius:24,paddingHorizontal:20,paddingTop:25,paddingBottom:38},
+  optionsTitle:{fontSize:21,fontWeight:'900'},
+  optionsCopy:{fontSize:12,lineHeight:18,marginTop:7,marginBottom:13},
+  reportOption:{height:49,flexDirection:'row',alignItems:'center',gap:12,borderBottomWidth:StyleSheet.hairlineWidth},
+  cancel:{height:45,borderRadius:13,alignItems:'center',justifyContent:'center',marginTop:16},
   note:{marginTop:10,textAlign:'center',fontSize:11,lineHeight:16}
 });

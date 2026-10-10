@@ -1,53 +1,40 @@
-# StudentHood — Pending Corrections Register
+# StudentHood — Complete Correction Ledger
 
-**Owner instruction (10 October 2026, IST):** Include the complete pending-corrections register at the end of **every StudentHood development reply**, in this and future chats, until the owner **explicitly authorizes the next consolidated APK build**. At each build approval, first check this file, pending PRs, CI and Expo release status; confirm which entries enter that build. Do not silently omit previously reported bugs, and do not merge/build automatically. Update this file when corrections are added, implemented, tested, released or reopened.
+Last reviewed: 10 October 2026 (IST). **Always include all 12 corrections at the end of StudentHood development replies, even after a build, until verified on device.**
 
-**Status legend**
-- `BACKLOG`: requested, not fully implemented.
-- `IN DRAFT`: code staged outside `main`, not in an installed APK.
-- `BACKEND LIVE`: server change deployed; mobile feature may still require an APK.
-- `IN v0.1.7 / QA`: included in released source, not necessarily verified on owner's Android handset.
-- `DEVICE QA`: a real handset test is required; CI alone is not sufficient.
-- `RELEASED + VERIFIED`: user confirms behavior on installed APK (do not mark prematurely).
+## Release checkpoints
+- Live installed baseline: **v0.1.7**, Android versionCode **8**, Expo build c82f47fe-5056-454a-bbe3-d25d86562528, submitted 9 Oct.
+- Owner approved the **one consolidated v0.1.8 APK** on 10 Oct. GitHub PR #9: https://github.com/kishorerohy/StudentHood/pull/9, branch `release/v0.1.8-consolidated`. Android code **versionCode 9**.
+- Do not equate GitHub CI, Supabase deployment or an EAS request with device verification. Real handset QA follows the new APK.
+- **One official Expo EAS Android submission maximum per Asia/Kolkata calendar day.** No native rebuilds or build retries without checking the daily cap.
+- Production SQL migrations for secure Scene-link Ping shares, Discover sharing Peeps, private independent cover photos, safe campus normalization, restricted human moderation, private profile reporting, cover path owner guard and cover column update grant were applied on 10 Oct.
+- Supabase `institution-search` Edge Function v3 is active with second Overpass provider fallback. Authenticated production device lookup still needs a real test.
+- **Scenes are moderation-gated:** all 3 existing production Scenes were `pending` when inspected Oct 10; no human moderator reviews have been performed. An approved adult reviewer must be authorized and review content manually; never auto-publish pending Scenes.
+- The current Ping **only supports sharing a moderated Scene link to eligible mutual Peeps**; general text messaging is not falsely advertised as live.
 
-## Release checkpoint
-- GitHub repo: `kishorerohy/StudentHood`; approved mainline merged PR #7.
-- Most recent consolidated APK request: **v0.1.7**, Android `versionCode 8`, Expo build ID `c82f47fe-5056-454a-bbe3-d25d86562528`, submitted 9 October 2026 (IST). GitHub EAS submission succeeded. Check Expo to confirm current build status before claiming APK installed or finished.
-- Current pending mobile changes: draft **PR #8** `fix/keyboard-visible-fields-v2`, not merged.
-- Other requested but not fully committed: Discover personalized-card redesign. Branch `fix/discover-personalized-cards` exists but its proposed `DiscoverPeoplePanel` implementation was **not verified to exist**. Do not mark as implemented.
-- **Daily release policy:** max one Expo EAS APK submission per Asia/Kolkata calendar day; each new batch needs explicit owner approval. Never infer build approval from having a completed list. CI and GitHub docs updates do not count as APK builds.
+## All twelve corrections
 
-## Active corrections for NEXT owner-approved build
-
-| ID | Requested correction / acceptance outcome | Work status | Release gate |
+| # | Reported correction | In PR #9 / backend | Remaining validation |
 |---|---|---|---|
-| K-01 | **Edit Profile keyboard obstruction**: tapping City / University / Bio moves input and label fully above Android keyboard; no hiding of typed text; Save reachable. | IN DRAFT — PR #8 revised keyboard measurements, bottom padding and Android height fallback | DEVICE QA; not in v0.1.7 |
-| K-02 | **All lower text fields**: same safe keyboard handling in sign-in, account setup, Scene creation, Pulse, Hangs, Crews, Gigs and comments, including tall keyboards and keyboard closing. | IN DRAFT — PR #8 | DEVICE QA |
-| I-01 | **City-to-institution search on onboarding**: entering/detecting a city and country lists real schools, colleges and universities; does not require GPS permission. | IN DRAFT — PR #8 mobile; BACKEND LIVE institution-search v2 | Authenticated service + device QA |
-| I-02 | **Edit Profile institution dropdown**: city-specific searchable school/college/university results replace free-text campus field. City changes clear stale campus choices. | IN DRAFT — PR #8 mobile | DEVICE QA |
-| I-03 | **Reliable institution service**: report provider errors and no matches; city cache and Nominatim rate-limiter; protect privacy. | BACKEND LIVE — `institution-search` Edge Function v2 and private `institution_city_cache` / `institution_provider_slots` tables | Confirm end-to-end authenticated city lookup in real app; OSM is not exhaustive |
-| I-04 | **One canonical ID for each campus**, global institution identity and aliases: avoid duplicate campus communities even when users type different names. | BACKLOG — current `profiles.campus_name` is text; OSM IDs returned by API aren't yet permanently mapped to user campus IDs | Design/review DB migration, safe existing-account backfill, and discovery-function update; no unreviewed production schema change |
-| D-01 | **Discover premium student cards**: horizontal swipeable People cards with photo, username, campus, shared interests and working Add Peep action, respecting teen/privacy restrictions; light/dark design. | BACKLOG — current Discover is vertical campus list; design not merged/verified | Implement + CI + DEVICE QA |
-| D-02 | **Discover navigation**: Keep People/Hangs/Crews/Gigs discover sections and ensure See all opens the full People page, with real campus students; no inert links. | IN v0.1.7 / QA — See all wired in PR #7; full Discover redesign outstanding | DEVICE QA |
-| R-01 | **Regression check: startup and Scenes actions**: approved logo splash, existing completed account goes to Scenes, Scene three-dot menu works, Scene radial share country rules, comments, and account safety remain correct. | IN v0.1.7 / QA — PR #7 shipped in source | DEVICE QA/retest after next consolidated build |
-| R-02 | **Profile, username and campus reliability**: globally unique usernames with exact duplicate warning, country/location handling, privacy-safe campus discovery, saved profile/Peep state. | IN v0.1.7 / QA (some previous backend fixes live); canonical campus ID work still backlog | DEVICE QA/retest |
+| 1 | Discover scrollable student cards with photo, campus, interests, Add Peep | Implemented in `DiscoverPeoplePanel`, privacy-aware API and `TopHubScreen` | CI and real Android |
+| 2 | Lower form inputs visible above Android keyboard | Carried forward from PR #8 v2 keyboard hook | Real Android keyboards |
+| 3 | City-based canonical institution picker, GPS optional | PR #8 + Edge Function v3 fallback/caching, searchable Edit Profile city results | Authenticated city query and device QA; **true global canonical external-ID storage/backfill and alias registry remain outstanding** |
+| 4 | Independent profile cover and borderless bottom fade | Cover storage/RLS and upload grant, signed URL, SVG fade | Android cover upload/display, light/dark |
+| 5 | Profile three-dot beside Ping | Own action menu and visiting-user three-dot report menu | Android navigation/report tests |
+| 6 | Floating elevated profile picture | Avatar overlap, elevation/shadow | Device light/dark QA |
+| 7 | Globally unique usernames, coloured availability | Red exact unavailable string and SVG gradient availability; existing SQL unique check | Duplicate race/onboarding QA |
+| 8 | Campus Edge Function HTTP 503 onboarding blocker | v3 fallback plus real error parsing; cached directory | Authenticated request/503 retry device QA |
+| 9 | Replace radial Scene sharing with Peeps-first bottom panel | New `SceneShareSheet`, database RPC privacy checks, Ping-only link inbox, installed app checks | Device app availability and correct mutual-Peep delivery |
+| 10 | Remove duplicate startup logo | Keep native splash until auth route resolved and avoid repeated branded pages | Android cold/warm startup QA |
+| 11 | Other eligible students' Scenes from campus | Campus default feed + normalized campus matching + privacy-safe moderation queue | Actual **reviewed** Scenes and user-to-user testing; pending Scenes remain intentionally hidden |
+| 12 | Swipe left on full-screen Scene → actual creator profile | Improved PanResponder and author ID navigation | Android gesture QA |
 
-## Already consolidated into v0.1.7 (do not mislabel as new pending code)
-- Main navigation: Scenes / Hangs / + / Gigs / Profile; Discover / Drops / Ping in header.
-- Full Scene creator profile and profile UI; other-user Peep request flows and profile permissions.
-- Scene comments, Scene link sharing, approved anchored semi-circular Share fan with installed-app/region logic, functional three-dot options, See all route.
-- New creation UI for Scenes, Pulse, Hangs, Crews and Gigs; pending submission database tables and RLS.
-- StudentHood logo startup/routing checks, light/dark brand assets, profile fields and initial keyboard correction.
-- Functional shells do **not** imply live Ping messaging, full Gigs application flow, Crew membership or RSVP backend; those larger services remain separate roadmap work.
-- The owner reported **persistent keyboard overlap, missing city/university list, and incomplete Discover** after this build. These remain active in K/I/D above; do not close based solely on the v0.1.7 CI success.
+## Critical open gates
+- Automated Expo Doctor, native introspection, Android JS export must pass at latest release HEAD.
+- Validate production role grants/RLS on new tables/functions before release.
+- PR #9 must merge to `main` before the sole owner-approved EAS APK submission. Confirm successful EAS workflow submission, then obtain actual Expo artifact link.
+- True worldwide institution-ID/alias deduplication is **not fully complete**. Do not claim every campus in the world has a unique canonical ID solely from name normalization/OSM.
+- Authorized adult moderator must review existing pending Scenes for other users to see them; never bypass age, guardian, content or RLS safeguards.
 
-## Checklist for each future ChatGPT reply
-1. **Answer the immediate user question first.**
-2. Append `### StudentHood corrections awaiting next build` and show **all active IDs K-01 through R-02**, with short one-line statuses, grouped to avoid excessive scrolling.
-3. When a new correction is requested, assign a new ID and update the register in GitHub; carry it forward in every response until next explicit build approval.
-4. Differentiate `IN DRAFT`, `BACKEND LIVE`, `CI PASSED`, `DEVICE QA`, and `RELEASED + VERIFIED`. A GitHub commit is never evidence of a device fix.
-5. State PR/merge and APK-release status, **whether the one-build/day limit has been used**, and refrain from new Expo submissions until user approval.
-6. At build approval, form a new batch/checklist, update `PROJECT_STATE.md` and reset shipped items to post-release QA rather than losing them. Keep unresolved defects carried forward.
-7. Preserve StudentHood product names, brand, account/privacy/guardian safety checks, and separation of Ping message alerts from Drops.
-
-**Sources of truth:** GitHub `main`, PR #8, EAS project `studenthood-0920/studenthood`, live Supabase `studenthood-production`. Do not rely on chat-only memory for the checklist.
+## StudentHood rules
+Use only Scenes, Pulse, Peeps, Ping, Drops, Hangs, Crews and Gigs. Never call Scene media a reel or clip. Ping shares/notifications stay solely in Ping, never Drops. Preserve logo, onboarding safeguards, privacy, age verification and guardian consent. Never delete real users automatically.

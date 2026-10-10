@@ -27,3 +27,27 @@ In the installed Android v0.1.6, opening Edit Profile and tapping the lower city
 
 ## Release control
 Leave PR #7 as draft and unmerged. Do not queue an APK without explicit user approval; previous user requested build hold. This fix is not present in the installed Android v0.1.6 APK.
+
+## Follow-up: persistent keyboard obstruction reported after v0.1.7 — 2026-10-09
+
+The owner confirms the Android keyboard still covers lower app content despite the previous `softwareKeyboardLayoutMode='resize'` setting. Root implementation defect confirmed: the old `useKeyboardAwareForm` passes `onFocus.nativeEvent.target` (a native target identifier) to `scrollResponderScrollNativeHandleToKeyboard`. This is not a reliable measurable TextInput ref under React Native 0.81 / newer architecture, so the request may be silently ignored.
+
+### Correction v2 (branch `fix/keyboard-visible-fields-v2`)
+- Use `TextInput.State.currentlyFocusedInput()` as the actual measurable focused TextInput.
+- Measure its rectangle and the owning scroll viewport using `measureInWindow`; use reported keyboard `screenY` to identify the usable visible area.
+- Scroll by the required delta only, preserving input label clearance and scrolling upward when an input is above the viewport.
+- Retry focus reveal immediately and after 90ms/260ms for Android keyboard animation and layout updates, including keyboard-frame changes.
+- Track the ScrollView scroll position with `onScroll` and add temporary bottom padding only when the keyboard overlaps the scrollable viewport; clear on keyboard hide.
+- Apply to Edit Profile, profile onboarding, sign-in/up, Scene composer and Pulse/Hangs/Crews/Gigs composers; do not let the nested institution-picker search use the parent scroll ref.
+- Keep iOS automatic keyboard inset handling and native Android adjustResize as complementary behavior.
+- No DB schema changes and no account/safety-policy changes.
+
+### Must manually verify before claiming fixed
+1. Install a *future explicitly approved* APK containing this branch and reproduce the exact reported City and School/College/University case.
+2. Tap University with Gboard shown; field and field label must be above keyboard, and cursor visible. Repeat with a taller keyboard and landscape.
+3. Reopen Edit Profile and switch between Bio, City and University without dismissing keyboard; scroll should neither jump to top nor oscillate.
+4. Confirm Save in the top bar works, and dismissing Android keyboard with Back retains the form values.
+5. Repeat for the final inputs in onboarding and each creation form, including number keyboards.
+6. Verify the country/institution full-screen selectors retain their own navigation and the keyboard only shifts the relevant pane.
+7. Expo Doctor, native config introspection, and Android JS export must pass; these static tests do not substitute for on-device keyboard measurement.
+8. This release branch must remain unmerged until approved; owner one APK/day cap remains in effect.

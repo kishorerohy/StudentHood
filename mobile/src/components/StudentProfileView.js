@@ -1,6 +1,7 @@
 import React,{useRef,useState} from 'react';
 import {Image,Modal,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
+import Svg,{Defs,LinearGradient,Stop,Rect} from 'react-native-svg';
 import CampusPresenceBadge from './CampusPresenceBadge';
 
 // One consistent, real-data profile layout for your own profile and permitted
@@ -13,8 +14,8 @@ export default function StudentProfileView({
   const [openScene,setOpenScene]=useState(null);
   const interests=Array.isArray(student?.interests)?
     student.interests.filter(value=>typeof value==='string'&&value.trim()):[];
-  const photoScene=scenes.find(item=>item.media_type==='image'&&item.media_signed_url);
-  const coverUrl=student?.cover_signed_url||photoScene?.media_signed_url||null;
+  // Cover imagery is its own profile asset; never substitute a student's recent Scene.
+  const coverUrl=student?.cover_signed_url||null;
   const handle=student?.username?'@'+student.username:'@student';
   const title=student?.full_name||student?.username||'Student';
   const initial=title[0]?.toUpperCase()||'S';
@@ -30,14 +31,19 @@ export default function StudentProfileView({
     <View style={[styles.cover,{backgroundColor:theme.isLight?'#2E383E':'#121C24'}]}>
       {!!coverUrl&&<Image source={{uri:coverUrl}} style={styles.coverImage} resizeMode="cover"/>}
       <View style={styles.coverShade}/>
+      <Svg pointerEvents="none" style={styles.coverFade} width="100%" height="115">
+        <Defs><LinearGradient id="profile-cover-fade" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={theme.bg} stopOpacity="0"/>
+          <Stop offset="1" stopColor={theme.bg} stopOpacity="1"/>
+        </LinearGradient></Defs>
+        <Rect x="0" y="0" width="100%" height="115" fill="url(#profile-cover-fade)"/>
+      </Svg>
       {!coverUrl&&<Feather name="book-open" size={80} color="rgba(255,255,255,0.10)" style={styles.coverPlaceholder}/>}
       <View style={styles.topBar}>
         {!!onBack?<Pressable onPress={onBack} style={styles.topAction} accessibilityRole="button" accessibilityLabel="Back to Scenes">
           <Feather name="arrow-left" size={24} color="#fff"/>
         </Pressable>:<View style={{width:43}}/>}
-        {!!onMenu&&<Pressable onPress={onMenu} style={styles.topAction} accessibilityRole="button" accessibilityLabel="Profile options">
-          <Feather name="more-horizontal" size={25} color="#fff"/>
-        </Pressable>}
+
       </View>
     </View>
 
@@ -90,6 +96,9 @@ export default function StudentProfileView({
         accessibilityLabel="Edit profile picture">
         <Feather name="user" size={22} color={theme.text}/>
       </Pressable>
+      {!!onMenu&&<Pressable onPress={onMenu} style={[styles.actionIcon,{backgroundColor:theme.surface2,borderColor:theme.line}]} accessibilityRole="button" accessibilityLabel="Profile options">
+        <Feather name="more-horizontal" size={22} color={theme.text}/>
+      </Pressable>}
     </View>:actions}
 
     {!!footer&&footer}
@@ -159,12 +168,13 @@ const styles=StyleSheet.create({
   content:{paddingBottom:125,maxWidth:790,width:'100%',alignSelf:'center'},
   cover:{height:235,position:'relative',overflow:'hidden'},
   coverImage:{height:'100%',width:'100%'},
-  coverShade:{...StyleSheet.absoluteFillObject,backgroundColor:'rgba(5,10,16,0.45)'},
+  coverShade:{...StyleSheet.absoluteFillObject,backgroundColor:'rgba(5,10,16,0.28)'},
+  coverFade:{position:'absolute',left:0,right:0,bottom:0}, 
   coverPlaceholder:{position:'absolute',alignSelf:'center',top:72},
   topBar:{position:'absolute',left:13,right:13,top:12,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   topAction:{width:43,height:43,borderRadius:22,backgroundColor:'rgba(5,10,16,0.35)',alignItems:'center',justifyContent:'center'},
-  identity:{alignItems:'center',paddingHorizontal:15,marginTop:-59,gap:7},
-  avatarRing:{height:130,width:130,borderRadius:65,borderWidth:4,alignItems:'center',justifyContent:'center',overflow:'visible'},
+  identity:{alignItems:'center',paddingHorizontal:15,marginTop:-59,gap:7,zIndex:2,elevation:2}, 
+  avatarRing:{height:130,width:130,borderRadius:65,borderWidth:4,alignItems:'center',justifyContent:'center',overflow:'visible',elevation:10,shadowColor:'#000',shadowOpacity:0.23,shadowOffset:{width:0,height:8},shadowRadius:15}, 
   avatarPhoto:{width:'100%',height:'100%',borderRadius:63},
   initial:{fontSize:48,fontWeight:'800'},
   camera:{position:'absolute',bottom:2,right:1,width:29,height:29,borderRadius:15,borderWidth:2,alignItems:'center',justifyContent:'center'},

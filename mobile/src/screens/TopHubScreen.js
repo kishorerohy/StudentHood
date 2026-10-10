@@ -4,14 +4,15 @@ import {
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {DiscoverIcon,DropsIcon,PingIcon} from '../icons';
-import {getCampusPeeps,getDropsFeed,getPeepConnection,getProfileCard} from '../api';
+import {getCampusPeeps,getDropsFeed,getPeepConnection,getProfileCard,getPingSceneInbox} from '../api';
 import CampusPresenceBadge from '../components/CampusPresenceBadge';
+import DiscoverPeoplePanel from '../components/DiscoverPeoplePanel';
 
 const PING_TABS=['All','Peeps','Requests','Hang Chats','Crew Chats'];
 const DISCOVER_SECTIONS=[{name:'People',icon:'users',copy:'Meet students from your campus'},{name:'Hangs',icon:'calendar',copy:'Find campus plans'},{name:'Crews',icon:'users',copy:'Discover communities'},{name:'Gigs',icon:'briefcase',copy:'Explore student opportunities'}];
 const DROP_FILTERS=['All','Scenes','Peeps'];
 
-export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProfile,onOpenFeature,pingTarget=null}){
+export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProfile,onOpenFeature,onOpenScene,pingTarget=null}){
   const [peeps,setPeeps]=useState([]);
   const [peepsLoading,setPeepsLoading]=useState(false);
   const [peepsError,setPeepsError]=useState('');
@@ -24,6 +25,10 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
   const [dropsError,setDropsError]=useState('');
   const [dropsRefresh,setDropsRefresh]=useState(0);
   const [dropFilter,setDropFilter]=useState('All');
+  const [pingShares,setPingShares]=useState([]);
+  const [pingSharesError,setPingSharesError]=useState('');
+  const [pingSharesLoading,setPingSharesLoading]=useState(false);
+  const [pingRefresh,setPingRefresh]=useState(0);
 
   useEffect(()=>{
     let live=true;
@@ -69,6 +74,17 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
       }).catch(()=>{});
     return ()=>{live=false};
   },[kind,pingTarget?.id]);
+
+  useEffect(()=>{
+    if(kind!=='Ping')return;
+    let live=true;
+    setPingSharesLoading(true);
+    setPingSharesError('');
+    getPingSceneInbox({limit:50}).then(rows=>{if(live)setPingShares(rows)}).catch(e=>{
+      if(live){setPingShares([]);setPingSharesError(e?.message||'Cannot load shared Scenes.');}
+    }).finally(()=>{if(live)setPingSharesLoading(false)});
+    return()=>{live=false};
+  },[kind,pingRefresh]);
 
   const visibleDrops=drops.filter(item=>dropFilter==='All'||(dropFilter==='Scenes'&&String(item.activity_type||'').startsWith('scene_'))||(dropFilter==='Peeps'&&String(item.activity_type||'').startsWith('peep_')));
   const visiblePeople=peeps.filter(item=>(item.full_name||'').toLocaleLowerCase().includes(peopleQuery.trim().toLocaleLowerCase())||(item.username||'').toLocaleLowerCase().includes(peopleQuery.trim().toLocaleLowerCase()));
@@ -154,6 +170,7 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
           <Text style={[styles.sectionTitle,{color:theme.text}]}>People from your campus</Text>
           <Text style={[styles.sectionCaption,{color:theme.muted}]} numberOfLines={1}>{profile?.campus_name||'Your campus'}</Text>
         </View>
+        {!peepsError&&!peepsLoading&&visiblePeople.length>0&&<DiscoverPeoplePanel people={visiblePeople} viewer={profile} theme={theme} onOpenProfile={onOpenProfile}/>}
         {peepsError?<EmptyMessage theme={theme} icon="alert-circle" title="Unable to load students" copy={peepsError}/>:
           peepsLoading?<Loading theme={theme} label="Finding permitted campus students…"/>:
           visiblePeople.length===0?<EmptyMessage theme={theme} icon="users" title={peopleQuery?'No matching students':'No students to show yet'} copy={peopleQuery?'Try a different name or username.':'Students from your campus will appear when their privacy settings allow discovery.'}/>:
@@ -196,6 +213,22 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
             <Text style={[styles.pingTabLabel,{color:pingTab===label?'#fff':theme.text}]}>{label}</Text>
           </Pressable>)}
         </ScrollView>
+        {(pingTab==='All'||pingTab==='Peeps')&&<View style={styles.pingShareSection}>
+          <View style={styles.sectionHeading}><Text style={[styles.sectionTitle,{color:theme.text}]}>Scenes sent to Ping</Text>
+            <Pressable onPress={()=>setPingRefresh(v=>v+1)} accessibilityRole="button" accessibilityLabel="Refresh Ping Scene shares" disabled={pingSharesLoading}>
+              <Feather name="refresh-cw" size={18} color={theme.accent}/>
+            </Pressable>
+          </View>
+          {pingSharesLoading?<Loading theme={theme} label="Loading shared Scenes…"/>:
+           pingSharesError?<Text style={{color:theme.danger,fontSize:12}}>{pingSharesError}</Text>:
+           pingShares.length?<View style={[styles.panel,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+             {pingShares.map(item=><Pressable key={item.id} onPress={()=>onOpenScene?.(item.scene_id)} accessibilityRole="button" accessibilityLabel="Open shared Scene" style={[styles.peepRow,{borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:theme.line}]}>
+               <View style={[styles.avatar,{backgroundColor:theme.surface2}]}>{item.sender_avatar_url?<Image source={{uri:item.sender_avatar_url}} style={styles.avatarImage}/>:<Feather name="user" size={22} color={theme.accent}/>}</View>
+               <View style={{flex:1}}><Text style={[styles.peepName,{color:theme.text}]}>{item.sender_name||item.sender_username||'Your Peep'} shared a Scene</Text><Text style={[styles.peepHandle,{color:theme.muted}]}>Tap to view if you still have access</Text></View>
+               <Feather name="arrow-up-right" size={19} color={theme.accent}/>
+             </Pressable>)}
+           </View>:<Text style={[styles.emptyCopy,{color:theme.muted,marginBottom:20}]}>Your Peeps haven't shared any Scenes with you yet.</Text>}
+        </View>}
         <EmptyMessage
           theme={theme}
           icon="message-circle"
@@ -283,6 +316,7 @@ const styles=StyleSheet.create({
   avatarImage:{width:'100%',height:'100%'},
   peepName:{fontSize:12,fontWeight:'800'},
   peepHandle:{fontSize:10,marginTop:4},
+  pingShareSection:{marginBottom:20},
   pingTabs:{gap:8,paddingBottom:16},
   pingTab:{height:36,borderRadius:99,borderWidth:1,paddingHorizontal:14,alignItems:'center',justifyContent:'center'},
   pingTabLabel:{fontSize:11,fontWeight:'800'},

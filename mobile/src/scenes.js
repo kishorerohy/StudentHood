@@ -29,7 +29,7 @@ async function signMedia(scene){
   return {...item,media_signed_url:data?.signedUrl||null};
 }
 
-export async function fetchScenes(filter='For you',limit=20,offset=0){
+export async function fetchScenes(filter='Campus',limit=20,offset=0){
   const {data,error}=await supabase.rpc('studenthood_scene_feed',{
     p_filter:filterMap[filter]||'for_you',
     p_limit:limit,

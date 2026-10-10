@@ -9,6 +9,7 @@ export default function ProfileScreen({theme,profile,onMenu,onEdit,onEditPicture
   const [sceneCount,setSceneCount]=useState(null);
   const [peepCount,setPeepCount]=useState(null);
   const [avatarUrl,setAvatarUrl]=useState(null);
+  const [coverUrl,setCoverUrl]=useState(null);
   const [scenes,setScenes]=useState([]);
   const [loading,setLoading]=useState(false);
 
@@ -36,13 +37,19 @@ export default function ProfileScreen({theme,profile,onMenu,onEdit,onEditPicture
     return()=>{live=false};
   },[profile?.avatar_url,reloadKey]);
 
+  useEffect(()=>{
+    let active=true;
+    getAvatarDisplayUrl(profile?.cover_url).then(url=>{if(active)setCoverUrl(url)}).catch(()=>{if(active)setCoverUrl(null)});
+    return()=>{active=false};
+  },[profile?.cover_url,reloadKey]);
+
   if(!profile)return <View style={{flex:1,alignItems:'center',justifyContent:'center',backgroundColor:theme.bg}}>
     <ActivityIndicator color={theme.accent}/>
   </View>;
   return <StudentProfileView
     own
     theme={theme}
-    student={profile}
+    student={{...profile,cover_signed_url:coverUrl}}
     avatarUrl={avatarUrl}
     scenes={scenes}
     sceneCount={sceneCount}

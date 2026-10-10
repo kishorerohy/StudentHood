@@ -3,7 +3,7 @@
     "name": "StudentHood",
     "slug": "studenthood",
     "scheme": "studenthood",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -27,7 +27,7 @@
         "backgroundColor": "#0B0D0F",
         "foregroundImage": "assets/studenthood-app-icon-foreground.png"
       },
-      "versionCode": 8,
+      "versionCode": 9,
       "softwareKeyboardLayoutMode": "resize"
     },
     "plugins": [

@@ -1,4 +1,8 @@
-import React from 'react';
+import React,{useEffect} from 'react';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Keep the native branded splash visible until the initial authenticated route is ready.
+SplashScreen.preventAutoHideAsync().catch(()=>{});
 import {ActivityIndicator,StatusBar,StyleSheet,Text,useColorScheme,View} from 'react-native';
 import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
 import {SessionProvider,useSession} from './src/session';
@@ -13,6 +17,12 @@ function StudentHood(){
   const scheme=useColorScheme();
   const theme=themeForScheme(scheme);
   const {session,profile,policy,loading,error,isSignedIn,resolvedUserId,refreshAccount}=useSession();
+
+  useEffect(()=>{
+    if(!loading&&(!isSignedIn||resolvedUserId===session?.user?.id)){
+      SplashScreen.hideAsync().catch(()=>{});
+    }
+  },[loading,isSignedIn,resolvedUserId,session?.user?.id]);
 
   // Keep the approved logo on screen until this specific signed-in account's
   // profile AND age/guardian access checks finish. No premature onboarding.
