@@ -99,7 +99,7 @@ export default function StudentProfileView({
       {!!onMenu&&<Pressable onPress={onMenu} style={[styles.actionIcon,{backgroundColor:theme.surface2,borderColor:theme.line}]} accessibilityRole="button" accessibilityLabel="Profile options">
         <Feather name="more-horizontal" size={22} color={theme.text}/>
       </Pressable>}
-    </View>:<View style={styles.actions}>{actions}{!!onMenu&&<Pressable onPress={onMenu} style={[styles.actionIcon,{backgroundColor:theme.surface2,borderColor:theme.line}]} accessibilityRole="button" accessibilityLabel="Profile options"><Feather name="more-horizontal" size={22} color={theme.text}/></Pressable>}</View>}
+    </View>:actions}
 
     {!!footer&&footer}
 
