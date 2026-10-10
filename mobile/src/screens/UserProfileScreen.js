@@ -34,14 +34,16 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
         if(!live)return;
         setCard(result);
         if(!result)return;
-        const [photo,relationship,recent,count]=await Promise.allSettled([
+        const [photo,relationship,recent,count,cover]=await Promise.allSettled([
           getAvatarDisplayUrl(result.avatar_url),
           getPeepConnection(userId),
           getVisibleProfileScenes(userId,{limit:12}),
-          getVisibleSceneCount(userId)
+          getVisibleSceneCount(userId),
+          getAvatarDisplayUrl(result.cover_url)
         ]);
         if(!live)return;
         if(photo.status==='fulfilled')setAvatar(photo.value);
+        if(cover.status==='fulfilled')setCard({...result,cover_signed_url:cover.value});
         if(relationship.status==='fulfilled'){
           setConnection(relationship.value);
           setPeepReady(true);
