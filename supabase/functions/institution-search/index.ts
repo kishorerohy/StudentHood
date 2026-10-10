@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const OVERPASS_URL="https://overpass-api.de/api/interpreter";
+const OVERPASS_URLS=["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter"];
 const NOMINATIM_URL="https://nominatim.openstreetmap.org/search";
 const PRODUCT_URL="https://kishorerohy.github.io/StudentHood/";
 const CACHE_MS=7*24*60*60*1000;
@@ -65,17 +65,32 @@ async function queryOSM(lat:number,lon:number,bounds:[number,number,number,numbe
     'nwr["amenity"~"^(school|college|university)$"]["name"]('+bbox+');'+
     'nwr["building"="university"]["name"]('+bbox+');'+
     ');out center tags 450;';
-  const response=await fetchWithTimeout(OVERPASS_URL,{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8",
-      "User-Agent":"StudentHood/0.1.7 ("+PRODUCT_URL+")"
-    },
-    body:new URLSearchParams({data:query}).toString()
-  },21000);
-  if(!response.ok)throw new Error("Institution directory is temporarily unavailable.");
-  const data=await response.json();
-  const elements=Array.isArray(data?.elements)?data.elements:[];
+  // Fail over once to a second public endpoint when an Overpass instance
+  // is overloaded. Do not poll or fan out: every search is user initiated.
+  let data:unknown=null;
+  for(const endpoint of OVERPASS_URLS){
+    try{
+      const response=await fetchWithTimeout(endpoint,{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8",
+          "User-Agent":"StudentHood/0.1.8 ("+PRODUCT_URL+")"
+        },
+        body:new URLSearchParams({data:query}).toString()
+      },18000);
+      if(!response.ok)throw new Error("Overpass temporarily unavailable: "+response.status);
+      const payload=await response.json();
+      if(!Array.isArray(payload?.elements))throw new Error("Invalid Overpass response");
+      data=payload;
+      break;
+    }catch(error){
+      // No coordinates, tokens, or student details are logged.
+      console.warn("Institution directory provider failed",error instanceof Error?error.name:"provider error");
+    }
+  }
+  if(!data)throw new Error("Institution directory is temporarily unavailable.");
+  const result=data as {elements?:unknown[]};
+  const elements=Array.isArray(result.elements)?result.elements:[];
   const candidates=elements.map((element:Record<string,unknown>)=>{
     const tags=(element.tags||{}) as Record<string,unknown>;
     const name=clean(tags.name,160);
