@@ -113,6 +113,31 @@ export async function uploadMyAvatar(asset){
   return path;
 }
 
+// Cover media is independent of Scenes and uses the private profile bucket.
+// The database links only paths owned by the signed-in student.
+export async function uploadMyCover(asset){
+  if(!asset?.uri)throw new Error('Choose a cover photo first.');
+  const {data:{user},error:userError}=await supabase.auth.getUser();
+  if(userError)throw userError;
+  if(!user)throw new Error('Please sign in again.');
+  const bytes=await (await fetch(asset.uri)).arrayBuffer();
+  if(bytes.byteLength>5*1024*1024)throw new Error('Choose a cover image smaller than 5 MB.');
+  const contentType=asset.mimeType||'image/jpeg';
+  if(!['image/jpeg','image/png','image/webp'].includes(contentType))
+    throw new Error('Please choose a JPG, PNG or WebP cover.');
+  const ext=contentType==='image/png'?'png':contentType==='image/webp'?'webp':'jpg';
+  const path=`${user.id}/cover-${Date.now()}.${ext}`;
+  const {error:uploadError}=await supabase.storage.from('profile-avatars').upload(path,bytes,{contentType,upsert:false});
+  if(uploadError)throw uploadError;
+  const {data,error}=await supabase.from('profiles').update({cover_url:path}).eq('id',user.id)
+    .select('id,cover_url').single();
+  if(error||data?.id!==user.id||data?.cover_url!==path){
+    await supabase.storage.from('profile-avatars').remove([path]).catch(()=>{});
+    throw error||new Error('Your cover picture could not be saved.');
+  }
+  return path;
+}
+
 export async function getAvatarDisplayUrl(value){
   if(!value) return null;
   if(/^https?:\/\//i.test(value)) return value;
@@ -128,7 +153,7 @@ export async function getMyProfile(){
 
   const {data,error}=await supabase
     .from('profiles')
-    .select('id,full_name,username,date_of_birth,city,campus_name,locale,country_code,preferred_currency,time_zone,age_assurance_status,guardian_consent_status,platform_age_provider,platform_age_status,platform_age_lower,platform_age_upper,platform_age_source,platform_age_signal_at,age_conflict,adult_access_verified,profile_visibility,location_visibility,recommendation_mode,ping_permissions,avatar_url,bio,interests,campus_presence,onboarding_completed,created_at,updated_at')
+    .select('id,full_name,username,date_of_birth,city,campus_name,locale,country_code,preferred_currency,time_zone,age_assurance_status,guardian_consent_status,platform_age_provider,platform_age_status,platform_age_lower,platform_age_upper,platform_age_source,platform_age_signal_at,age_conflict,adult_access_verified,profile_visibility,location_visibility,recommendation_mode,ping_permissions,avatar_url,cover_url,bio,interests,campus_presence,onboarding_completed,created_at,updated_at')
     .eq('id',user.id)
     .maybeSingle();
 
