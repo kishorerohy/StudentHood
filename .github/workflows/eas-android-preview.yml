@@ -2,6 +2,8 @@ name: StudentHood Expo EAS Android Preview
 
 # One official EAS APK submission per IST day. Scheduled for 19:00 IST;
 # manual dispatch remains possible, but must respect the same daily limit.
+# 2026-10-10: owner-approved consolidated StudentHood v0.1.8, Android versionCode 9.
+# This comment triggers no extra build unless the audited daily IST EAS gate allows it.
 on:
   workflow_dispatch:
   # Owner-approved immediate release requests may be triggered by a tagged workflow update.
