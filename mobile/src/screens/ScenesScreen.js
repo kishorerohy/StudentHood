@@ -288,13 +288,14 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCo
   const pan=useMemo(()=>PanResponder.create({
     // Only claim an actual swipe; taps belong to the action Pressables.
     onStartShouldSetPanResponder:()=>false,
-    onMoveShouldSetPanResponder:(_,g)=>Math.abs(g.dx)>25||Math.abs(g.dy)>25,
+    onMoveShouldSetPanResponder:(_,g)=>Math.abs(g.dx)>18||Math.abs(g.dy)>24,
+    onMoveShouldSetPanResponderCapture:(_,g)=>g.dx< -18&&Math.abs(g.dx)>Math.abs(g.dy)*1.25,
     onPanResponderGrant:(_,g)=>{start.x=g.x0;start.y=g.y0},
     onPanResponderRelease:(_,g)=>{
       const dx=g.dx;
       const dy=g.dy;
       if(Math.max(Math.abs(dx),Math.abs(dy))<45) return;
-      if(Math.abs(dx)>Math.abs(dy)&&dx<0){leave(()=>onProfile(scenes[index]));return;}
+      if(dx< -65&&Math.abs(dx)>Math.abs(dy)*1.25){const creator=scenes[index];if(creator?.author_id)leave(()=>onProfile(creator));return;}
       if(Math.abs(dy)>=Math.abs(dx)){
         const next=(index+(dy<0?1:-1)+scenes.length)%scenes.length;
         onIndex(next);
@@ -314,7 +315,7 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCo
       <Pressable onPress={()=>leave()} style={styles.viewerClose}><Feather name="x" size={24} color="#fff"/></Pressable>
       <Pressable ref={moreButton} onPress={()=>moreButton.current?.measureInWindow((x,y,width,height)=>{setMoreAnchor({x,y,width,height});setMoreOpen(true)})} accessibilityRole="button" accessibilityLabel="Scene options" style={[styles.viewerClose,{left:undefined,right:14}]}><Feather name="more-horizontal" size={24} color="#fff"/></Pressable>
       <View style={styles.viewerBottom}>
-        <Pressable onPress={()=>leave(()=>onProfile(scene))} style={styles.viewerCreator}><View style={styles.viewerAvatar}>{scene.author_avatar_url?<Image source={{uri:scene.author_avatar_url}} style={styles.avatarImage}/>:<Feather name="user" size={18} color="#fff"/>}</View><View><Text style={styles.viewerName}>{scene.author_name||scene.author_username||'Student'}</Text><Text style={styles.viewerMeta}>{scene.author_campus_name||'Campus'} · {timeAgo(scene.created_at)}</Text></View></Pressable>
+        <Pressable onPress={()=>leave(()=>onProfile(scene))} accessibilityRole="button" accessibilityLabel="Open Scene creator profile" style={styles.viewerCreator}><View style={styles.viewerAvatar}>{scene.author_avatar_url?<Image source={{uri:scene.author_avatar_url}} style={styles.avatarImage}/>:<Feather name="user" size={18} color="#fff"/>}</View><View><Text style={styles.viewerName}>{scene.author_name||scene.author_username||'Student'}</Text><Text style={styles.viewerMeta}>{scene.author_campus_name||'Campus'} · {timeAgo(scene.created_at)}</Text></View></Pressable>
         {!!scene.body&&scene.media_type!=='text'&&<Text style={styles.viewerCaption}>{scene.body}</Text>}
         <Text style={styles.viewerHint}>Swipe left for profile · Swipe up for next Scene</Text>
       </View>
