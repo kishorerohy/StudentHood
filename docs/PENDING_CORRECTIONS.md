@@ -5,7 +5,8 @@ Last reviewed: 10 October 2026 (IST). **Always include all 12 corrections at the
 ## Release checkpoints
 - Live installed baseline: **v0.1.7**, Android versionCode **8**, Expo build c82f47fe-5056-454a-bbe3-d25d86562528, submitted 9 Oct.
 - Owner approved the **one consolidated v0.1.8 APK** on 10 Oct. GitHub **PR #9 merged** to main. Android versionCode **9**. Mainline CI passed.
-- **GitHub EAS submission successful 10 Oct 2026**: workflow https://github.com/kishorerohy/StudentHood/actions/runs/38050929041, Expo build ID `ef509aea-4f0b-4385-a6dc-ee7c376010bb` (https://expo.dev/accounts/studenthood-0920/projects/studenthood/builds/ef509aea-4f0b-4385-a6dc-ee7c376010bb). This is a submitted/queued build until EAS reports success and owner installs it. No second APK today.
+- **GitHub EAS submission successful 10 Oct 2026**: workflow https://github.com/kishorerohy/StudentHood/actions/runs/38050929041 completed successfully and uploaded project to Expo; Expo build ID `ef509aea-4f0b-4385-a6dc-ee7c376010bb` (https://expo.dev/accounts/studenthood-0920/projects/studenthood/builds/ef509aea-4f0b-4385-a6dc-ee7c376010bb). Because workflow uses `--no-wait`, this **does not prove final Expo APK success**. Expo build completion and owner installation remain UNVERIFIED. No second APK today.
+- Android release acceptance checklist with all 12 test cases: [`docs/V018_ANDROID_RELEASE_ACCEPTANCE.md`](V018_ANDROID_RELEASE_ACCEPTANCE.md). Every device test is UNVERIFIED until evidenced; #11 is BLOCKED pending authorized human moderation and eligible user tests.
 - Do not equate GitHub CI, Supabase deployment or an EAS request with device verification. Real handset QA follows the new APK.
 - **One official Expo EAS Android submission maximum per Asia/Kolkata calendar day.** No native rebuilds or build retries without checking the daily cap.
 - Production SQL migrations for secure Scene-link Ping shares, Discover sharing Peeps, private independent cover photos, safe campus normalization, restricted human moderation, private profile reporting, cover path owner guard and cover column update grant were applied on 10 Oct.
@@ -33,7 +34,7 @@ Last reviewed: 10 October 2026 (IST). **Always include all 12 corrections at the
 ## Critical open gates
 - Automated Expo Doctor, native introspection, Android JS export must pass at latest release HEAD.
 - Validate production role grants/RLS on new tables/functions before release.
-- PR #9 must merge to `main` before the sole owner-approved EAS APK submission. Confirm successful EAS workflow submission, then obtain actual Expo artifact link.
+- PR #9 is merged and the sole owner-approved GitHub EAS submission succeeded. **Next gate:** verify Expo reports `Finished` and provides an APK, then install and complete acceptance tests without another build today.
 - True worldwide institution-ID/alias deduplication is **not fully complete**. Do not claim every campus in the world has a unique canonical ID solely from name normalization/OSM.
 - Authorized adult moderator must review existing pending Scenes for other users to see them; never bypass age, guardian, content or RLS safeguards.
 
