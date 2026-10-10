@@ -6,6 +6,7 @@ import {Feather} from '@expo/vector-icons';
 import {DiscoverIcon,DropsIcon,PingIcon} from '../icons';
 import {getCampusPeeps,getDropsFeed,getPeepConnection,getProfileCard} from '../api';
 import CampusPresenceBadge from '../components/CampusPresenceBadge';
+import DiscoverPeoplePanel from '../components/DiscoverPeoplePanel';
 
 const PING_TABS=['All','Peeps','Requests','Hang Chats','Crew Chats'];
 const DISCOVER_SECTIONS=[{name:'People',icon:'users',copy:'Meet students from your campus'},{name:'Hangs',icon:'calendar',copy:'Find campus plans'},{name:'Crews',icon:'users',copy:'Discover communities'},{name:'Gigs',icon:'briefcase',copy:'Explore student opportunities'}];
@@ -154,6 +155,7 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
           <Text style={[styles.sectionTitle,{color:theme.text}]}>People from your campus</Text>
           <Text style={[styles.sectionCaption,{color:theme.muted}]} numberOfLines={1}>{profile?.campus_name||'Your campus'}</Text>
         </View>
+        {!peepsError&&!peepsLoading&&visiblePeople.length>0&&<DiscoverPeoplePanel people={visiblePeople} viewer={profile} theme={theme} onOpenProfile={onOpenProfile}/>}
         {peepsError?<EmptyMessage theme={theme} icon="alert-circle" title="Unable to load students" copy={peepsError}/>:
           peepsLoading?<Loading theme={theme} label="Finding permitted campus students…"/>:
           visiblePeople.length===0?<EmptyMessage theme={theme} icon="users" title={peopleQuery?'No matching students':'No students to show yet'} copy={peopleQuery?'Try a different name or username.':'Students from your campus will appear when their privacy settings allow discovery.'}/>:
