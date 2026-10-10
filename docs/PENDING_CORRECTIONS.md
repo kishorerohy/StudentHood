@@ -4,7 +4,8 @@ Last reviewed: 10 October 2026 (IST). **Always include all 12 corrections at the
 
 ## Release checkpoints
 - Live installed baseline: **v0.1.7**, Android versionCode **8**, Expo build c82f47fe-5056-454a-bbe3-d25d86562528, submitted 9 Oct.
-- Owner approved the **one consolidated v0.1.8 APK** on 10 Oct. GitHub PR #9: https://github.com/kishorerohy/StudentHood/pull/9, branch `release/v0.1.8-consolidated`. Android code **versionCode 9**.
+- Owner approved the **one consolidated v0.1.8 APK** on 10 Oct. GitHub **PR #9 merged** to main. Android versionCode **9**. Mainline CI passed.
+- **GitHub EAS submission successful 10 Oct 2026**: workflow https://github.com/kishorerohy/StudentHood/actions/runs/38050929041, Expo build ID `ef509aea-4f0b-4385-a6dc-ee7c376010bb` (https://expo.dev/accounts/studenthood-0920/projects/studenthood/builds/ef509aea-4f0b-4385-a6dc-ee7c376010bb). This is a submitted/queued build until EAS reports success and owner installs it. No second APK today.
 - Do not equate GitHub CI, Supabase deployment or an EAS request with device verification. Real handset QA follows the new APK.
 - **One official Expo EAS Android submission maximum per Asia/Kolkata calendar day.** No native rebuilds or build retries without checking the daily cap.
 - Production SQL migrations for secure Scene-link Ping shares, Discover sharing Peeps, private independent cover photos, safe campus normalization, restricted human moderation, private profile reporting, cover path owner guard and cover column update grant were applied on 10 Oct.
