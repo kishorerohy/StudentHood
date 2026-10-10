@@ -12,10 +12,10 @@ import SceneShareSheet from '../components/SceneShareSheet';
 import SceneCommentsPanel from '../components/SceneCommentsPanel';
 import SceneOptionsMenu from '../components/SceneOptionsMenu';
 
-const FILTERS=['For you','Viral','Nearby','Campus','Live now'];
+const FILTERS=['Campus','Viral','Nearby','Live now'];
 
 export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenCreate,onOpenPulse,onOpenDiscover,focusScene,reloadKey=0}){
-  const [filter,setFilter]=useState('For you');
+  const [filter,setFilter]=useState('Campus');
   const [items,setItems]=useState([]);
   const [loading,setLoading]=useState(true);
   const [refreshing,setRefreshing]=useState(false);
@@ -181,7 +181,7 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
         items.length===0?<View style={[styles.empty,{backgroundColor:theme.surface,borderColor:theme.line}]}>
           <View style={[styles.emptyIcon,{backgroundColor:theme.accentSoft}]}><SceneIcon size={28} color={theme.accent}/></View>
           <Text style={[styles.emptyTitle,{color:theme.text}]}>Your campus is quiet here.</Text>
-          <Text style={[styles.emptyCopy,{color:theme.muted}]}>Be the first to post a Scene. New Scenes are moderated before broader distribution.</Text>
+          <Text style={[styles.emptyCopy,{color:theme.muted}]}>Be the first to post a Scene. Other students’ Scenes appear when their privacy settings allow them and moderation is complete.</Text>
           <Pressable onPress={onOpenCreate} style={[styles.emptyButton,{backgroundColor:theme.accent}]}><Text style={styles.emptyButtonText}>Create a Scene</Text></Pressable>
         </View>:
         <View style={styles.feed}>{items.filter(scene=>!hiddenIds.includes(scene.id)).map(scene=><SceneCard key={scene.id} scene={scene} theme={theme} onOpen={()=>{setSharedScene(null);setViewerIndex(items.findIndex(row=>row.id===scene.id))}} onProfile={()=>onOpenProfile?.(scene.author_id)} onLike={()=>like(scene.id)} onComments={()=>setCommentScene(scene)} onShare={anchor=>handleShare(scene,anchor)} onMore={anchor=>setOptionsTarget({scene,anchor})}/>)}</View>
