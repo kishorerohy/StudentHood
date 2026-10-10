@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {SceneIcon} from '../icons';
 import {getCampusPeeps} from '../api';
 import {fetchScenes,fetchSharedScene,toggleSceneLike} from '../scenes';
-import SceneShareRadial from '../components/SceneShareRadial';
+import SceneShareSheet from '../components/SceneShareSheet';
 import SceneCommentsPanel from '../components/SceneCommentsPanel';
 import SceneOptionsMenu from '../components/SceneOptionsMenu';
 
@@ -212,7 +212,7 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
       }}/>} 
     </Modal>
     <Modal visible={!!shareTarget} transparent statusBarTranslucent animationType="none" onRequestClose={()=>setShareTarget(null)}>
-      {!!shareTarget&&<SceneShareRadial scene={shareTarget.scene} anchor={shareTarget.anchor} profileCountry={profile?.country_code} theme={theme} onClose={()=>setShareTarget(null)}/>}
+      {!!shareTarget&&<SceneShareSheet scene={shareTarget.scene} profileCountry={profile?.country_code} theme={theme} onClose={()=>setShareTarget(null)}/>}
     </Modal>
     <Modal visible={!!optionsTarget} transparent statusBarTranslucent animationType="fade" onRequestClose={()=>setOptionsTarget(null)}>
       {!!optionsTarget&&<SceneOptionsMenu scene={optionsTarget.scene} anchor={optionsTarget.anchor} theme={theme} currentUserId={profile?.id} onClose={()=>setOptionsTarget(null)} onProfile={userId=>onOpenProfile?.(userId)} onHide={hideScene} onDeleted={handleDeleted}/>}
@@ -325,7 +325,7 @@ function SceneViewer({visible,scenes,index,onIndex,onClose,onProfile,onLike,onCo
         <Pressable ref={shareButton} onPress={openShare} accessibilityRole="button" accessibilityLabel="Share Scene" style={styles.viewerAction}><Feather name="send" size={24} color="#fff"/><Text style={styles.viewerActionText}>Share Scene</Text></Pressable>
       </View>
       </>}
-      {shareOpen&&<SceneShareRadial scene={scene} theme={theme} anchor={shareAnchor} profileCountry={profileCountry} onClose={()=>setShareOpen(false)}/>}
+      {shareOpen&&<SceneShareSheet scene={scene} theme={theme} profileCountry={profileCountry} onClose={()=>setShareOpen(false)}/>}
       {moreOpen&&<SceneOptionsMenu scene={scene} anchor={moreAnchor} theme={theme} currentUserId={currentUserId} onClose={()=>setMoreOpen(false)} onProfile={userId=>{setMoreOpen(false);leave(()=>onProfile(scene))}} onHide={onHide} onDeleted={onDeleted}/>}
     </Animated.View>
   </Modal>;
