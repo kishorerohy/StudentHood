@@ -2,7 +2,7 @@ import React,{useEffect,useState} from 'react';
 import {ActivityIndicator,Alert,Image,Keyboard,KeyboardAvoidingView,Modal,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,ToastAndroid,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import {findInstitutionsByCity,getAvatarDisplayUrl,saveMyProfileChanges,uploadMyAvatar} from '../api';
+import {findInstitutionsByCity,getAvatarDisplayUrl,saveMyProfileChanges,uploadMyAvatar,uploadMyCover} from '../api';
 import useKeyboardAwareForm from '../hooks/useKeyboardAwareForm';
 
 export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnly=false}){
@@ -12,6 +12,8 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
   const [campus,setCampus]=useState(profile?.campus_name||'');
   const [avatar,setAvatar]=useState(null);
   const [newPhoto,setNewPhoto]=useState(null);
+  const [cover,setCover]=useState(null);
+  const [newCover,setNewCover]=useState(null);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
   const [institutionOpen,setInstitutionOpen]=useState(false);
@@ -27,7 +29,25 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
     return()=>{active=false};
   },[profile?.avatar_url]);
 
+  useEffect(()=>{
+    let active=true;
+    getAvatarDisplayUrl(profile?.cover_url).then(url=>{if(active)setCover(url)}).catch(()=>{});
+    return()=>{active=false};
+  },[profile?.cover_url]);
+
   useEffect(()=>{if(photoOnly&&!newPhoto)choosePhoto()},[photoOnly]);
+
+  async function chooseCover(){
+    setError('');
+    try{
+      const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if(!permission.granted){setError('Photo library permission is required to choose a cover picture.');return;}
+      const result=await ImagePicker.launchImageLibraryAsync({
+        mediaTypes:['images'],quality:0.88,allowsEditing:true,aspect:[16,9],allowsMultipleSelection:false
+      });
+      if(!result.canceled&&result.assets?.[0])setNewCover(result.assets[0]);
+    }catch(e){setError(e?.message||'Could not choose a cover picture.');}
+  }
 
   async function choosePhoto(){
     setError('');
@@ -57,6 +77,7 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
     setError('');
     let profileSaved=false;
     let photoSaved=false;
+    let coverSaved=false;
     try{
       // These calls verify the saved record before returning success.
       if(!photoOnly){
@@ -68,6 +89,11 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
         photoSaved=true;
         setNewPhoto(null);
       }
+      if(newCover){
+        await uploadMyCover(newCover);
+        coverSaved=true;
+        setNewCover(null);
+      }
       // Refresh the profile the student sees after returning from Edit.
       await onSaved?.();
       if(Platform.OS==='android')ToastAndroid.show('Profile saved successfully',ToastAndroid.SHORT);
@@ -75,7 +101,7 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
       onBack?.();
     }catch(e){
       const detail=e?.message||'Could not update your profile.';
-      if(profileSaved||photoSaved){
+      if(profileSaved||photoSaved||coverSaved){
         setError('Some changes were saved, but the remaining changes or profile refresh failed: '+detail);
         // Refresh any partial changes, but keep the editor open for retry.
         try{await onSaved?.()}catch{}
@@ -135,6 +161,11 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
         <Text style={[styles.photoHint,{color:theme.muted}]}>JPG, PNG or WebP, up to 5 MB</Text>
       </Pressable>
       {!photoOnly&&<>
+        <Pressable onPress={chooseCover} accessibilityRole="button" accessibilityLabel="Choose independent profile cover" style={[styles.coverControl,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
+          {newCover?.uri||cover?<Image source={{uri:newCover?.uri||cover}} style={styles.coverPreview}/>:<Feather name="image" size={34} color={theme.accent}/>}
+          <View style={styles.coverOverlay}><Feather name="camera" size={16} color="#fff"/><Text style={styles.coverOverlayText}>Change cover picture</Text></View>
+        </Pressable>
+        <Text style={[styles.hint,{color:theme.muted}]}>Your cover picture is separate from your Scenes. JPG, PNG or WebP, up to 5 MB.</Text>
         <LabeledInput label="Full name" value={fullName} onChangeText={setFullName} onFocus={onFieldFocus} theme={theme}/>
         <LabeledInput label="Username" value={profile?.username||''} editable={false} theme={theme}/>
         <Text style={[styles.hint,{color:theme.muted}]}>Your unique username is managed separately from profile details.</Text>
@@ -219,6 +250,10 @@ const styles=StyleSheet.create({
  save:{height:38,minWidth:64,borderRadius:12,alignItems:'center',justifyContent:'center',paddingHorizontal:12},
  saveText:{fontSize:12,color:'#fff',fontWeight:'800'},
  content:{padding:18,paddingBottom:140,width:'100%',maxWidth:760,alignSelf:'center'},
+ coverControl:{height:160,borderRadius:18,borderWidth:1,overflow:'hidden',alignItems:'center',justifyContent:'center',marginTop:10},
+ coverPreview:{width:'100%',height:'100%',position:'absolute'},
+ coverOverlay:{position:'absolute',bottom:0,left:0,right:0,minHeight:42,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,backgroundColor:'rgba(0,0,0,0.44)'},
+ coverOverlayText:{color:'#fff',fontWeight:'800',fontSize:12},
  photoControl:{alignItems:'center',marginVertical:18},
  avatar:{width:108,height:108,borderRadius:54,alignItems:'center',justifyContent:'center',overflow:'hidden'},
  avatarImage:{width:'100%',height:'100%'},
