@@ -1,21 +1,19 @@
 # StudentHood Project State
 
-Last updated: 2026-10-08 (IST)
+Last updated: 2026-10-10 (IST)
 
 This file is the durable recovery checkpoint for StudentHood. Keep secrets and private user data out of this document.
 
 ## Current checkpoint
 
-- StudentHood is an Expo / React Native student social-network app.
-- Repository: `kishorerohy/StudentHood`
-- Mobile app: `mobile/`
-- Public website: GitHub Pages from the repository root
-- Currently installed Android preview baseline: **0.1.5**, versionCode **6**
-- Next consolidated preview pending approval/release: **0.1.6**, Android versionCode **7**, draft PR #5 (`fix/onboarding-campus-identity`).
-- Android package: `com.studenthood.app`
-- Official native builds use **Expo EAS**
-- The owner installed and tested the current v0.1.5 preview APK and reported that it is working.
-- The project is now in a batched correction pass.
+- StudentHood is an Expo SDK 54 / React Native app with private Supabase `studenthood-production` services.
+- GitHub repository: `kishorerohy/StudentHood`; Android package `com.studenthood.app`.
+- Most recently built baseline: **v0.1.7, versionCode 8**, submitted 9 October 2026 (IST), Expo build `c82f47fe-5056-454a-bbe3-d25d86562528`.
+- **User explicitly approved the one consolidated v0.1.8 APK on 10 October 2026.** PR #9 `release/v0.1.8-consolidated` contains new UI, Supabase migration/Edge Function changes and Android versionCode **9**. No claim of an APK until EAS actually submits it.
+- Keep the complete 12-correction register in `docs/PENDING_CORRECTIONS.md`, and show it at end of StudentHood development conversations.
+- Production Supabase institution-search **v3 ACTIVE** with a secondary Overpass endpoint; live authenticated city search and Android device tests remain required.
+- New private cover photo storage, moderated Scene sharing via Ping, human Scene review audit and campus-label normalization have production migrations applied. No existing pending Scenes have been silently approved.
+- The next action is to validate the latest PR #9 CI, inspect security/permissions, merge the approved release when ready, and submit one owner-approved Expo EAS build respecting the daily IST limit.
 
 ## Build policy
 
@@ -99,11 +97,11 @@ GitHub `main` is the durable code source of truth.
 
 ## Current backlog
 
-- The owner has finished the current in-app correction pass; review draft PR #5 and request the owner's approval before merging/releasing the consolidated next APK. Do not auto-merge.
-- For every correction, say whether it needs GitHub only, backend only, or the next APK.
-- Continue guardian consent and preview account-lifecycle testing.
-- Domain purchase and automatic guardian emails remain deferred.
-- Review any older EAS workflow pull request against the current one-build-per-day policy before merging it.
+- See **all 12 corrections** in `docs/PENDING_CORRECTIONS.md` with per-item GitHub/Supabase and device-QA status.
+- Complete the v0.1.8 CI/release process and test on Android. A passed JS build is not handset verification.
+- Globally canonical institution IDs/aliases need further design and safe existing-account backfill; current name normalization is not a globally complete institution registry.
+- Pending Scene approvals require a verified, explicitly authorized adult moderator; underage or unreviewed Scenes cannot be shown to other users.
+- Automatic guardian emails/domain purchase remain deferred, and real account deletion must never be automatic.
 
 ## Recovery procedure
 
