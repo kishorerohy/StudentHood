@@ -152,9 +152,22 @@ export async function findNearbyInstitutions({latitude,longitude,radiusMeters=18
   const {data,error}=await supabase.functions.invoke('institution-search',{
     body:{latitude:lat,longitude:lon,radiusMeters}
   });
-  if(error) throw error;
+  if(error) throw await institutionLookupError(error);
   if(data?.error) throw new Error(data.error);
   return Array.isArray(data?.institutions)?data.institutions:[];
+}
+
+// Supabase FunctionsHttpError otherwise displays the opaque "non-2xx" message.
+// Preserve the service's actionable error while keeping unexpected failures friendly.
+async function institutionLookupError(error){
+  try{
+    const response=error?.context;
+    if(response&&typeof response.json==='function'){
+      const payload=await response.json();
+      if(typeof payload?.error==='string'&&payload.error.trim())return new Error(payload.error);
+    }
+  }catch(_ignored){}
+  return new Error('Campus directory is temporarily unavailable. Please retry shortly.');
 }
 
 // City-based institution lookup works without phone GPS permission. The
@@ -168,7 +181,7 @@ export async function findInstitutionsByCity({city,countryCode}={}){
   const {data,error}=await supabase.functions.invoke('institution-search',{
     body:{city:term,countryCode:country}
   });
-  if(error)throw error;
+  if(error)throw await institutionLookupError(error);
   if(data?.error)throw new Error(data.error);
   if(!Array.isArray(data?.institutions))throw new Error('The institution directory did not return a valid list.');
   return data.institutions;
