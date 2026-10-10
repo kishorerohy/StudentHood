@@ -187,6 +187,32 @@ export async function findInstitutionsByCity({city,countryCode}={}){
   return data.institutions;
 }
 
+// Mutual Peeps only. The RPC enforces age/Ping eligibility server-side.
+export async function getSceneSharingPeeps({limit=60}={}){
+  const {data,error}=await supabase.rpc('studenthood_share_peeps',{p_limit:limit});
+  if(error)throw error;
+  return Promise.all((data||[]).map(async person=>({
+    ...person,avatar_url:await getAvatarDisplayUrl(person.avatar_url)
+  })));
+}
+
+// A Scene can only be sent after the backend independently validates the
+// recipient's age, mutual Peep status, creator's visibility and moderation.
+export async function sendSceneToPeep({sceneId,recipientId}){
+  const {data,error}=await supabase.rpc('studenthood_send_scene_ping',{
+    p_scene_id:sceneId,p_recipient_id:recipientId
+  });
+  if(error)throw error;
+  return data;
+}
+export async function getPingSceneInbox({limit=50}={}){
+  const {data,error}=await supabase.rpc('studenthood_ping_scene_inbox',{p_limit:limit});
+  if(error)throw error;
+  return Promise.all((data||[]).map(async row=>({
+    ...row,sender_avatar_url:await getAvatarDisplayUrl(row.sender_avatar_url)
+  })));
+}
+
 export async function getCampusPeeps({limit=100,offset=0}={}){
   const {data,error}=await supabase.rpc('studenthood_campus_peeps',{
     p_limit:limit,
