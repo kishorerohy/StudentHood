@@ -7,6 +7,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Localization from 'expo-localization';
 import * as Location from 'expo-location';
 import {Feather} from '@expo/vector-icons';
+import Svg,{Defs,LinearGradient,Stop,Text as SvgText} from 'react-native-svg';
 import CountryPicker,{CountryPickerPage} from '../components/CountryPicker';
 import SlidePage from '../components/SlidePage';
 import {localeRegion} from '../countries';
@@ -389,7 +390,7 @@ export default function OnboardingScreen({theme}){
           <Field theme={theme} onFocus={onFieldFocus} icon="user" value={fullName} onChangeText={setFullName} placeholder="Full name"/>
           <Field theme={theme} onFocus={onFieldFocus} icon="at-sign" value={username} onChangeText={v=>setUsername(v.toLowerCase().replace(/[^a-z0-9._-]/g,''))} placeholder="Username" autoCapitalize="none"/>
           {usernameState==='checking'&&<Text style={[styles.fieldHint,{color:theme.muted}]}>Checking username...</Text>}
-          {usernameState==='available'&&!!username.trim()&&<Text style={[styles.fieldHint,{color:theme.accent}]}>Username available</Text>}
+          {usernameState==='available'&&!!username.trim()&&<Svg width={171} height={23} accessibilityLabel="Username available"><Defs><LinearGradient id="available-username-gradient" x1="0" y1="0" x2="1" y2="0"><Stop offset="0" stopColor="#F54B9D"/><Stop offset="0.52" stopColor="#A54DF0"/><Stop offset="1" stopColor="#F68C44"/></LinearGradient></Defs><SvgText x={0} y={17} fontSize={13} fontWeight="700" fill="url(#available-username-gradient)">Username available</SvgText></Svg>}
           {usernameState==='taken'&&<Text style={[styles.fieldHint,{color:theme.danger}]}>user name already exist</Text>}
           {usernameState==='invalid'&&!!username.trim()&&<Text style={[styles.fieldHint,{color:theme.danger}]}>Use 3 to 24 lowercase letters, numbers, dots, hyphens or underscores.</Text>}
           {usernameState==='error'&&<Text style={[styles.fieldHint,{color:theme.danger}]}>Could not check username. Try again.</Text>}
