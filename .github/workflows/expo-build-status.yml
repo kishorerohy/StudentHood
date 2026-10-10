@@ -1,0 +1,63 @@
+name: StudentHood Expo APK Readout
+
+# Read-only status of the *already submitted* v0.1.8 EAS build.
+# This workflow never invokes "eas build" and cannot queue another APK.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/expo-build-status.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-approved-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout StudentHood
+        uses: actions/checkout@v4
+
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Confirm protected Expo access
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          test -n "$EXPO_TOKEN" || { echo "::error::Protected Expo token not available"; exit 1; }
+
+      - name: Read existing Expo EAS build (no new APK request)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          CI: '1'
+        run: |
+          npx --yes eas-cli@latest build:view ef509aea-4f0b-4385-a6dc-ee7c376010bb --json > "$RUNNER_TEMP/studenthood-eas-status.json"
+          node -e '
+            const fs=require("fs");
+            const p=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/studenthood-eas-status.json","utf8"));
+            const status=String(p.status||"UNKNOWN");
+            const url="https://expo.dev/accounts/studenthood-0920/projects/studenthood/builds/ef509aea-4f0b-4385-a6dc-ee7c376010bb";
+            const artifact=p.artifacts?.buildUrl||p.artifacts?.applicationArchiveUrl||"";
+            const lines=[
+              "# StudentHood v0.1.8 Android EAS build",
+              "",
+              "**Expo status:** "+status,
+              "",
+              "**Build details:** "+url,
+              "",
+              "**APK artifact:** "+(artifact||"Not yet available"),
+              "",
+              "Read-only check; no new APK was requested."
+            ];
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join("\n")+"\n");
+            console.log("Existing v0.1.8 EAS status: "+status);
+            console.log("Expo build details: "+url);
+            if(artifact)console.log("APK artifact available: "+artifact);
+          '
