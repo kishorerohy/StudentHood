@@ -1,6 +1,6 @@
 # StudentHood: Global campus catalogue data pipeline (implementation gates)
 
-**Status (11 Oct 2026):** architecture and draft RLS schema; **not** populated, not a completed worldwide directory. Owner explicitly requires schools, colleges, universities and real campus-level dedup, not just ROR parent organizations.
+**Status (11 Oct 2026):** RLS schema applied to production, and **223 source-identified ROR academic organizations in India** seeded from verified cached provider records. **Zero verified physical campus records**. This is not a completed worldwide campus directory. Owner explicitly requires schools, colleges, universities and real campus-level dedup, not just ROR parent organizations.
 
 ## Data layers (do not conflate)
 
@@ -53,6 +53,6 @@
 ## Release checkpoints
 
 - **Now:** production Edge Function v7 offers explicit ROR name search (authenticated) but installed APK does not include its controls.
-- **Draft PR #12:** mobile mode picker and additive RLS schema, not a full worldwide dataset.
-- **Next:** approve/add the database migration, implement batch import job and run controlled test region, then broader staged country rollouts.
+- **Draft PR #12:** mobile mode picker plus production-applied additive RLS schema and 223 source-identified academic organization records; not a full worldwide physical campus dataset.
+- **Next:** implement a sourced physical-campus batch import job, run a controlled region pilot, and review IDs and quality before broader staged country rollouts.
 - **Later:** link verified physical IDs into profiles and student grouping, with human-reviewed alias migrations.
