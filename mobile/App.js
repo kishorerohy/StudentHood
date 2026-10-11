@@ -1,9 +1,9 @@
-import React,{useEffect} from 'react';
+import React,{useCallback,useRef} from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 
-// Keep the native branded splash visible until the initial authenticated route is ready.
+// Native Android splash uses the SAME white logo treatment as StartupScreen.
 SplashScreen.preventAutoHideAsync().catch(()=>{});
-import {ActivityIndicator,StatusBar,StyleSheet,Text,useColorScheme,View} from 'react-native';
+import {StatusBar,StyleSheet,useColorScheme,View} from 'react-native';
 import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
 import {SessionProvider,useSession} from './src/session';
 import {themeForScheme} from './src/theme';
@@ -18,19 +18,11 @@ function StudentHood(){
   const theme=themeForScheme(scheme);
   const {session,profile,policy,loading,error,isSignedIn,resolvedUserId,refreshAccount}=useSession();
 
-  // The native Expo splash is the ONLY branded launch screen.
-  // Keep it visible until the correct auth/profile/safety route is ready.
-  // A recoverable loading error must also release the splash so Retry can be used.
-  useEffect(()=>{
-    if(!loading&&(error||!isSignedIn||resolvedUserId===session?.user?.id)){
-      SplashScreen.hideAsync().catch(()=>{});
-    }
-  },[loading,error,isSignedIn,resolvedUserId,session?.user?.id]);
-
-  // Any later account transition uses a neutral, unbranded loading state.
-  // Never flash another logo or show onboarding before the safety checks finish.
+  // The native splash and this startup screen share the same white branding.
+  // The startup route keeps showing while the correct account safety checks run.
+  // No premature onboarding or unsafe account switching.
   if(loading||(isSignedIn&&resolvedUserId!==session?.user?.id)){
-    return <SafeAreaView style={[styles.safe,{backgroundColor:theme.bg}]}>
+    return <SafeAreaView style={[styles.safe,{backgroundColor:'#FFFFFF'}]}>
       <StartupScreen theme={theme} error={!loading?error:null} onRetry={()=>refreshAccount().catch(()=>{})}/>
     </SafeAreaView>;
   }
@@ -43,7 +35,7 @@ function StudentHood(){
 
   const safetyReady=!!(profile?.date_of_birth&&profile?.country_code&&profile?.time_zone);
   if(error){
-    return <SafeAreaView style={[styles.safe,{backgroundColor:theme.bg}]}>
+    return <SafeAreaView style={[styles.safe,{backgroundColor:'#FFFFFF'}]}>
       <StartupScreen theme={theme} error={error} onRetry={()=>refreshAccount().catch(()=>{})}/>
     </SafeAreaView>;
   }
@@ -68,15 +60,20 @@ function StudentHood(){
 export default function App(){
   const scheme=useColorScheme();
   const theme=themeForScheme(scheme);
+  const splashDismissed=useRef(false);
+  const onFirstLayout=useCallback(()=>{
+    if(splashDismissed.current)return;
+    splashDismissed.current=true;
+    // Hand off as soon as React Native renders the matching white startup.
+    // The loading UI remains visible until auth/profile/guardian checks finish.
+    SplashScreen.hideAsync().catch(()=>{});
+  },[]);
   return <SafeAreaProvider>
-    <StatusBar barStyle={scheme==='light'?'dark-content':'light-content'} backgroundColor={theme.bg}/>
-    <SessionProvider><StudentHood/></SessionProvider>
+    <View style={styles.safe} onLayout={onFirstLayout}>
+      <StatusBar barStyle={scheme==='light'?'dark-content':'light-content'} backgroundColor={theme.bg}/>
+      <SessionProvider><StudentHood/></SessionProvider>
+    </View>
   </SafeAreaProvider>;
 }
 
-const styles=StyleSheet.create({
-  safe:{flex:1},
-  center:{flex:1,alignItems:'center',justifyContent:'center',gap:10,padding:24},
-  loading:{fontSize:11},
-  error:{fontSize:12,textAlign:'center'}
-});
+const styles=StyleSheet.create({safe:{flex:1}});
