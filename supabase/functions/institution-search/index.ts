@@ -204,7 +204,11 @@ async function searchRorByName(name:string,countryCode:string,scope:"country"|"w
   const filter=scope==="country"
     ?"types:education,locations.geonames_details.country_code:"+countryCode
     :"types:education";
-  const params=new URLSearchParams({query:name,filter,page:String(page)});
+  // ROR's name-search parameter uses Elasticsearch syntax. Strip operator
+  // punctuation rather than allowing user text to alter query semantics.
+  const safeName=name.replace(/[^\p{L}\p{N}\s.'-]/gu," ").replace(/\s+/g," ").trim();
+  if(safeName.length<3)throw new Error("Enter at least three letters of an institution name.");
+  const params=new URLSearchParams({query:safeName,filter,page:String(page)});
   let response:Response;
   try{
     response=await fetchWithTimeout("https://api.ror.org/v2/organizations?"+params.toString(),{
