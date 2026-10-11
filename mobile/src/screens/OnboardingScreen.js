@@ -485,7 +485,7 @@ export default function OnboardingScreen({theme}){
             <Text style={[styles.pickerTitle,{color:theme.text}]}>Choose your institution</Text>
             <View style={{width:42}}/>
           </View>
-          <Text style={[styles.pickerCopy,{color:theme.muted}]}>Schools, colleges and universities listed for {city.trim()||'your location'} in the selected country. Results use OpenStreetMap and may be incomplete.</Text>
+          <Text style={[styles.pickerCopy,{color:theme.muted}]}>Search institutions in {city.trim()||'your location'} and nearby metropolitan areas. Results come from public directories and may be incomplete.</Text>
           <View style={[styles.pickerSearch,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
             <Feather name="search" size={17} color={theme.muted}/>
             <TextInput value={campusQuery} onChangeText={setCampusQuery} placeholder="Search nearby institutions" placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text}]}/>
