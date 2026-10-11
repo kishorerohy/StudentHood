@@ -50,7 +50,7 @@
         {
           "backgroundColor": "#FFFFFF",
           "image": "./assets/studenthood-logo-light.png",
-          "imageWidth": 220,
+          "imageWidth": 250,
           "resizeMode": "contain",
           "dark": {
             "backgroundColor": "#FFFFFF",
