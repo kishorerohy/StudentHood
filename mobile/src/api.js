@@ -212,6 +212,31 @@ export async function findInstitutionsByCity({city,countryCode}={}){
   return data.institutions;
 }
 
+// Explicit global (or country-wide) name search. ROR covers real higher-ed
+// organizations but not all K-12 schools or individual branch campuses.
+// No per-keystroke requests: the UI invokes this only after Search is tapped.
+export async function searchInstitutionsByName({query,countryCode,scope='worldwide',page=1}={}){
+  const name=String(query||'').trim().replace(/\s+/g,' ');
+  const country=String(countryCode||'').trim().toUpperCase();
+  if(name.length<3||name.length>100)throw new Error('Enter at least 3 characters of an institution name.');
+  if(!['country','worldwide'].includes(scope))throw new Error('Invalid institution search scope.');
+  if(scope==='country'&&!/^[A-Z]{2}$/.test(country))throw new Error('Choose a country to search its institutions.');
+  if(!Number.isInteger(page)||page<1||page>5)throw new Error('Invalid search page.');
+  const {data,error}=await supabase.functions.invoke('institution-search',{
+    body:{searchQuery:name,countryCode:country,scope,page}
+  });
+  if(error)throw await institutionLookupError(error);
+  if(data?.error)throw new Error(data.error);
+  if(!Array.isArray(data?.institutions))throw new Error('Global institution directory did not return a valid list.');
+  return {
+    institutions:data.institutions,
+    hasMore:data.hasMore===true,
+    page:Number(data.page)||page,
+    source:String(data.source||''),
+    coverage:String(data.coverage||'')
+  };
+}
+
 // Mutual Peeps only. The RPC enforces age/Ping eligibility server-side.
 export async function getSceneSharingPeeps({limit=60}={}){
   const {data,error}=await supabase.rpc('studenthood_share_peeps',{p_limit:limit});
