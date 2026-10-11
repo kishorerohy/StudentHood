@@ -243,14 +243,19 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
           <Pressable onPress={()=>setInstitutionOpen(false)} accessibilityRole="button" accessibilityLabel="Close institution directory" style={styles.headerAction}>
             <Feather name="arrow-left" size={22} color={theme.text}/>
           </Pressable>
-          <Text numberOfLines={1} style={[styles.headerText,{color:theme.text,fontSize:17,flex:1}]}>Institutions in {city}</Text>
-          <Pressable onPress={searchInstitutions} disabled={institutionLoading} accessibilityRole="button" accessibilityLabel="Refresh institution directory" style={styles.headerAction}>
+          <Text numberOfLines={1} style={[styles.headerText,{color:theme.text,fontSize:17,flex:1}]}>
+            {institutionMode==='nearby'?'Institutions near '+(city||'you'):institutionMode==='country'?'Country institutions':'Worldwide institutions'}
+          </Text>
+          {institutionMode==='nearby'?<Pressable onPress={searchInstitutions} disabled={institutionLoading}
+            accessibilityRole="button" accessibilityLabel="Refresh nearby institutions" style={styles.headerAction}>
             {institutionLoading?<ActivityIndicator color={theme.accent}/>:<Feather name="refresh-cw" size={19} color={theme.accent}/>}
-          </Pressable>
+          </Pressable>:<View style={styles.headerAction}/>} 
         </View>
         <View style={{marginHorizontal:16,marginTop:12,marginBottom:10}}>
           <Text style={{color:theme.muted,fontSize:12,lineHeight:18}}>
-            Select your actual institution. Results may include the surrounding metropolitan area and can be incomplete.
+            {institutionMode==='nearby'
+              ?'Find actual institutions in your city or surrounding area. Results may be incomplete.'
+              :'Search registered higher-education organizations. Individual campus branches and schools may not appear.'}
           </Text>
           <View style={{flexDirection:'row',gap:8,marginTop:12}}>
             {[{id:'nearby',label:'Nearby'},{id:'country',label:'Country'},{id:'worldwide',label:'Worldwide'}].map(mode=>
