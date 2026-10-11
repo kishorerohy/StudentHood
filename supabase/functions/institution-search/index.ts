@@ -42,7 +42,10 @@ async function geocodeCity(city:string,countryCode:string,client:ReturnType<type
       "Accept-Language":"en","Accept":"application/json"
     }
   },12000);
-  if(!response.ok)throw new Error("City directory is temporarily unavailable.");
+  if(!response.ok){
+    console.warn("institution_search: nominatim_http_"+response.status);
+    throw new Error("City directory is temporarily unavailable.");
+  }
   const rows=await response.json();
   if(!Array.isArray(rows)||!rows.length)throw new Error("City not found. Check city and country.");
   const place=rows[0],lat=Number(place.lat),lon=Number(place.lon);
@@ -61,7 +64,7 @@ async function geocodeCity(city:string,countryCode:string,client:ReturnType<type
 // Nominatim outages. The public Photon demo has fair-use limits and is NOT a
 // substitute for a managed, global campus identity directory.
 async function geocodePhoton(city:string,countryCode:string){
-  const params=new URLSearchParams({q:city+", "+countryCode,limit:"12",lang:"en"});
+  const params=new URLSearchParams({q:city,limit:"20",lang:"en"});
   const response=await fetchWithTimeout("https://photon.komoot.io/api/?"+params.toString(),{
     method:"GET",headers:{
       "User-Agent":"StudentHood/0.1.8 ("+PRODUCT_URL+")",
