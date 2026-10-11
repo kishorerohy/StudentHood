@@ -18,14 +18,17 @@ function StudentHood(){
   const theme=themeForScheme(scheme);
   const {session,profile,policy,loading,error,isSignedIn,resolvedUserId,refreshAccount}=useSession();
 
+  // The native Expo splash is the ONLY branded launch screen.
+  // Keep it visible until the correct auth/profile/safety route is ready.
+  // A recoverable loading error must also release the splash so Retry can be used.
   useEffect(()=>{
-    if(!loading&&(!isSignedIn||resolvedUserId===session?.user?.id)){
+    if(!loading&&(error||!isSignedIn||resolvedUserId===session?.user?.id)){
       SplashScreen.hideAsync().catch(()=>{});
     }
-  },[loading,isSignedIn,resolvedUserId,session?.user?.id]);
+  },[loading,error,isSignedIn,resolvedUserId,session?.user?.id]);
 
-  // Keep the approved logo on screen until this specific signed-in account's
-  // profile AND age/guardian access checks finish. No premature onboarding.
+  // Any later account transition uses a neutral, unbranded loading state.
+  // Never flash another logo or show onboarding before the safety checks finish.
   if(loading||(isSignedIn&&resolvedUserId!==session?.user?.id)){
     return <SafeAreaView style={[styles.safe,{backgroundColor:theme.bg}]}>
       <StartupScreen theme={theme} error={!loading?error:null} onRetry={()=>refreshAccount().catch(()=>{})}/>
