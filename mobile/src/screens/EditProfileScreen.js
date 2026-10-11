@@ -201,7 +201,7 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
         </View>
         <View style={{marginHorizontal:16,marginTop:12,marginBottom:10}}>
           <Text style={{color:theme.muted,fontSize:12,lineHeight:18}}>
-            Select the actual school, college or university. OpenStreetMap coverage may be incomplete.
+            Select your actual institution. Results may include the surrounding metropolitan area and can be incomplete.
           </Text>
           <TextInput accessibilityLabel="Filter institutions"
             placeholder="Filter institution names" placeholderTextColor={theme.muted}
