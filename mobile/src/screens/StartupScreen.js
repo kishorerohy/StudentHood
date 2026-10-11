@@ -26,12 +26,14 @@ export default function StartupScreen({theme,error,onRetry}){
 
 const styles=StyleSheet.create({
   root:{flex:1,alignItems:'center',justifyContent:'center',padding:24,backgroundColor:'#FFFFFF'},
-  center:{width:'100%',maxWidth:390,alignItems:'center'},
+  // Keep the logo vertically centered exactly as in the native Expo splash.
+  // Adding the tagline/loading text must not shift the logo at handoff.
+  center:{width:'100%',maxWidth:390,height:76,alignItems:'center'},
   logo:{width:250,height:76},
-  tagline:{fontSize:10,fontWeight:'800',letterSpacing:2.3,marginTop:12,color:'#706E6B'},
-  loading:{alignItems:'center',gap:12,marginTop:46},
+  tagline:{position:'absolute',top:88,fontSize:10,fontWeight:'800',letterSpacing:2.3,color:'#706E6B'},
+  loading:{position:'absolute',top:145,alignItems:'center',gap:12},
   messageText:{fontSize:12,color:'#706E6B'},
-  message:{width:'100%',alignItems:'center',gap:17,marginTop:38},
+  message:{position:'absolute',top:145,width:'100%',alignItems:'center',gap:17},
   error:{fontSize:12,textAlign:'center',lineHeight:20},
   retry:{fontSize:13,fontWeight:'800',padding:12}
 });
