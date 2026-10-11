@@ -104,6 +104,84 @@ async function locateCity(city:string,countryCode:string,client:ReturnType<typeo
     }
   }
 }
+// Research Organization Registry: open, curated research/education organization
+// identifiers and verified city fields. This covers SOME universities/colleges,
+// not primary or secondary schools. It does not guess institutions from text.
+async function queryRorEducation(city:string,countryCode:string){
+  type RorName={value?:string,types?:string[]};
+  type RorLocation={geonames_details?:{name?:string,country_code?:string}};
+  type RorRecord={id?:string,names?:RorName[],locations?:RorLocation[],types?:string[]};
+  const all:Array<{id:string,name:string,type:string,city:string,distance_m:null}>=[];
+  let count=0;
+  for(let page=1;page<=6;page++){
+    const params=new URLSearchParams({
+      "query.advanced":'locations.geonames_details.name:"'+city.replace(/"/g,"")+'"',
+      "filter":"types:education,locations.geonames_details.country_code:"+countryCode,
+      "page":String(page)
+    });
+    let response:Response;
+    try{
+      response=await fetchWithTimeout("https://api.ror.org/v2/organizations?"+params.toString(),{
+        method:"GET",headers:{
+          "Accept":"application/json",
+          "User-Agent":"StudentHood/0.1.8 ("+PRODUCT_URL+")"
+        }
+      },8500);
+    }catch{
+      console.warn("institution_search: ror_network_failure");
+      if(all.length)return all;
+      throw new Error("Research directory unavailable.");
+    }
+    if(!response.ok){
+      console.warn("institution_search: ror_http_"+response.status);
+      if(all.length)return all;
+      throw new Error("Research directory unavailable.");
+    }
+    let payload:Record<string,unknown>;
+    try{payload=await response.json()}catch{throw new Error("Research directory response invalid.")}
+    const items=Array.isArray(payload?.items)?payload.items as RorRecord[]:[];
+    count=Number(payload?.number_of_results)||0;
+    for(const item of items){
+      if(!item?.types?.includes("education"))continue;
+      const cityMatches=item.locations?.some(location=>{
+        const geo=location?.geonames_details;
+        return nameKey(clean(geo?.name,90))===nameKey(city)
+          &&clean(geo?.country_code,2).toUpperCase()===countryCode;
+      });
+      if(!cityMatches)continue;
+      const official=item.names?.find(n=>n.types?.includes("ror_display"))?.value
+        ||item.names?.find(n=>n.types?.includes("label"))?.value
+        ||item.names?.find(n=>n.types?.includes("alias"))?.value;
+      const name=clean(official,160);
+      const id=clean(item.id,100);
+      if(!name||!/^https:\/\/ror\.org\/[a-z0-9]{9}$/i.test(id))continue;
+      if(all.some(existing=>nameKey(existing.name)===nameKey(name)))continue;
+      all.push({
+        id:"ror:"+id.split("/").pop(),
+        name,
+        // ROR describes an organization, not an accredited campus level.
+        type:"institution",city,distance_m:null
+      });
+    }
+    if(items.length<20||page*20>=count||all.length>=120)break;
+  }
+  return all.sort((a,b)=>a.name.localeCompare(b.name));
+}
+async function cityDirectoryWithFallback(city:string,countryCode:string,client:ReturnType<typeof serverClient>){
+  try{
+    const location=await locateCity(city,countryCode,client);
+    const mapped=await queryOSM(location.lat,location.lon,location.bounds,city);
+    if(mapped.length)return {institutions:mapped,source:"osm-city-directory"};
+  }catch{
+    console.warn("institution_search: mapped_city_directory_failed");
+  }
+  // If public OSM/geocoders are blocked, query a different authenticated-
+  // independent educational registry by city. Strict country/city filtering
+  // prevents a search match from adding an institution in the wrong city.
+  const educational=await queryRorEducation(city,countryCode);
+  if(educational.length)return {institutions:educational,source:"ror-education-directory"};
+  throw new Error("Institution directory is temporarily unavailable.");
+}
 async function queryOSM(lat:number,lon:number,bounds:[number,number,number,number],cityName:string){
   const [s,w,n,e]=bounds.map(x=>Math.round(x*100000)/100000);
   const bbox=[s,w,n,e].join(",");
@@ -189,9 +267,8 @@ Deno.serve(async(req:Request)=>{
       const age=cached?.refreshed_at?Date.now()-new Date(cached.refreshed_at).getTime():Infinity;
       if(cached?.response&&age<CACHE_MS)return json({...cached.response,source:"cached-city-directory"});
       try{
-        const location=await locateCity(city,countryCode,client);
-        const institutions=await queryOSM(location.lat,location.lon,location.bounds,city);
-        const response={institutions,city,countryCode,source:"osm-city-directory"};
+        const directory=await cityDirectoryWithFallback(city,countryCode,client);
+        const response={...directory,city,countryCode};
         // Serving the freshly fetched results does not require cache writes
         // to succeed. A cache write failure should not hide real results.
         await client.from("institution_city_cache").upsert({
