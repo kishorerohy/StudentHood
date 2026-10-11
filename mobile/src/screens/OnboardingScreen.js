@@ -75,6 +75,8 @@ export default function OnboardingScreen({theme}){
   const usernameRequest=useRef(0);
   const locationAttempted=useRef(false);
   const institutionRequest=useRef(0);
+  // Rounded GPS coordinates are used only when the auto-detected city still matches.
+  const detectedCityLocation=useRef(null);
   const {scrollRef,onFieldFocus,onScrollLayout,onScroll,keyboardPadding}=useKeyboardAwareForm();
 
   const timeZone=profile?.time_zone||session?.user?.user_metadata?.time_zone||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
@@ -126,15 +128,40 @@ export default function OnboardingScreen({theme}){
   async function loadCityInstitutions(cityName=city,countryName=country){
     const request=++institutionRequest.current;
     const chosenCity=String(cityName||'').trim();
+    const detected=detectedCityLocation.current;
+    const sameDetectedCity=detected
+      &&detected.city.toLowerCase()===chosenCity.toLowerCase()
+      &&detected.country===String(countryName||'').toUpperCase();
+    // A manually changed city must never reuse coordinates from an old city.
+    const nearbyCoords=sameDetectedCity?detected.coords:null;
     setInstitutionError('');
     setInstitutionLoading(true);
     try{
-      const rows=await findInstitutionsByCity({
-        city:chosenCity,countryCode:countryName
-      });
+      let rows,failedCityLookup=null,usedNearbyFallback=false;
+      try{
+        rows=await findInstitutionsByCity({city:chosenCity,countryCode:countryName});
+      }catch(error){
+        failedCityLookup=error;
+      }
+      // GPS fallback is allowed ONLY for the current auto-detected city.
+      // The server sees rounded coordinates, never a stored precise GPS point.
+      if(nearbyCoords&&(failedCityLookup||!rows?.length)){
+        try{
+          const nearbyRows=await findNearbyInstitutions(nearbyCoords);
+          if(nearbyRows.length){
+            rows=nearbyRows;
+            failedCityLookup=null;
+            usedNearbyFallback=true;
+          }
+        }catch(_nearbyError){
+          // Preserve the original city lookup error, do not claim success.
+        }
+      }
+      if(failedCityLookup)throw failedCityLookup;
       if(request!==institutionRequest.current)return;
-      setInstitutions(rows);
-      if(!rows.length)setInstitutionError('No mapped institutions were found for this city. Try another city spelling or search nearby.');
+      setInstitutions(rows||[]);
+      if(usedNearbyFallback)setLocationNote('Showing mapped institutions near your detected city.');
+      if(!rows?.length)setInstitutionError('No mapped institutions were found for this city. Try another city spelling or search nearby.');
     }catch(e){
       if(request!==institutionRequest.current)return;
       setInstitutions([]);
@@ -145,6 +172,8 @@ export default function OnboardingScreen({theme}){
   }
 
   function updateCity(value){
+    detectedCityLocation.current=null;
+    setCurrentCoords(null);
     setCity(value);
     setCampus('');
     setInstitutions([]);
@@ -187,16 +216,17 @@ export default function OnboardingScreen({theme}){
         latitude:Math.round(position.coords.latitude*1000)/1000,
         longitude:Math.round(position.coords.longitude*1000)/1000
       };
-      setCurrentCoords(coords);
-
       const addresses=await Location.reverseGeocodeAsync(coords);
       const address=addresses?.[0];
       const detectedCity=String(address?.city||address?.district||address?.subregion||'').trim();
       if(detectedCity){
         updateCity(detectedCity);
+        detectedCityLocation.current={city:detectedCity,country:String(country||'').toUpperCase(),coords};
+        setCurrentCoords(coords);
         setLocationNote('City detected. Select your institution to load the city directory.');
         await loadCityInstitutions(detectedCity,country);
       }else{
+        setCurrentCoords(coords);
         setLocationNote('Location found. Choose your institution below.');
         await loadInstitutions(coords);
       }
@@ -220,6 +250,8 @@ export default function OnboardingScreen({theme}){
   function closeSelector(){setSelectorClosing(true)}
 
   function changeCountry(value){
+    detectedCityLocation.current=null;
+    setCurrentCoords(null);
     setCountry(value);
     setCampus('');
     setInstitutions([]);
