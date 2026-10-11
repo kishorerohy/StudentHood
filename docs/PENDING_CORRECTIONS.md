@@ -1,6 +1,6 @@
 # StudentHood — Complete Correction Ledger
 
-Last reviewed: 10 October 2026 (IST). **Always include all 12 corrections at the end of StudentHood development replies, even after a build, until verified on device.**
+Last reviewed: 11 October 2026 (IST). **Always include all 12 corrections at the end of StudentHood development replies, even after a build, until verified on device.**
 
 ## Release checkpoints
 - Live installed baseline: **v0.1.7**, Android versionCode **8**, Expo build c82f47fe-5056-454a-bbe3-d25d86562528, submitted 9 Oct.
@@ -14,7 +14,7 @@ Last reviewed: 10 October 2026 (IST). **Always include all 12 corrections at the
 - **Scenes are moderation-gated:** all 3 existing production Scenes were `pending` when inspected Oct 10; no human moderator reviews have been performed. An approved adult reviewer must be authorized and review content manually; never auto-publish pending Scenes.
 - The current Ping **only supports sharing a moderated Scene link to eligible mutual Peeps**; general text messaging is not falsely advertised as live.
 
-- **11 Oct 2026 owner photo:** dark startup screen still displays centered `StudentHood` wordmark, described as a dummy logo. This screen matches the configured native Expo splash image; `mobile/app.json` includes the dark splash logo and `mobile/src/screens/StartupScreen.js` also has a logo for asynchronous session loading. Screenshot does not alone establish two successive screens. **Do not mark correction #10 PASS.** Confirm owner preference (approved mark versus blank splash) before changing brand assets; native splash changes require a new APK.
+- **11 Oct 2026 owner photo:** dark startup screen still displays centered `StudentHood` wordmark, described as a dummy logo. This screen matches the configured native Expo splash image; `mobile/app.json` includes the dark splash logo and `mobile/src/screens/StartupScreen.js` also has a logo for asynchronous session loading. Screenshot does not alone establish two successive screens. **Do not mark correction #10 PASS.** Owner clarified: retain exactly one branded startup splash, with no second loading logo. The fix removes redundant in-app loading branding without changing native splash assets. A mobile release is still required for the installed app because no OTA distribution is configured.
 
 ## All twelve corrections
 
@@ -29,7 +29,7 @@ Last reviewed: 10 October 2026 (IST). **Always include all 12 corrections at the
 | 7 | Globally unique usernames, coloured availability | Red exact unavailable string and SVG gradient availability; existing SQL unique check | Duplicate race/onboarding QA |
 | 8 | Campus Edge Function HTTP 503 onboarding blocker | v3 fallback plus real error parsing; cached directory | Authenticated request/503 retry device QA |
 | 9 | Replace radial Scene sharing with Peeps-first bottom panel | New `SceneShareSheet`, database RPC privacy checks, Ping-only link inbox, installed app checks | Device app availability and correct mutual-Peep delivery |
-| 10 | Remove duplicate startup logo / user reports unwanted startup wordmark | Native `expo-splash-screen` still intentionally uses `studenthood-logo.png`; `StartupScreen.js` can also display logo during account loading | **REPORTED 11 Oct:** owner photo shows logo on dark initial screen; determine whether the requirement is a different approved splash asset or no image at all; then check any second branded loading screen. Requires a fresh native APK to change splash assets. |
+| 10 | Show startup logo **once** during launch (owner clarified 11 Oct) | On `fix/single-native-startup-logo`, keep approved native Expo splash, remove in-app loading screen logo/tagline, and release splash on recoverable account-loading error so Retry is visible; sign-in page keeps its normal in-page branding | **SOURCE FIX STAGED, NOT RELEASED:** validate real Android cold/warm launch, sign-in and auth refresh, poor connection, Retry, and no secondary branded loading screen in next approved APK |
 | 11 | Other eligible students' Scenes from campus | Campus default feed + normalized campus matching + privacy-safe moderation queue | Actual **reviewed** Scenes and user-to-user testing; pending Scenes remain intentionally hidden |
 | 12 | Swipe left on full-screen Scene → actual creator profile | Improved PanResponder and author ID navigation | Android gesture QA |
 
