@@ -14,6 +14,36 @@ function distanceMeters(aLat:number,aLon:number,bLat:number,bLon:number){
 }
 const nameKey=(value:string)=>value.toLowerCase().normalize("NFKD").replace(/[^\p{L}\p{N}]+/gu," ").trim();
 const clean=(value:unknown,max=100)=>String(value??"").trim().replace(/\s+/g," ").slice(0,max);
+
+type MetroAlias={metro:string,region:string};
+// Verified starter map for places commonly reported by the geocoder as
+// localities, rather than their larger metro city. Do not fuzzy-map unknown
+// locations or infer metro membership from shared words. Future global support
+// requires a sourced geographic hierarchy/alias registry with admin IDs.
+const VERIFIED_METRO_ALIASES:Record<string,MetroAlias>={
+  "in:kunrattur":{metro:"Chennai",region:"Chennai metropolitan area"},
+  "in:kundrathur":{metro:"Chennai",region:"Chennai metropolitan area"},
+  "in:kundrattur":{metro:"Chennai",region:"Chennai metropolitan area"}
+};
+function verifiedMetroAlias(city:string,countryCode:string):MetroAlias|null{
+  return VERIFIED_METRO_ALIASES[countryCode.toLowerCase()+":"+nameKey(city)]||null;
+}
+function metroResponse(
+  directory:{institutions:unknown[],source:string},
+  requestedCity:string,
+  alias:MetroAlias,
+){
+  // These are METROPOLITAN results, NOT claimed to be inside the locality.
+  return {
+    institutions:directory.institutions,
+    city:requestedCity,
+    resolvedCity:alias.metro,
+    locationScope:"metropolitan-area",
+    areaLabel:alias.region,
+    source:"metro-"+directory.source
+  };
+}
+
 function serverClient(){
   const url=Deno.env.get("SUPABASE_URL"),key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if(!url||!key)throw new Error("Institution lookup is not configured.");
@@ -261,14 +291,32 @@ Deno.serve(async(req:Request)=>{
     if(city){
       const client=serverClient();
       const key=countryCode.toLowerCase()+":"+nameKey(city);
+      const alias=verifiedMetroAlias(city,countryCode);
       const {data:cached,error:cacheError}=await client.from("institution_city_cache")
         .select("response,refreshed_at").eq("lookup_key",key).maybeSingle();
       if(cacheError)throw new Error("City directory is temporarily unavailable.");
       const age=cached?.refreshed_at?Date.now()-new Date(cached.refreshed_at).getTime():Infinity;
       if(cached?.response&&age<CACHE_MS)return json({...cached.response,source:"cached-city-directory"});
       try{
-        const directory=await cityDirectoryWithFallback(city,countryCode,client);
-        const response={...directory,city,countryCode};
+        let response:Record<string,unknown>;
+        if(alias){
+          const metroKey=countryCode.toLowerCase()+":"+nameKey(alias.metro);
+          const {data:metroCache,error:metroCacheError}=await client
+            .from("institution_city_cache")
+            .select("response,refreshed_at").eq("lookup_key",metroKey).maybeSingle();
+          if(metroCacheError)throw new Error("City directory is temporarily unavailable.");
+          const metroAge=metroCache?.refreshed_at
+            ?Date.now()-new Date(metroCache.refreshed_at).getTime():Infinity;
+          const hasValidMetroCache=Array.isArray(metroCache?.response?.institutions)
+            &&metroCache.response.institutions.length>0&&metroAge<CACHE_MS;
+          const directory=hasValidMetroCache
+            ?{institutions:metroCache.response.institutions,source:"cached-academic-directory"}
+            :await cityDirectoryWithFallback(alias.metro,countryCode,client);
+          response={...metroResponse(directory,city,alias),countryCode};
+        }else{
+          const directory=await cityDirectoryWithFallback(city,countryCode,client);
+          response={...directory,city,countryCode};
+        }
         // Serving the freshly fetched results does not require cache writes
         // to succeed. A cache write failure should not hide real results.
         await client.from("institution_city_cache").upsert({
