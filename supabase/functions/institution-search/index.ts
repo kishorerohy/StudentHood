@@ -57,6 +57,50 @@ async function geocodeCity(city:string,countryCode:string,client:ReturnType<type
     [south,west,north,east]:[lat-dlat,lon-dlon,lat+dlat,lon+dlon];
   return {lat,lon,bounds};
 }
+// Photon is a best-effort fallback for user-initiated city searches during
+// Nominatim outages. The public Photon demo has fair-use limits and is NOT a
+// substitute for a managed, global campus identity directory.
+async function geocodePhoton(city:string,countryCode:string){
+  const params=new URLSearchParams({q:city+", "+countryCode,limit:"12",lang:"en"});
+  const response=await fetchWithTimeout("https://photon.komoot.io/api/?"+params.toString(),{
+    method:"GET",headers:{
+      "User-Agent":"StudentHood/0.1.8 ("+PRODUCT_URL+")",
+      "Accept":"application/json"
+    }
+  },9500);
+  if(!response.ok)throw new Error("Fallback city geocoder unavailable.");
+  const data=await response.json();
+  const features=Array.isArray(data?.features)?data.features:[];
+  // Never take the first unverified text hit: a city name can occur in
+  // several countries or match a school/business instead of a municipality.
+  const match=features.find((feature:Record<string,unknown>)=>{
+    const props=(feature.properties||{}) as Record<string,unknown>;
+    const type=clean(props.osm_value||props.type,24).toLowerCase();
+    return clean(props.countrycode,2).toUpperCase()===countryCode
+      &&nameKey(clean(props.name,100))===nameKey(city)
+      &&["city","town","municipality","village"].includes(type);
+  });
+  if(!match)throw new Error("Fallback geocoder did not verify that city.");
+  const coords=(match.geometry as {coordinates?:unknown[]}|undefined)?.coordinates;
+  const lon=Number(coords?.[0]),lat=Number(coords?.[1]);
+  if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)
+    throw new Error("Fallback geocoder returned invalid coordinates.");
+  const dlat=40000/111320,dlon=40000/(111320*Math.max(.25,Math.cos(rad(lat))));
+  return {lat,lon,bounds:[lat-dlat,lon-dlon,lat+dlat,lon+dlon] as [number,number,number,number]};
+}
+async function locateCity(city:string,countryCode:string,client:ReturnType<typeof serverClient>){
+  try{return await geocodeCity(city,countryCode,client)}
+  catch(error){
+    if(error instanceof Error&&error.message==="City not found. Check city and country.")throw error;
+    // No user identifying data or precise location in logs.
+    console.warn("institution_search: primary_city_geocoder_failed");
+    try{return await geocodePhoton(city,countryCode)}
+    catch(_fallback){
+      console.warn("institution_search: fallback_city_geocoder_failed");
+      throw new Error("City directory is temporarily unavailable.");
+    }
+  }
+}
 async function queryOSM(lat:number,lon:number,bounds:[number,number,number,number],cityName:string){
   const [s,w,n,e]=bounds.map(x=>Math.round(x*100000)/100000);
   const bbox=[s,w,n,e].join(",");
@@ -142,7 +186,7 @@ Deno.serve(async(req:Request)=>{
       const age=cached?.refreshed_at?Date.now()-new Date(cached.refreshed_at).getTime():Infinity;
       if(cached?.response&&age<CACHE_MS)return json({...cached.response,source:"cached-city-directory"});
       try{
-        const location=await geocodeCity(city,countryCode,client);
+        const location=await locateCity(city,countryCode,client);
         const institutions=await queryOSM(location.lat,location.lon,location.bounds,city);
         const response={institutions,city,countryCode,source:"osm-city-directory"};
         // Serving the freshly fetched results does not require cache writes
