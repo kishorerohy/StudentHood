@@ -1,8 +1,8 @@
-import React,{useEffect,useState} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import {ActivityIndicator,Alert,Image,Keyboard,KeyboardAvoidingView,Modal,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,ToastAndroid,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import {findInstitutionsByCity,getAvatarDisplayUrl,saveMyProfileChanges,uploadMyAvatar,uploadMyCover} from '../api';
+import {findInstitutionsByCity,searchInstitutionsByName,getAvatarDisplayUrl,saveMyProfileChanges,uploadMyAvatar,uploadMyCover} from '../api';
 import useKeyboardAwareForm from '../hooks/useKeyboardAwareForm';
 
 export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnly=false}){
@@ -21,6 +21,14 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
   const [institutionLoading,setInstitutionLoading]=useState(false);
   const [institutionError,setInstitutionError]=useState('');
   const [institutionQuery,setInstitutionQuery]=useState('');
+  const [institutionMode,setInstitutionMode]=useState('nearby');
+  const [globalRows,setGlobalRows]=useState([]);
+  const [globalError,setGlobalError]=useState('');
+  const [globalLoading,setGlobalLoading]=useState(false);
+  const [globalHasMore,setGlobalHasMore]=useState(false);
+  const [globalPage,setGlobalPage]=useState(1);
+  const [globalSearched,setGlobalSearched]=useState(false);
+  const globalRequest=useRef(0);
   const {scrollRef,onFieldFocus,onScrollLayout,onScroll,keyboardPadding}=useKeyboardAwareForm();
 
   useEffect(()=>{
@@ -127,15 +135,56 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
   }
 
   function openInstitutions(){
-    if(!String(city||'').trim()){
-      setError('Enter a city before choosing your school, college or university.');
-      return;
-    }
     setError('');
+    setInstitutionMode('nearby');
     setInstitutionQuery('');
     setInstitutionOpen(true);
+    setGlobalRows([]);
+    setGlobalError('');
+    setGlobalSearched(false);
+    globalRequest.current++;
     Keyboard.dismiss();
-    searchInstitutions();
+    if(String(city||'').trim())searchInstitutions();
+    else setInstitutionError('Enter a city to browse nearby institutions, or use Country / Worldwide search.');
+  }
+  function changeInstitutionMode(mode){
+    setInstitutionMode(mode);
+    setInstitutionQuery('');
+    setGlobalRows([]);
+    setGlobalError('');
+    setGlobalHasMore(false);
+    setGlobalSearched(false);
+    globalRequest.current++;
+  }
+  async function searchGlobalInstitutions(nextPage=1){
+    const query=institutionQuery.trim();
+    if(query.length<3){
+      setGlobalError('Enter at least 3 letters of an institution name.');
+      return;
+    }
+    const request=++globalRequest.current;
+    setGlobalError('');
+    setGlobalSearched(true);
+    setGlobalLoading(true);
+    try{
+      const result=await searchInstitutionsByName({
+        query,countryCode:profile?.country_code,scope:institutionMode,page:nextPage
+      });
+      if(request!==globalRequest.current)return;
+      setGlobalRows(existing=>{
+        if(nextPage===1)return result.institutions;
+        const ids=new Set(existing.map(item=>item.id));
+        return [...existing,...result.institutions.filter(item=>!ids.has(item.id))];
+      });
+      setGlobalPage(nextPage);
+      setGlobalHasMore(result.hasMore);
+    }catch(e){
+      if(request!==globalRequest.current)return;
+      if(nextPage===1){setGlobalRows([]);setGlobalHasMore(false);}
+      setGlobalError(e?.message||'Global institution directory is unavailable.');
+    }finally{
+      if(request===globalRequest.current)setGlobalLoading(false);
+    }
   }
   const filteredInstitutions=institutionRows.filter(item=>
     String(item?.name||'').toLowerCase().includes(institutionQuery.trim().toLowerCase())
@@ -203,14 +252,34 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
           <Text style={{color:theme.muted,fontSize:12,lineHeight:18}}>
             Select your actual institution. Results may include the surrounding metropolitan area and can be incomplete.
           </Text>
-          <TextInput accessibilityLabel="Filter institutions"
-            placeholder="Filter institution names" placeholderTextColor={theme.muted}
-            value={institutionQuery} onChangeText={setInstitutionQuery}
+          <View style={{flexDirection:'row',gap:8,marginTop:12}}>
+            {[{id:'nearby',label:'Nearby'},{id:'country',label:'Country'},{id:'worldwide',label:'Worldwide'}].map(mode=>
+              <Pressable key={mode.id} accessibilityRole="button" accessibilityState={{selected:institutionMode===mode.id}}
+                onPress={()=>changeInstitutionMode(mode.id)}
+                style={{flex:1,minHeight:38,borderWidth:1,borderColor:theme.line,borderRadius:11,
+                  alignItems:'center',justifyContent:'center',backgroundColor:institutionMode===mode.id?theme.accentSoft:theme.surface}}>
+                <Text style={{color:institutionMode===mode.id?theme.accent:theme.muted,fontWeight:'700',fontSize:12}}>{mode.label}</Text>
+              </Pressable>)}
+          </View>
+          <Text style={{color:theme.muted,fontSize:11,marginTop:10}}>
+            {institutionMode==='nearby'?'Filter nearby city results.': 'Search higher-education organizations by name. Not every school or physical campus is listed.'}
+          </Text>
+          <TextInput accessibilityLabel="Search institutions"
+            placeholder={institutionMode==='nearby'?'Filter nearby institutions':'Institution name, at least 3 letters'}
+            placeholderTextColor={theme.muted}
+            value={institutionQuery}
+            onChangeText={value=>{setInstitutionQuery(value);if(institutionMode!=='nearby'){setGlobalRows([]);setGlobalSearched(false);setGlobalError('');setGlobalHasMore(false);globalRequest.current++;}}}
             style={[styles.field,{backgroundColor:theme.surface,borderColor:theme.line,color:theme.text,marginTop:12}]}/>
+          {institutionMode!=='nearby'&&<Pressable onPress={()=>searchGlobalInstitutions(1)}
+            disabled={globalLoading} accessibilityRole="button"
+            style={[styles.save,{backgroundColor:theme.accent,marginTop:12}]}>
+            <Text style={styles.saveText}>Search {institutionMode==='country'?'country':'worldwide'}</Text>
+          </Pressable>}
         </View>
-        {institutionLoading?<View style={{padding:30,alignItems:'center'}}><ActivityIndicator color={theme.accent}/><Text style={{color:theme.muted,marginTop:12}}>Searching city directory…</Text></View>:
+        {(institutionMode==='nearby'?institutionLoading:globalLoading&&globalRows.length===0)?
+          <View style={{padding:30,alignItems:'center'}}><ActivityIndicator color={theme.accent}/><Text style={{color:theme.muted,marginTop:12}}>Searching institutions…</Text></View>:
           <ScrollView style={{flex:1}} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{paddingHorizontal:16,paddingBottom:140}}>
-            {filteredInstitutions.map(item=><Pressable key={item.id}
+            {(institutionMode==='nearby'?filteredInstitutions:globalRows).map(item=><Pressable key={item.id}
               onPress={()=>{setCampus(String(item.name||''));setInstitutionOpen(false);Keyboard.dismiss();}}
               accessibilityRole="button"
               accessibilityLabel={'Choose '+item.name}
@@ -218,16 +287,26 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
               <Feather name="book-open" size={19} color={theme.accent}/>
               <View style={{flex:1}}>
                 <Text style={{color:theme.text,fontSize:13,fontWeight:'700'}}>{item.name}</Text>
-                <Text style={{color:theme.muted,fontSize:11,marginTop:4}}>{item.type==='university'?'University':item.type==='college'?'College':'School'}</Text>
+                <Text style={{color:theme.muted,fontSize:11,marginTop:4}}>{item.type==='university'?'University':item.type==='college'?'College':item.type==='school'?'School':'Institution'}{item.city?' · '+item.city:''}{item.country_code?' · '+item.country_code:''}</Text>
               </View>
               <Feather name="chevron-right" size={18} color={theme.muted}/>
             </Pressable>)}
-            {filteredInstitutions.length===0&&<View style={{padding:24,alignItems:'center',gap:12}}>
-              <Text style={{color:theme.muted,textAlign:'center',fontSize:12}}>{institutionError||'No matching institution. Check the spelling or change the city.'}</Text>
+            {institutionMode==='nearby'&&filteredInstitutions.length===0&&<View style={{padding:24,alignItems:'center',gap:12}}>
+              <Text style={{color:theme.muted,textAlign:'center',fontSize:12}}>{institutionError||'No matching nearby institutions. Try country or worldwide.'}</Text>
               <Pressable onPress={searchInstitutions} style={[styles.save,{backgroundColor:theme.accent}]}>
                 <Text style={styles.saveText}>Retry city search</Text>
               </Pressable>
             </View>}
+            {institutionMode!=='nearby'&&globalRows.length===0&&<Text style={{color:globalError?theme.danger:theme.muted,textAlign:'center',fontSize:12,marginTop:30}}>
+              {globalError||(globalSearched?'No matching higher-education organizations found.':'Enter a name and tap Search.')}
+            </Text>}
+            {institutionMode!=='nearby'&&globalRows.length>0&&globalHasMore&&
+              <Pressable disabled={globalLoading} onPress={()=>searchGlobalInstitutions(globalPage+1)}
+                accessibilityRole="button" style={[styles.save,{backgroundColor:theme.accent,marginTop:20}]}>
+                {globalLoading?<ActivityIndicator color="#fff"/>:<Text style={styles.saveText}>More results</Text>}
+              </Pressable>}
+            {institutionMode!=='nearby'&&!!globalError&&globalRows.length>0&&
+              <Text style={{color:theme.danger,fontSize:12,marginTop:12}}>{globalError}</Text>}
           </ScrollView>}
       </KeyboardAvoidingView>
     </Modal>
