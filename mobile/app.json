@@ -49,12 +49,12 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#FFFFFF",
-          "image": "./assets/studenthood-logo-light.png",
-          "imageWidth": 250,
+          "image": "./assets/studenthood-native-blank.png",
+          "imageWidth": 1,
           "resizeMode": "contain",
           "dark": {
             "backgroundColor": "#FFFFFF",
-            "image": "./assets/studenthood-logo-light.png"
+            "image": "./assets/studenthood-native-blank.png"
           }
         }
       ]
