@@ -24,11 +24,13 @@ Last reviewed: 11 October 2026 (IST). **Always include all 12 corrections at the
 
 - **11 Oct 2026 v7 production update:** JWT-required `institution-search` Edge Function v7 deployed ACTIVE with explicit ROR global/country search by institution name, 3+ characters, bounded pagination. Installed v0.1.8 APK does NOT expose the new search modes. PR #12 has Nearby/Country/Worldwide selectors in onboarding and Edit Profile and an applied RLS catalogue schema and initial 223-row organization seed. Android CI passed on earlier PR #12 commit; latest CI still must finish. No full global campus or K–12 register is live; ROR is organization-level only. Do not mark #3 fully verified until actual cross-country Android search works.
 
+- **16 Oct 2026 two-device screenshot (#13/#14):** A student's uploaded profile avatar appears on their own device but not on another discoverable account, and incoming Peep requests show only a disabled `Request received` label without Accept/Decline. Verified `profile-avatars` is private and both saved avatar paths have real linked storage objects. **Production migration `peep_recipient_decisions_and_profile_media` APPLIED**, restricting storage-object avatar/cover reads with a limited saved-path authorization helper, removing signed-in direct UPDATE on Peep connections, adding recipient-only decision and incoming-request RPCs; one real pending request unchanged. PR #13 stages Android actions in UserProfileScreen, DiscoverPeoplePanel and Drops. Pending real two-device QA and consolidated owner-approved APK. **No new APK built, no real request accepted/declined by us.**
+
 ## All twelve corrections
 
 | # | Reported correction | In PR #9 / backend | Remaining validation |
 |---|---|---|---|
-| 1 | Discover scrollable student cards with photo, campus, interests, Add Peep | Implemented in `DiscoverPeoplePanel`, privacy-aware API and `TopHubScreen` | CI and real Android |
+| 1 | Discover scrollable student cards with photo, campus, interests, Add Peep | Implemented in `DiscoverPeoplePanel`, privacy-aware API and `TopHubScreen` | CI and real Android; refresh/sign private avatar URLs on allowed viewers (PR #13) |
 | 2 | Lower form inputs visible above Android keyboard | Carried forward from PR #8 v2 keyboard hook | Real Android keyboards |
 | 3 | City/locality and worldwide institution search; canonical campus identity | Chennai and Kunrattur metropolitan lookups work on owner's installed APK. **PR #12 drafts explicit Nearby / Country / Worldwide search via ROR verified organization IDs**, with a production-applied RLS catalogue, geographical hierarchy, aliases and missing-campus review queue. No APK containing global UI yet. | Search by name globally not device-tested; worldwide K-12 and actual branch campus ingestion, canonical profile IDs and rigorous dedup remain incomplete. Catalog migration APPLIED, 223 India-based ROR academic organizations seeded (not physical campuses); global site coverage remains open. |
 | 4 | Independent profile cover and borderless bottom fade | Cover storage/RLS and upload grant, signed URL, SVG fade | Android cover upload/display, light/dark |
@@ -40,6 +42,9 @@ Last reviewed: 11 October 2026 (IST). **Always include all 12 corrections at the
 | 10 | One immediate white startup screen with existing approved logo | **PR #10** implements same white native Expo splash and React startup, no black intermediary. | Draft awaiting next approved APK and physical Android cold/warm launch tests. |
 | 11 | Other eligible students' Scenes from campus | Campus default feed + normalized campus matching + privacy-safe moderation queue | Actual **reviewed** Scenes and user-to-user testing; pending Scenes remain intentionally hidden |
 | 12 | Swipe left on full-screen Scene → actual creator profile | Improved PanResponder and author ID navigation | Android gesture QA |
+
+| 13 | Approved viewer sees another user's uploaded profile photo | **PR #13 / production backend migration**: scoped object-access predicate for avatar/cover signed URLs; Discover refresh; no public-bucket change | Test actual images on two accounts and both themes; confirm unauthorized/underage access remains denied |
+| 14 | Received Peep request cannot be accepted or declined | **PR #13 / production RPC**: recipient-only Accept/Decline, Discover and visited-profile actions, Drops pending-request list; direct table UPDATE revoked | Real Android accept/decline and persisted mutual status tests; do not decide real requests automatically |
 
 ## Critical open gates
 - Automated Expo Doctor, native introspection, Android JS export must pass at latest release HEAD.
