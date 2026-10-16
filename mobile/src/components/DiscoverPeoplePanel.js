@@ -34,7 +34,7 @@ function PersonCard({person,viewer,theme,onOpenProfile}){
   const isPeep=details?.is_peep||relationship?.status==='accepted';
   const pending=relationship?.status==='pending';
   const incoming=pending&&relationship?.requester_id===person.id;
-  const canRequest=ready&&!!details&&!isPeep&&!pending&&!busy;
+  const canRequest=ready&&!!details&&!isPeep&&!relationship&&!busy;
   const canDecide=ready&&incoming&&!busy;
   const active=canRequest||canDecide;
   const label=busy?'Updating…':isPeep?'Peeps':incoming?'Accept Peep':pending?'Request sent':relationship?.status==='declined'?'Unavailable':'Add Peep';
