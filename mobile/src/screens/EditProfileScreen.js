@@ -1,6 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {ActivityIndicator,Alert,Image,Keyboard,KeyboardAvoidingView,Modal,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,ToastAndroid,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
+import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import {findInstitutionsByCity,searchInstitutionsByName,getAvatarDisplayUrl,saveMyProfileChanges,uploadMyAvatar,uploadMyCover} from '../api';
 import useKeyboardAwareForm from '../hooks/useKeyboardAwareForm';
@@ -237,13 +238,24 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
       </>}
       {!!error&&<Text style={[styles.error,{color:theme.danger}]}>{error}</Text>}
     </ScrollView>
-    <Modal visible={institutionOpen} animationType="slide" presentationStyle="fullScreen" onRequestClose={()=>setInstitutionOpen(false)}>
-      <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]} behavior={Platform.OS==='ios'?'padding':'height'}>
-        <View style={[styles.header,{borderBottomColor:theme.line}]}>
+    <Modal visible={institutionOpen} animationType="slide" presentationStyle="fullScreen"
+      statusBarTranslucent={false} navigationBarTranslucent={false}
+      onRequestClose={()=>{Keyboard.dismiss();setInstitutionOpen(false)}}>
+      {/* A Modal has a separate native root; the app's outer SafeAreaProvider
+          does not necessarily supply its status/navigation insets. */}
+      <SafeAreaProvider>
+        <SafeAreaView edges={['top','right','bottom','left']}
+          style={[styles.pickerSafeArea,{backgroundColor:theme.bg}]}>
+          {/* Android's resize keyboard mode already reduces this window.
+              Combining it with KeyboardAvoidingView height doubles the shrink. */}
+          <KeyboardAvoidingView style={styles.root}
+            behavior={Platform.OS==='ios'?'padding':undefined}>
+        <View style={[styles.pickerHeader,{borderBottomColor:theme.line}]}>
           <Pressable onPress={()=>setInstitutionOpen(false)} accessibilityRole="button" accessibilityLabel="Close institution directory" style={styles.headerAction}>
             <Feather name="arrow-left" size={22} color={theme.text}/>
           </Pressable>
-          <Text numberOfLines={1} style={[styles.headerText,{color:theme.text,fontSize:17,flex:1}]}>
+          <Text numberOfLines={1} ellipsizeMode="tail"
+            style={[styles.pickerHeaderTitle,{color:theme.text}]}>
             {institutionMode==='nearby'?'Institutions near '+(city||'you'):institutionMode==='country'?'Country institutions':'Worldwide institutions'}
           </Text>
           {institutionMode==='nearby'?<Pressable onPress={searchInstitutions} disabled={institutionLoading}
@@ -251,7 +263,7 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
             {institutionLoading?<ActivityIndicator color={theme.accent}/>:<Feather name="refresh-cw" size={19} color={theme.accent}/>}
           </Pressable>:<View style={styles.headerAction}/>} 
         </View>
-        <View style={{marginHorizontal:16,marginTop:12,marginBottom:10}}>
+        <View style={styles.pickerControls}>
           <Text style={{color:theme.muted,fontSize:12,lineHeight:18}}>
             {institutionMode==='nearby'
               ?'Find actual institutions in your city or surrounding area. Results may be incomplete.'
@@ -283,7 +295,9 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
         </View>
         {(institutionMode==='nearby'?institutionLoading:globalLoading&&globalRows.length===0)?
           <View style={{padding:30,alignItems:'center'}}><ActivityIndicator color={theme.accent}/><Text style={{color:theme.muted,marginTop:12}}>Searching institutions…</Text></View>:
-          <ScrollView style={{flex:1}} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{paddingHorizontal:16,paddingBottom:140}}>
+          <ScrollView style={styles.pickerResults} keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.pickerResultsContent}>
             {(institutionMode==='nearby'?filteredInstitutions:globalRows).map(item=><Pressable key={item.id}
               onPress={()=>{setCampus(String(item.name||''));setInstitutionOpen(false);Keyboard.dismiss();}}
               accessibilityRole="button"
@@ -313,7 +327,9 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
             {institutionMode!=='nearby'&&!!globalError&&globalRows.length>0&&
               <Text style={{color:theme.danger,fontSize:12,marginTop:12}}>{globalError}</Text>}
           </ScrollView>}
-      </KeyboardAvoidingView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   </KeyboardAvoidingView>;
 }
@@ -328,6 +344,12 @@ function LabeledInput({label,theme,multiline=false,...props}){
 
 const styles=StyleSheet.create({
  root:{flex:1},
+ pickerSafeArea:{flex:1,width:'100%'},
+ pickerHeader:{height:62,width:'100%',maxWidth:760,alignSelf:'center',flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:12,borderBottomWidth:StyleSheet.hairlineWidth},
+ pickerHeaderTitle:{fontSize:17,fontWeight:'800',flex:1,flexShrink:1,includeFontPadding:false},
+ pickerControls:{width:'100%',maxWidth:760,alignSelf:'center',paddingHorizontal:16,paddingTop:12,paddingBottom:10},
+ pickerResults:{flex:1,width:'100%'},
+ pickerResultsContent:{width:'100%',maxWidth:760,alignSelf:'center',paddingHorizontal:16,paddingTop:4,paddingBottom:32},
  header:{height:64,flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:16,borderBottomWidth:StyleSheet.hairlineWidth},
  headerAction:{width:42,height:42,alignItems:'center',justifyContent:'center'},
  headerText:{fontSize:19,fontWeight:'800'},
