@@ -246,6 +246,54 @@ export async function getSceneSharingPeeps({limit=60}={}){
   })));
 }
 
+// Ping text conversations and message requests are mediated entirely by
+// participant-restricted RPCs. No client-side direct table access or bypass.
+export async function sendPingText(targetUserId,messageText){
+  const target=String(targetUserId||'').trim();
+  const body=String(messageText||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(target))throw new Error('Select a valid recipient.');
+  if(body.length<1||body.length>1500)throw new Error('Write a message up to 1,500 characters.');
+  const {data,error}=await supabase.rpc('studenthood_ping_send',{
+    p_target:target,p_body:body
+  });
+  if(error)throw error;
+  if(!data?.thread_id)throw new Error('The Ping could not be confirmed.');
+  return data;
+}
+
+export async function getPingThreads({limit=60}={}){
+  const {data,error}=await supabase.rpc('studenthood_ping_threads_list',{
+    p_limit:Math.min(100,Math.max(1,Math.floor(Number(limit)||60)))
+  });
+  if(error)throw error;
+  return Promise.all((data||[]).map(async row=>({
+    ...row,
+    other_avatar_url:row.other_avatar_url?await getAvatarDisplayUrl(row.other_avatar_url):null
+  })));
+}
+
+export async function getPingMessages(threadId,{limit=100}={}){
+  const id=String(threadId||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id))throw new Error('Invalid conversation.');
+  const {data,error}=await supabase.rpc('studenthood_ping_messages_list',{
+    p_thread:id,p_limit:Math.min(200,Math.max(1,Math.floor(Number(limit)||100)))
+  });
+  if(error)throw error;
+  return Array.isArray(data)?data:[];
+}
+
+export async function decidePingRequest(threadId,decision){
+  const id=String(threadId||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id)||!['accept','decline'].includes(decision))
+    throw new Error('Invalid Ping request decision.');
+  const {data,error}=await supabase.rpc('studenthood_ping_request_decide',{
+    p_thread:id,p_decision:decision
+  });
+  if(error)throw error;
+  if(!data?.thread_id)throw new Error('Could not confirm the Ping request decision.');
+  return data;
+}
+
 // A Scene can only be sent after the backend independently validates the
 // recipient's age, mutual Peep status, creator's visibility and moderation.
 export async function sendSceneToPeep({sceneId,recipientId}){
