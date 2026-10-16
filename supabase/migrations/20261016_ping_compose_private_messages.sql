@@ -89,6 +89,8 @@ DECLARE
   b uuid;
   thread public.studenthood_ping_threads%rowtype;
   connected boolean;
+  existing_consent boolean;
+  recipient_privacy text;
   recent_new int;
   recent_message timestamptz;
   new_message uuid;
@@ -100,7 +102,6 @@ BEGIN
   END IF;
   IF NOT coalesce((public.studenthood_access_policy()->>'app_access')::boolean,false)
     OR NOT public.studenthood_ping_recipient_ready(p_target)
-    OR NOT public.studenthood_can_ping(p_target)
   THEN RAISE EXCEPTION 'Ping is not available for this student or account'; END IF;
 
   connected:=public.studenthood_are_peeps(sender,p_target);
@@ -109,6 +110,17 @@ BEGIN
 
   SELECT * INTO thread FROM public.studenthood_ping_threads
   WHERE user_a=a AND user_b=b FOR UPDATE;
+
+  -- A recipient's explicit acceptance permits a conversation even if the
+  -- requester later sets "Peeps only". "None" always blocks new messages.
+  SELECT ping_permissions INTO recipient_privacy FROM public.profiles
+  WHERE id=p_target;
+  existing_consent:=thread.id IS NOT NULL AND thread.status='active'
+    AND recipient_privacy IS DISTINCT FROM 'none'
+    AND NOT coalesce((private.studenthood_age_context(sender)->>'youth_account')::boolean,true)
+    AND NOT coalesce((private.studenthood_age_context(p_target)->>'youth_account')::boolean,true);
+  IF NOT public.studenthood_can_ping(p_target) AND NOT existing_consent
+  THEN RAISE EXCEPTION 'Ping is not permitted by this student'; END IF;
 
   IF thread.id IS NULL THEN
     -- Limit unsolicited introductions; test accounts are not exempt.
@@ -159,7 +171,7 @@ GRANT EXECUTE ON FUNCTION public.studenthood_ping_send(uuid,text) TO authenticat
 CREATE OR REPLACE FUNCTION public.studenthood_ping_threads_list(p_limit integer DEFAULT 60)
 RETURNS TABLE (
   id uuid,other_user_id uuid,other_name text,other_username text,
-  other_avatar_url text,status text,incoming_request boolean,
+  other_avatar_url text,status text,incoming_request boolean,is_peep boolean,
   last_message text,last_message_at timestamptz
 ) LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path=public,private,pg_catalog
@@ -173,6 +185,7 @@ BEGIN
          OR public.studenthood_are_peeps(auth.uid(),other.id)
       THEN other.avatar_url ELSE NULL END,
     t.status,t.status='pending' AND t.initiator_id<>auth.uid(),
+    public.studenthood_are_peeps(auth.uid(),other.id),
     (SELECT m.body FROM public.studenthood_ping_text_messages m
       WHERE m.thread_id=t.id ORDER BY m.created_at DESC,m.id DESC LIMIT 1),
     t.last_message_at
@@ -228,10 +241,8 @@ BEGIN
     AND auth.uid() IN (user_a,user_b)
   FOR UPDATE;
   IF t.id IS NULL THEN RAISE EXCEPTION 'This Ping request is not pending or is not yours'; END IF;
-  IF p_decision='accept' AND (
-    NOT public.studenthood_ping_recipient_ready(t.initiator_id)
-    OR NOT public.studenthood_can_ping(t.initiator_id)
-  ) THEN RAISE EXCEPTION 'This Ping request is no longer eligible'; END IF;
+  IF p_decision='accept' AND NOT public.studenthood_ping_recipient_ready(t.initiator_id)
+    THEN RAISE EXCEPTION 'This Ping request is no longer eligible'; END IF;
   UPDATE public.studenthood_ping_threads
   SET status=CASE WHEN p_decision='accept' THEN 'active' ELSE 'declined' END,
       updated_at=now()
