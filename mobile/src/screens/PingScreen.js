@@ -43,6 +43,8 @@ export default function PingScreen({theme,profile,onBack,onOpenProfile,onOpenSce
     try{
       const rows=await getPingThreads({limit:80});
       setThreads(rows);
+      // Refresh a currently open conversation when the other student accepts.
+      setSelected(current=>current?(rows.find(item=>item.id===current.id)||current):current);
       setError('');
       return rows;
     }catch(e){
@@ -169,7 +171,7 @@ export default function PingScreen({theme,profile,onBack,onOpenProfile,onOpenSce
 
   function back(){
     if(mode==='list')onBack?.();
-    else {Keyboard.dismiss();setMode('list');setSelected(null);setTarget(null);setError('');setNotice('');}
+    else {Keyboard.dismiss();setMode('list');setSelected(null);setTarget(null);setError('');setNotice('');refreshThreads(true);}
   }
 
   return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]}
