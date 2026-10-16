@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {DiscoverIcon,DropsIcon,PingIcon} from '../icons';
-import {getCampusPeeps,getDropsFeed,getPeepConnection,getProfileCard,getPingSceneInbox} from '../api';
+import {getCampusPeeps,getDropsFeed,getPeepConnection,getProfileCard,getPingSceneInbox,getIncomingPeepRequests,respondToPeepRequest} from '../api';
 import CampusPresenceBadge from '../components/CampusPresenceBadge';
 import DiscoverPeoplePanel from '../components/DiscoverPeoplePanel';
 
@@ -24,6 +24,11 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
   const [dropsLoading,setDropsLoading]=useState(false);
   const [dropsError,setDropsError]=useState('');
   const [dropsRefresh,setDropsRefresh]=useState(0);
+  const [incomingRequests,setIncomingRequests]=useState([]);
+  const [incomingError,setIncomingError]=useState('');
+  const [incomingLoading,setIncomingLoading]=useState(false);
+  const [incomingBusyId,setIncomingBusyId]=useState(null);
+  const [incomingNotice,setIncomingNotice]=useState('');
   const [dropFilter,setDropFilter]=useState('All');
   const [pingShares,setPingShares]=useState([]);
   const [pingSharesError,setPingSharesError]=useState('');
@@ -61,6 +66,31 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
     }).finally(()=>{if(live) setDropsLoading(false)});
     return ()=>{live=false};
   },[kind,dropsRefresh]);
+
+  useEffect(()=>{
+    let live=true;
+    if(kind!=='Drops')return;
+    setIncomingLoading(true);
+    setIncomingError('');
+    getIncomingPeepRequests({limit:25})
+      .then(rows=>{if(live)setIncomingRequests(rows)})
+      .catch(e=>{if(live){setIncomingRequests([]);setIncomingError(e?.message||'Could not load incoming Peep requests.');}})
+      .finally(()=>{if(live)setIncomingLoading(false)});
+    return()=>{live=false};
+  },[kind,dropsRefresh]);
+
+  async function respondToIncoming(request,decision){
+    if(incomingBusyId)return;
+    setIncomingBusyId(request.id);setIncomingError('');setIncomingNotice('');
+    try{
+      const resolved=await respondToPeepRequest(request.id,decision);
+      setIncomingRequests(current=>current.filter(r=>r.id!==resolved.id));
+      setIncomingNotice(decision==='accept'?'Peep request accepted.':'Peep request declined.');
+      setDropsRefresh(value=>value+1);
+    }catch(e){
+      setIncomingError(e?.message||'Unable to respond to this Peep request.');
+    }finally{setIncomingBusyId(null)}
+  }
 
   useEffect(()=>{
     let live=true;
@@ -128,6 +158,40 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
             <Text style={[styles.filterLabel,{color:dropFilter===label?'#fff':theme.text}]}>{label}</Text>
           </Pressable>)}
         </ScrollView>
+        {(dropFilter==='All'||dropFilter==='Peeps')&&<View style={{marginBottom:18,gap:10}}>
+          <Text style={[styles.sectionTitle,{color:theme.text}]}>Peep requests</Text>
+          {incomingLoading&&incomingRequests.length===0&&<Loading theme={theme} label="Loading incoming Peep requests…"/>}
+          {!!incomingError&&<Text accessibilityRole="alert" style={{color:theme.danger,fontSize:12}}>{incomingError}</Text>}
+          {!!incomingNotice&&<Text accessibilityRole="alert" style={{color:theme.accent,fontSize:12}}>{incomingNotice}</Text>}
+          {!incomingLoading&&incomingRequests.length===0&&!incomingError&&
+            <Text style={[styles.emptyCopy,{color:theme.muted}]}>No pending Peep requests.</Text>}
+          {incomingRequests.map(request=><View key={request.id}
+            style={[styles.incomingRequest,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+            <Pressable onPress={()=>onOpenProfile?.(request.requester_id)}
+              accessibilityRole="button" accessibilityLabel="Open Peep requester profile" style={styles.incomingIdentity}>
+              <View style={[styles.avatar,{backgroundColor:theme.surface2}]}>
+                {request.requester_avatar_url?<Image source={{uri:request.requester_avatar_url}} style={styles.avatarImage}/>:
+                  <Feather name="user" size={21} color={theme.accent}/>}
+              </View>
+              <View style={{flex:1}}>
+                <Text numberOfLines={1} style={[styles.peepName,{color:theme.text}]}>{request.requester_name||request.requester_username||'Student'}</Text>
+                {!!request.requester_username&&<Text style={[styles.peepHandle,{color:theme.muted}]}>@{request.requester_username}</Text>}
+              </View>
+            </Pressable>
+            <View style={styles.incomingActions}>
+              <Pressable onPress={()=>respondToIncoming(request,'accept')}
+                accessibilityRole="button" accessibilityLabel="Accept Peep request"
+                disabled={!!incomingBusyId} style={[styles.incomingDecision,{backgroundColor:theme.accent}]}>
+                <Feather name="check" color="#fff" size={15}/><Text style={styles.incomingDecisionText}>Accept</Text>
+              </Pressable>
+              <Pressable onPress={()=>respondToIncoming(request,'decline')}
+                accessibilityRole="button" accessibilityLabel="Decline Peep request"
+                disabled={!!incomingBusyId} style={[styles.incomingDecision,{backgroundColor:theme.surface2,borderColor:theme.line,borderWidth:1}]}>
+                <Feather name="x" color={theme.text} size={15}/><Text style={{fontSize:12,color:theme.text,fontWeight:'800'}}>Decline</Text>
+              </Pressable>
+            </View>
+          </View>)}
+        </View>}
         {dropsError?<EmptyMessage theme={theme} icon="alert-circle" title="Activity unavailable" copy={dropsError}/>:
           dropsLoading&&drops.length===0?<Loading theme={theme} label="Loading your activity…"/>:
           visibleDrops.length===0?<EmptyMessage theme={theme} icon="bell" title="All caught up" copy="No activity in this category yet. Messages and Ping requests remain inside Ping."/>:
@@ -312,6 +376,11 @@ const styles=StyleSheet.create({
   sectionTitle:{fontSize:18,fontWeight:'800'},
   sectionCaption:{fontSize:11,maxWidth:'47%'},
   peepRow:{minHeight:72,flexDirection:'row',alignItems:'center',gap:12,paddingHorizontal:14},
+  incomingRequest:{borderWidth:1,borderRadius:16,padding:12,gap:12},
+  incomingIdentity:{flexDirection:'row',alignItems:'center',gap:11},
+  incomingActions:{flexDirection:'row',gap:10},
+  incomingDecision:{flex:1,height:39,borderRadius:16,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6},
+  incomingDecisionText:{fontSize:12,fontWeight:'800',color:'#fff'},
   avatar:{width:44,height:44,borderRadius:22,alignItems:'center',justifyContent:'center',overflow:'hidden'},
   avatarImage:{width:'100%',height:'100%'},
   peepName:{fontSize:12,fontWeight:'800'},
