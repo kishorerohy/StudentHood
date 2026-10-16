@@ -449,6 +449,34 @@ export async function sendPeepRequest(targetUserId){
   return data;
 }
 
+// A Peep request is a two-way friendship invitation, not a Ping message.
+// The database RPC only lets the addressed recipient decide a pending request.
+export async function respondToPeepRequest(connectionId,decision){
+  const id=String(connectionId||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id))throw new Error('Invalid Peep request.');
+  if(!['accept','decline'].includes(decision))throw new Error('Choose Accept or Decline.');
+  const {data,error}=await supabase.rpc('studenthood_respond_to_peep_request',{
+    p_connection_id:id,p_decision:decision
+  });
+  if(error)throw error;
+  if(!data?.id||!['accepted','declined'].includes(data.status))throw new Error('Unable to confirm the Peep request decision.');
+  return data;
+}
+
+// The backend exposes pending requests only to their designated recipient,
+// and limits sender identity to the details needed for a consent decision.
+export async function getIncomingPeepRequests({limit=25}={}){
+  const {data,error}=await supabase.rpc('studenthood_incoming_peep_requests',{
+    p_limit:Math.min(50,Math.max(1,Math.floor(Number(limit)||25)))
+  });
+  if(error)throw error;
+  return Promise.all((Array.isArray(data)?data:[]).map(async item=>({
+    ...item,
+    requester_avatar_url:item.requester_avatar_url
+      ?await getAvatarDisplayUrl(item.requester_avatar_url):null
+  })));
+}
+
 // Fetch only Scenes the viewer is permitted to see under the existing RLS
 // policy, with short-lived media URLs rather than exposing storage paths.
 export async function getVisibleProfileScenes(targetUserId,{limit=12}={}){
