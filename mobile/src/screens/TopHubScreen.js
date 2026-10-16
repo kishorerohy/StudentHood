@@ -18,6 +18,7 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
   const [peepsError,setPeepsError]=useState('');
   const [discoverSection,setDiscoverSection]=useState('People');
   const [peopleQuery,setPeopleQuery]=useState('');
+  const [discoverRefresh,setDiscoverRefresh]=useState(0);
   const [pingTab,setPingTab]=useState('All');
   const [pingCampusPresence,setPingCampusPresence]=useState(null);
   const [drops,setDrops]=useState([]);
@@ -49,7 +50,7 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
       }
     }).finally(()=>{if(live) setPeepsLoading(false)});
     return ()=>{live=false};
-  },[kind,profile?.id,profile?.campus_name]);
+  },[kind,profile?.id,profile?.campus_name,discoverRefresh]);
 
   useEffect(()=>{
     let live=true;
@@ -231,8 +232,16 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
           </Pressable>)}
         </View>
         <View style={styles.sectionHeading}>
-          <Text style={[styles.sectionTitle,{color:theme.text}]}>People from your campus</Text>
-          <Text style={[styles.sectionCaption,{color:theme.muted}]} numberOfLines={1}>{profile?.campus_name||'Your campus'}</Text>
+          <View style={{flex:1}}>
+            <Text style={[styles.sectionTitle,{color:theme.text}]}>People from your campus</Text>
+            <Text style={[styles.sectionCaption,{color:theme.muted}]} numberOfLines={1}>{profile?.campus_name||'Your campus'}</Text>
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Refresh campus people and profile photos"
+            disabled={peepsLoading} onPress={()=>setDiscoverRefresh(x=>x+1)}
+            style={[styles.refresh,{backgroundColor:theme.surface,borderRadius:13}]}>
+            {peepsLoading?<ActivityIndicator color={theme.accent} size="small"/>:
+              <Feather name="refresh-cw" color={theme.accent} size={18}/>}
+          </Pressable>
         </View>
         {!peepsError&&!peepsLoading&&visiblePeople.length>0&&<DiscoverPeoplePanel people={visiblePeople} viewer={profile} theme={theme} onOpenProfile={onOpenProfile}/>}
         {peepsError?<EmptyMessage theme={theme} icon="alert-circle" title="Unable to load students" copy={peepsError}/>:
