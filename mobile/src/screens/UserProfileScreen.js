@@ -1,7 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {ActivityIndicator,Modal,Pressable,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
-import {getAvatarDisplayUrl,getPeepConnection,getProfileCard,getVisibleProfileScenes,getVisibleSceneCount,sendPeepRequest} from '../api';
+import {getAvatarDisplayUrl,getPeepConnection,getProfileCard,getVisibleProfileScenes,getVisibleSceneCount,sendPeepRequest,respondToPeepRequest} from '../api';
 import StudentProfileView from '../components/StudentProfileView';
 import {supabase} from '../supabase';
 
@@ -13,6 +13,7 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
   const [connection,setConnection]=useState(null);
   const [peepReady,setPeepReady]=useState(false);
   const [peepError,setPeepError]=useState('');
+  const [peepNotice,setPeepNotice]=useState('');
   const [requestBusy,setRequestBusy]=useState(false);
   const [scenes,setScenes]=useState([]);
   const [sceneCount,setSceneCount]=useState(null);
@@ -29,6 +30,7 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
     setConnection(null);
     setPeepReady(false);
     setPeepError('');
+    setPeepNotice('');
     setScenes([]);
     setSceneCount(null);
 
@@ -70,7 +72,9 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
   const incoming=connection?.status==='pending'&&connection?.requester_id===userId;
   const isSelf=!!currentUserId&&currentUserId===userId;
   const canRequest=!!card&&!isSelf&&!isPeep&&!connection&&peepReady&&!requestBusy;
-  const peepLabel=isSelf?'Your profile':requestBusy?'Sending…':isPeep?'Peeps':outgoing?'Request sent':incoming?'Request received':connection?'Unavailable':'Add Peep';
+  const peepLabel=isSelf?'Your profile':requestBusy?'Updating…':isPeep?'Peeps':outgoing?'Request sent':incoming?'Accept Peep':connection?'Unavailable':'Add Peep';
+  const canDecide=incoming&&peepReady&&!requestBusy;
+  const canMainAction=canRequest||canDecide;
   const canPing=!!card?.can_ping;
 
   async function addPeep(){
@@ -85,6 +89,20 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
     }finally{
       setRequestBusy(false);
     }
+  }
+
+  async function decidePeep(decision){
+    if(!canDecide||!connection?.id)return;
+    setRequestBusy(true);setPeepError('');setPeepNotice('');
+    try{
+      const updated=await respondToPeepRequest(connection.id,decision);
+      setConnection(updated);
+      if(updated.status==='accepted')setCard(current=>current?{...current,is_peep:true}:current);
+      setPeepNotice(updated.status==='accepted'?'Peep request accepted.':'Peep request declined.');
+    }catch(e){
+      setPeepError(e?.message||'Could not update this Peep request.');
+      try{setConnection(await getPeepConnection(userId));}catch(_){}
+    }finally{setRequestBusy(false);}
   }
 
   async function report(reason){
@@ -120,13 +138,14 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
     actions={<View style={styles.actionArea}>
       <View style={styles.actions}>
         <Pressable
-          onPress={addPeep}
-          disabled={!canRequest}
+          onPress={incoming?()=>decidePeep('accept'):addPeep}
+          disabled={!canMainAction}
           accessibilityRole="button"
-          accessibilityState={{disabled:!canRequest}}
-          style={[styles.action,{backgroundColor:canRequest?theme.accent:theme.surface2,borderColor:canRequest?theme.accent:theme.line}]}>
-          <Feather name={isPeep?'check':outgoing?'clock':'user-plus'} size={18} color={canRequest?'#fff':theme.muted}/>
-          <Text style={[styles.actionText,{color:canRequest?'#fff':theme.text}]}>{peepLabel}</Text>
+          accessibilityLabel={incoming?'Accept incoming Peep request':peepLabel}
+          accessibilityState={{disabled:!canMainAction}}
+          style={[styles.action,{backgroundColor:canMainAction?theme.accent:theme.surface2,borderColor:canMainAction?theme.accent:theme.line}]}>
+          <Feather name={isPeep?'check':incoming?'user-check':outgoing?'clock':'user-plus'} size={18} color={canMainAction?'#fff':theme.muted}/>
+          <Text style={[styles.actionText,{color:canMainAction?'#fff':theme.text}]}>{peepLabel}</Text>
         </Pressable>
         <Pressable
           onPress={()=>onPing?.({id:card.id,full_name:card.full_name,username:card.username})}
@@ -144,6 +163,15 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
           <Feather name="more-vertical" size={21} color={theme.text}/>
         </Pressable>
       </View>
+      {incoming&&<Pressable onPress={()=>decidePeep('decline')}
+        disabled={!canDecide} accessibilityRole="button"
+        accessibilityLabel="Decline incoming Peep request"
+        accessibilityState={{disabled:!canDecide}}
+        style={[styles.decline,{borderColor:theme.line,backgroundColor:theme.surface2}]}>
+        <Feather name="x" size={17} color={theme.text}/>
+        <Text style={{fontSize:12,fontWeight:'800',color:theme.text}}>Decline Peep request</Text>
+      </Pressable>}
+      {!!peepNotice&&<Text accessibilityRole="alert" style={[styles.note,{color:theme.accent}]}>{peepNotice}</Text>}
       {!!reportNotice&&<Text accessibilityRole="alert" style={[styles.note,{color:theme.accent}]}>{reportNotice}</Text>}
       {!!peepError&&<Text accessibilityRole="alert" style={[styles.note,{color:theme.danger}]}>{peepError}</Text>}
       {outgoing&&<Text style={[styles.note,{color:theme.muted}]}>Peep request sent. Awaiting acceptance.</Text>}
@@ -192,5 +220,6 @@ const styles=StyleSheet.create({
   optionsCopy:{fontSize:12,lineHeight:18,marginTop:7,marginBottom:13},
   reportOption:{height:49,flexDirection:'row',alignItems:'center',gap:12,borderBottomWidth:StyleSheet.hairlineWidth},
   cancel:{height:45,borderRadius:13,alignItems:'center',justifyContent:'center',marginTop:16},
-  note:{marginTop:10,textAlign:'center',fontSize:11,lineHeight:16}
+  note:{marginTop:10,textAlign:'center',fontSize:11,lineHeight:16},
+  decline:{height:43,borderWidth:1,borderRadius:22,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:7,marginTop:10}
 });
