@@ -1,7 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {ActivityIndicator,Image,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
-import {getPeepConnection,getProfileCard,sendPeepRequest} from '../api';
+import {getPeepConnection,getProfileCard,sendPeepRequest,respondToPeepRequest} from '../api';
 
 // Campus candidates are supplied by the privacy-aware studenthood_campus_peeps RPC.
 // Interests are only read via the existing permission-checked profile-card RPC.
@@ -33,8 +33,24 @@ function PersonCard({person,viewer,theme,onOpenProfile}){
   const shared=(Array.isArray(details?.interests)?details.interests:[]).filter(v=>mine.has(String(v).trim().toLowerCase())).slice(0,3);
   const isPeep=details?.is_peep||relationship?.status==='accepted';
   const pending=relationship?.status==='pending';
-  const canRequest=ready&&!!details&&!isPeep&&!pending&&!busy;
-  const label=busy?'Sending…':isPeep?'Peeps':pending?(relationship?.requester_id===person.id?'Request received':'Request sent'):'Add Peep';
+  const incoming=pending&&relationship?.requester_id===person.id;
+  const canRequest=ready&&!!details&&!isPeep&&!relationship&&!busy;
+  const canDecide=ready&&incoming&&!busy;
+  const active=canRequest||canDecide;
+  const label=busy?'Updating…':isPeep?'Peeps':incoming?'Accept Peep':pending?'Request sent':relationship?.status==='declined'?'Unavailable':'Add Peep';
+  async function decide(decision){
+    if(!canDecide||!relationship?.id)return;
+    setBusy(true);setNotice('');
+    try{
+      const updated=await respondToPeepRequest(relationship.id,decision);
+      setRelationship(updated);
+      if(updated.status==='accepted')setDetails(old=>old?{...old,is_peep:true}:old);
+      setNotice(updated.status==='accepted'?'Peep request accepted.':'Peep request declined.');
+    }catch(e){
+      setNotice(e?.message||'Unable to respond to Peep request.');
+      try{setRelationship(await getPeepConnection(person.id));}catch(_){}
+    }finally{setBusy(false);}
+  }
   async function request(){
     if(!canRequest)return;
     setBusy(true);setNotice('');
@@ -52,10 +68,17 @@ function PersonCard({person,viewer,theme,onOpenProfile}){
       <View style={styles.campus}><Feather name="book-open" size={12} color={theme.accent}/><Text numberOfLines={1} style={[styles.campusText,{color:theme.muted}]}>{person.campus_name||'Same campus'}</Text></View>
       <Text numberOfLines={2} style={[styles.common,{color:theme.muted}]}>{shared.length?shared.join(' · ')+' in common':'Explore their profile'}</Text>
     </Pressable>
-    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled:!canRequest}} onPress={request} disabled={!canRequest} style={[styles.add,{backgroundColor:canRequest?theme.accent:theme.surface2}]}>
-      {busy?<ActivityIndicator color="#fff" size="small"/>:<Feather name={isPeep?'check':'user-plus'} size={15} color={canRequest?'#fff':theme.muted}/>}
-      <Text style={[styles.addLabel,{color:canRequest?'#fff':theme.text}]}>{ready?label:'Checking…'}</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled:!active}}
+      onPress={incoming?()=>decide('accept'):request} disabled={!active}
+      style={[styles.add,{backgroundColor:active?theme.accent:theme.surface2}]}>
+      {busy?<ActivityIndicator color="#fff" size="small"/>:<Feather name={isPeep?'check':incoming?'user-check':'user-plus'} size={15} color={active?'#fff':theme.muted}/>}
+      <Text style={[styles.addLabel,{color:active?'#fff':theme.text}]}>{ready?label:'Checking…'}</Text>
     </Pressable>
+    {incoming&&<Pressable accessibilityRole="button" accessibilityLabel="Decline Peep request"
+      disabled={!canDecide} onPress={()=>decide('decline')} style={[styles.add,{backgroundColor:theme.surface2,marginTop:6}]}>
+      <Feather name="x" color={theme.text} size={15}/>
+      <Text style={[styles.addLabel,{color:theme.text}]}>Decline</Text>
+    </Pressable>}
     {!!notice&&<Text numberOfLines={2} accessibilityRole="alert" style={[styles.notice,{color:theme.danger}]}>{notice}</Text>}
   </View>;
 }

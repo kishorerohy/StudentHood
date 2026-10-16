@@ -14,6 +14,36 @@ function distanceMeters(aLat:number,aLon:number,bLat:number,bLon:number){
 }
 const nameKey=(value:string)=>value.toLowerCase().normalize("NFKD").replace(/[^\p{L}\p{N}]+/gu," ").trim();
 const clean=(value:unknown,max=100)=>String(value??"").trim().replace(/\s+/g," ").slice(0,max);
+
+type MetroAlias={metro:string,region:string};
+// Verified starter map for places commonly reported by the geocoder as
+// localities, rather than their larger metro city. Do not fuzzy-map unknown
+// locations or infer metro membership from shared words. Future global support
+// requires a sourced geographic hierarchy/alias registry with admin IDs.
+const VERIFIED_METRO_ALIASES:Record<string,MetroAlias>={
+  "in:kunrattur":{metro:"Chennai",region:"Chennai metropolitan area"},
+  "in:kundrathur":{metro:"Chennai",region:"Chennai metropolitan area"},
+  "in:kundrattur":{metro:"Chennai",region:"Chennai metropolitan area"}
+};
+function verifiedMetroAlias(city:string,countryCode:string):MetroAlias|null{
+  return VERIFIED_METRO_ALIASES[countryCode.toLowerCase()+":"+nameKey(city)]||null;
+}
+function metroResponse(
+  directory:{institutions:unknown[],source:string},
+  requestedCity:string,
+  alias:MetroAlias,
+){
+  // These are METROPOLITAN results, NOT claimed to be inside the locality.
+  return {
+    institutions:directory.institutions,
+    city:requestedCity,
+    resolvedCity:alias.metro,
+    locationScope:"metropolitan-area",
+    areaLabel:alias.region,
+    source:"metro-"+directory.source
+  };
+}
+
 function serverClient(){
   const url=Deno.env.get("SUPABASE_URL"),key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if(!url||!key)throw new Error("Institution lookup is not configured.");
@@ -42,7 +72,10 @@ async function geocodeCity(city:string,countryCode:string,client:ReturnType<type
       "Accept-Language":"en","Accept":"application/json"
     }
   },12000);
-  if(!response.ok)throw new Error("City directory is temporarily unavailable.");
+  if(!response.ok){
+    console.warn("institution_search: nominatim_http_"+response.status);
+    throw new Error("City directory is temporarily unavailable.");
+  }
   const rows=await response.json();
   if(!Array.isArray(rows)||!rows.length)throw new Error("City not found. Check city and country.");
   const place=rows[0],lat=Number(place.lat),lon=Number(place.lon);
@@ -56,6 +89,190 @@ async function geocodeCity(city:string,countryCode:string,client:ReturnType<type
   const bounds:[number,number,number,number]=south<north&&west<east?
     [south,west,north,east]:[lat-dlat,lon-dlon,lat+dlat,lon+dlon];
   return {lat,lon,bounds};
+}
+// Photon is a best-effort fallback for user-initiated city searches during
+// Nominatim outages. The public Photon demo has fair-use limits and is NOT a
+// substitute for a managed, global campus identity directory.
+async function geocodePhoton(city:string,countryCode:string){
+  const params=new URLSearchParams({q:city,limit:"20",lang:"en"});
+  const response=await fetchWithTimeout("https://photon.komoot.io/api/?"+params.toString(),{
+    method:"GET",headers:{
+      "User-Agent":"StudentHood/0.1.8 ("+PRODUCT_URL+")",
+      "Accept":"application/json"
+    }
+  },9500);
+  if(!response.ok)throw new Error("Fallback city geocoder unavailable.");
+  const data=await response.json();
+  const features=Array.isArray(data?.features)?data.features:[];
+  // Never take the first unverified text hit: a city name can occur in
+  // several countries or match a school/business instead of a municipality.
+  const match=features.find((feature:Record<string,unknown>)=>{
+    const props=(feature.properties||{}) as Record<string,unknown>;
+    const type=clean(props.osm_value||props.type,24).toLowerCase();
+    return clean(props.countrycode,2).toUpperCase()===countryCode
+      &&nameKey(clean(props.name,100))===nameKey(city)
+      &&["city","town","municipality","village"].includes(type);
+  });
+  if(!match)throw new Error("Fallback geocoder did not verify that city.");
+  const coords=(match.geometry as {coordinates?:unknown[]}|undefined)?.coordinates;
+  const lon=Number(coords?.[0]),lat=Number(coords?.[1]);
+  if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)
+    throw new Error("Fallback geocoder returned invalid coordinates.");
+  const dlat=40000/111320,dlon=40000/(111320*Math.max(.25,Math.cos(rad(lat))));
+  return {lat,lon,bounds:[lat-dlat,lon-dlon,lat+dlat,lon+dlon] as [number,number,number,number]};
+}
+async function locateCity(city:string,countryCode:string,client:ReturnType<typeof serverClient>){
+  try{return await geocodeCity(city,countryCode,client)}
+  catch(error){
+    if(error instanceof Error&&error.message==="City not found. Check city and country.")throw error;
+    // No user identifying data or precise location in logs.
+    console.warn("institution_search: primary_city_geocoder_failed");
+    try{return await geocodePhoton(city,countryCode)}
+    catch(_fallback){
+      console.warn("institution_search: fallback_city_geocoder_failed");
+      throw new Error("City directory is temporarily unavailable.");
+    }
+  }
+}
+// Research Organization Registry: open, curated research/education organization
+// identifiers and verified city fields. This covers SOME universities/colleges,
+// not primary or secondary schools. It does not guess institutions from text.
+async function queryRorEducation(city:string,countryCode:string){
+  type RorName={value?:string,types?:string[]};
+  type RorLocation={geonames_details?:{name?:string,country_code?:string}};
+  type RorRecord={id?:string,names?:RorName[],locations?:RorLocation[],types?:string[]};
+  const all:Array<{id:string,name:string,type:string,city:string,distance_m:null}>=[];
+  let count=0;
+  for(let page=1;page<=6;page++){
+    const params=new URLSearchParams({
+      "query.advanced":'locations.geonames_details.name:"'+city.replace(/"/g,"")+'"',
+      "filter":"types:education,locations.geonames_details.country_code:"+countryCode,
+      "page":String(page)
+    });
+    let response:Response;
+    try{
+      response=await fetchWithTimeout("https://api.ror.org/v2/organizations?"+params.toString(),{
+        method:"GET",headers:{
+          "Accept":"application/json",
+          "User-Agent":"StudentHood/0.1.8 ("+PRODUCT_URL+")"
+        }
+      },8500);
+    }catch{
+      console.warn("institution_search: ror_network_failure");
+      if(all.length)return all;
+      throw new Error("Research directory unavailable.");
+    }
+    if(!response.ok){
+      console.warn("institution_search: ror_http_"+response.status);
+      if(all.length)return all;
+      throw new Error("Research directory unavailable.");
+    }
+    let payload:Record<string,unknown>;
+    try{payload=await response.json()}catch{throw new Error("Research directory response invalid.")}
+    const items=Array.isArray(payload?.items)?payload.items as RorRecord[]:[];
+    count=Number(payload?.number_of_results)||0;
+    for(const item of items){
+      if(!item?.types?.includes("education"))continue;
+      const cityMatches=item.locations?.some(location=>{
+        const geo=location?.geonames_details;
+        return nameKey(clean(geo?.name,90))===nameKey(city)
+          &&clean(geo?.country_code,2).toUpperCase()===countryCode;
+      });
+      if(!cityMatches)continue;
+      const official=item.names?.find(n=>n.types?.includes("ror_display"))?.value
+        ||item.names?.find(n=>n.types?.includes("label"))?.value
+        ||item.names?.find(n=>n.types?.includes("alias"))?.value;
+      const name=clean(official,160);
+      const id=clean(item.id,100);
+      if(!name||!/^https:\/\/ror\.org\/[a-z0-9]{9}$/i.test(id))continue;
+      if(all.some(existing=>nameKey(existing.name)===nameKey(name)))continue;
+      all.push({
+        id:"ror:"+id.split("/").pop(),
+        name,
+        // ROR describes an organization, not an accredited campus level.
+        type:"institution",city,distance_m:null
+      });
+    }
+    if(items.length<20||page*20>=count||all.length>=120)break;
+  }
+  return all.sort((a,b)=>a.name.localeCompare(b.name));
+}
+// An explicit, user-triggered global organization-name search. ROR is
+// globally scoped but not a comprehensive list of schools or campus sites.
+// Do not mislabel organization IDs as physical campus IDs.
+async function searchRorByName(name:string,countryCode:string,scope:"country"|"worldwide",page:number){
+  const filter=scope==="country"
+    ?"types:education,locations.geonames_details.country_code:"+countryCode
+    :"types:education";
+  // ROR's name-search parameter uses Elasticsearch syntax. Strip operator
+  // punctuation rather than allowing user text to alter query semantics.
+  const safeName=name.replace(/[^\p{L}\p{N}\s.'-]/gu," ").replace(/\s+/g," ").trim();
+  if(safeName.length<3)throw new Error("Enter at least three letters of an institution name.");
+  const params=new URLSearchParams({query:safeName,filter,page:String(page)});
+  let response:Response;
+  try{
+    response=await fetchWithTimeout("https://api.ror.org/v2/organizations?"+params.toString(),{
+      method:"GET",headers:{"Accept":"application/json","User-Agent":"StudentHood/0.1.8 ("+PRODUCT_URL+")"}
+    },10000);
+  }catch{
+    console.warn("institution_search: global_ror_network_failure");
+    throw new Error("Global institution search is temporarily unavailable.");
+  }
+  if(!response.ok){
+    console.warn("institution_search: global_ror_http_"+response.status);
+    throw new Error("Global institution search is temporarily unavailable.");
+  }
+  const payload=await response.json();
+  if(!Array.isArray(payload?.items))throw new Error("Global institution search is temporarily unavailable.");
+  const found=new Set<string>();
+  const institutions:Array<Record<string,unknown>>=[];
+  for(const item of payload.items as Array<Record<string,unknown>>){
+    if(!(item.types as string[]|undefined)?.includes("education"))continue;
+    const names=item.names as Array<{value?:string,types?:string[]}>|undefined;
+    const label=clean(
+      names?.find(n=>n.types?.includes("ror_display"))?.value
+      ||names?.find(n=>n.types?.includes("label"))?.value
+      ||names?.[0]?.value,160
+    );
+    const id=clean(item.id,100);
+    if(!label||!/^https:\/\/ror\.org\/[a-z0-9]{9}$/i.test(id)||found.has(id))continue;
+    const locations=item.locations as Array<{geonames_details?:{name?:string,country_code?:string}}>|undefined;
+    const candidates=(locations||[]).map(loc=>loc?.geonames_details).filter(Boolean);
+    const valid=scope==="country"?candidates.filter(loc=>clean(loc?.country_code,2).toUpperCase()===countryCode):candidates;
+    if(scope==="country"&&!valid.length)continue;
+    const primary=valid[0];
+    const recordCountry=clean(primary?.country_code,2).toUpperCase();
+    if(!/^[A-Z]{2}$/.test(recordCountry))continue;
+    found.add(id);
+    institutions.push({
+      id:"ror:"+id.split("/").pop(),name:label,type:"institution",
+      city:clean(primary?.name,90),country_code:recordCountry,
+      distance_m:null,entity_type:"organization",source:"ror"
+    });
+  }
+  // ROR v2 has metadata.number_of_results. Some API versions expose a root field.
+  const count=Number(payload?.meta?.number_of_results??payload?.metadata?.number_of_results??payload?.number_of_results);
+  const hasMore=Number.isFinite(count)?page*20<count&&page<5:payload.items.length===20&&page<5;
+  return {
+    institutions,page,hasMore,scope,city:null,countryCode:scope==="country"?countryCode:null,
+    source:"ror-global-education-search",coverage:"higher-education-organizations-only"
+  };
+}
+
+async function cityDirectoryWithFallback(city:string,countryCode:string,client:ReturnType<typeof serverClient>){
+  try{
+    const location=await locateCity(city,countryCode,client);
+    const mapped=await queryOSM(location.lat,location.lon,location.bounds,city);
+    if(mapped.length)return {institutions:mapped,source:"osm-city-directory"};
+  }catch{
+    console.warn("institution_search: mapped_city_directory_failed");
+  }
+  // If public OSM/geocoders are blocked, query a different authenticated-
+  // independent educational registry by city. Strict country/city filtering
+  // prevents a search match from adding an institution in the wrong city.
+  const educational=await queryRorEducation(city,countryCode);
+  if(educational.length)return {institutions:educational,source:"ror-education-directory"};
+  throw new Error("Institution directory is temporarily unavailable.");
 }
 async function queryOSM(lat:number,lon:number,bounds:[number,number,number,number],cityName:string){
   const [s,w,n,e]=bounds.map(x=>Math.round(x*100000)/100000);
@@ -133,18 +350,44 @@ Deno.serve(async(req:Request)=>{
   if(city&&(!/^[\p{L}\p{N}\s.'\-()]{2,90}$/u.test(city)||!/^[A-Z]{2}$/.test(countryCode)))
     return json({error:"Enter a valid city and two-letter country code."},400);
   try{
+    if(body.searchQuery!==undefined){
+      const name=clean(body.searchQuery,110);
+      const scope=body.scope==="worldwide"?"worldwide":"country";
+      const page=Number(body.page??1);
+      if(name.length<3||name.length>100||!Number.isInteger(page)||page<1||page>5
+        ||(scope==="country"&&!/^[A-Z]{2}$/.test(countryCode)))
+        return json({error:"Enter at least three characters, a valid country and a search page."},400);
+      return json(await searchRorByName(name,countryCode,scope,page));
+    }
     if(city){
       const client=serverClient();
       const key=countryCode.toLowerCase()+":"+nameKey(city);
+      const alias=verifiedMetroAlias(city,countryCode);
       const {data:cached,error:cacheError}=await client.from("institution_city_cache")
         .select("response,refreshed_at").eq("lookup_key",key).maybeSingle();
       if(cacheError)throw new Error("City directory is temporarily unavailable.");
       const age=cached?.refreshed_at?Date.now()-new Date(cached.refreshed_at).getTime():Infinity;
       if(cached?.response&&age<CACHE_MS)return json({...cached.response,source:"cached-city-directory"});
       try{
-        const location=await geocodeCity(city,countryCode,client);
-        const institutions=await queryOSM(location.lat,location.lon,location.bounds,city);
-        const response={institutions,city,countryCode,source:"osm-city-directory"};
+        let response:Record<string,unknown>;
+        if(alias){
+          const metroKey=countryCode.toLowerCase()+":"+nameKey(alias.metro);
+          const {data:metroCache,error:metroCacheError}=await client
+            .from("institution_city_cache")
+            .select("response,refreshed_at").eq("lookup_key",metroKey).maybeSingle();
+          if(metroCacheError)throw new Error("City directory is temporarily unavailable.");
+          const metroAge=metroCache?.refreshed_at
+            ?Date.now()-new Date(metroCache.refreshed_at).getTime():Infinity;
+          const hasValidMetroCache=Array.isArray(metroCache?.response?.institutions)
+            &&metroCache.response.institutions.length>0&&metroAge<CACHE_MS;
+          const directory=hasValidMetroCache
+            ?{institutions:metroCache.response.institutions,source:"cached-academic-directory"}
+            :await cityDirectoryWithFallback(alias.metro,countryCode,client);
+          response={...metroResponse(directory,city,alias),countryCode};
+        }else{
+          const directory=await cityDirectoryWithFallback(city,countryCode,client);
+          response={...directory,city,countryCode};
+        }
         // Serving the freshly fetched results does not require cache writes
         // to succeed. A cache write failure should not hide real results.
         await client.from("institution_city_cache").upsert({
@@ -172,7 +415,8 @@ Deno.serve(async(req:Request)=>{
       "City directory is temporarily unavailable.",
       "Institution directory is temporarily unavailable.",
       "City location could not be confirmed.",
-      "Institution lookup is not configured."
+      "Institution lookup is not configured.",
+      "Global institution search is temporarily unavailable."
     ];
     return json({error:permitted.includes(msg)?msg:"Institution directory is temporarily unavailable."},503);
   }

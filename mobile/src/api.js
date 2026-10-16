@@ -212,6 +212,31 @@ export async function findInstitutionsByCity({city,countryCode}={}){
   return data.institutions;
 }
 
+// Explicit global (or country-wide) name search. ROR covers real higher-ed
+// organizations but not all K-12 schools or individual branch campuses.
+// No per-keystroke requests: the UI invokes this only after Search is tapped.
+export async function searchInstitutionsByName({query,countryCode,scope='worldwide',page=1}={}){
+  const name=String(query||'').trim().replace(/\s+/g,' ');
+  const country=String(countryCode||'').trim().toUpperCase();
+  if(name.length<3||name.length>100)throw new Error('Enter at least 3 characters of an institution name.');
+  if(!['country','worldwide'].includes(scope))throw new Error('Invalid institution search scope.');
+  if(scope==='country'&&!/^[A-Z]{2}$/.test(country))throw new Error('Choose a country to search its institutions.');
+  if(!Number.isInteger(page)||page<1||page>5)throw new Error('Invalid search page.');
+  const {data,error}=await supabase.functions.invoke('institution-search',{
+    body:{searchQuery:name,countryCode:country,scope,page}
+  });
+  if(error)throw await institutionLookupError(error);
+  if(data?.error)throw new Error(data.error);
+  if(!Array.isArray(data?.institutions))throw new Error('Global institution directory did not return a valid list.');
+  return {
+    institutions:data.institutions,
+    hasMore:data.hasMore===true,
+    page:Number(data.page)||page,
+    source:String(data.source||''),
+    coverage:String(data.coverage||'')
+  };
+}
+
 // Mutual Peeps only. The RPC enforces age/Ping eligibility server-side.
 export async function getSceneSharingPeeps({limit=60}={}){
   const {data,error}=await supabase.rpc('studenthood_share_peeps',{p_limit:limit});
@@ -219,6 +244,54 @@ export async function getSceneSharingPeeps({limit=60}={}){
   return Promise.all((data||[]).map(async person=>({
     ...person,avatar_url:await getAvatarDisplayUrl(person.avatar_url)
   })));
+}
+
+// Ping text conversations and message requests are mediated entirely by
+// participant-restricted RPCs. No client-side direct table access or bypass.
+export async function sendPingText(targetUserId,messageText){
+  const target=String(targetUserId||'').trim();
+  const body=String(messageText||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(target))throw new Error('Select a valid recipient.');
+  if(body.length<1||body.length>1500)throw new Error('Write a message up to 1,500 characters.');
+  const {data,error}=await supabase.rpc('studenthood_ping_send',{
+    p_target:target,p_body:body
+  });
+  if(error)throw error;
+  if(!data?.thread_id)throw new Error('The Ping could not be confirmed.');
+  return data;
+}
+
+export async function getPingThreads({limit=60}={}){
+  const {data,error}=await supabase.rpc('studenthood_ping_threads_list',{
+    p_limit:Math.min(100,Math.max(1,Math.floor(Number(limit)||60)))
+  });
+  if(error)throw error;
+  return Promise.all((data||[]).map(async row=>({
+    ...row,
+    other_avatar_url:row.other_avatar_url?await getAvatarDisplayUrl(row.other_avatar_url):null
+  })));
+}
+
+export async function getPingMessages(threadId,{limit=100}={}){
+  const id=String(threadId||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id))throw new Error('Invalid conversation.');
+  const {data,error}=await supabase.rpc('studenthood_ping_messages_list',{
+    p_thread:id,p_limit:Math.min(200,Math.max(1,Math.floor(Number(limit)||100)))
+  });
+  if(error)throw error;
+  return Array.isArray(data)?data:[];
+}
+
+export async function decidePingRequest(threadId,decision){
+  const id=String(threadId||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id)||!['accept','decline'].includes(decision))
+    throw new Error('Invalid Ping request decision.');
+  const {data,error}=await supabase.rpc('studenthood_ping_request_decide',{
+    p_thread:id,p_decision:decision
+  });
+  if(error)throw error;
+  if(!data?.thread_id)throw new Error('Could not confirm the Ping request decision.');
+  return data;
 }
 
 // A Scene can only be sent after the backend independently validates the
@@ -422,6 +495,34 @@ export async function sendPeepRequest(targetUserId){
     throw error;
   }
   return data;
+}
+
+// A Peep request is a two-way friendship invitation, not a Ping message.
+// The database RPC only lets the addressed recipient decide a pending request.
+export async function respondToPeepRequest(connectionId,decision){
+  const id=String(connectionId||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id))throw new Error('Invalid Peep request.');
+  if(!['accept','decline'].includes(decision))throw new Error('Choose Accept or Decline.');
+  const {data,error}=await supabase.rpc('studenthood_respond_to_peep_request',{
+    p_connection_id:id,p_decision:decision
+  });
+  if(error)throw error;
+  if(!data?.id||!['accepted','declined'].includes(data.status))throw new Error('Unable to confirm the Peep request decision.');
+  return data;
+}
+
+// The backend exposes pending requests only to their designated recipient,
+// and limits sender identity to the details needed for a consent decision.
+export async function getIncomingPeepRequests({limit=25}={}){
+  const {data,error}=await supabase.rpc('studenthood_incoming_peep_requests',{
+    p_limit:Math.min(50,Math.max(1,Math.floor(Number(limit)||25)))
+  });
+  if(error)throw error;
+  return Promise.all((Array.isArray(data)?data:[]).map(async item=>({
+    ...item,
+    requester_avatar_url:item.requester_avatar_url
+      ?await getAvatarDisplayUrl(item.requester_avatar_url):null
+  })));
 }
 
 // Fetch only Scenes the viewer is permitted to see under the existing RLS

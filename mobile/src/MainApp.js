@@ -7,6 +7,7 @@ import {useSession} from './session';
 import ScenesScreen from './screens/ScenesScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import TopHubScreen from './screens/TopHubScreen';
+import PingScreen from './screens/PingScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
 import ProfileMenuScreen from './screens/ProfileMenuScreen';
 import UserProfileScreen from './screens/UserProfileScreen';
@@ -83,6 +84,14 @@ export default function MainApp({theme}){
   function makePage(page){
     switch(page.type){
       case 'hub':
+        if(page.kind==='Ping')return <PingScreen
+          theme={theme}
+          profile={profile}
+          pingTarget={page.pingTarget||null}
+          onBack={goBack}
+          onOpenProfile={userId=>showPage({type:'student-profile',userId})}
+          onOpenScene={sceneId=>openSharedLink('studenthood://scene/'+sceneId)}
+        />;
         return <TopHubScreen
           kind={page.kind}
           theme={theme}

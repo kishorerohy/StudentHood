@@ -1,16 +1,16 @@
 import React from 'react';
-import {ActivityIndicator,Image,StyleSheet,Text,View} from 'react-native';
+import {ActivityIndicator,Image,StatusBar,StyleSheet,Text,View} from 'react-native';
 
-const LOGO_DARK=require('../../assets/studenthood-logo.png');
-const LOGO_LIGHT=require('../../assets/studenthood-logo-light.png');
+// This is the user's approved white startup screen. The matching native Expo
+// splash uses the same logo/background, so there is no black-to-white flash.
+const STARTUP_LOGO=require('../../assets/studenthood-logo-light.png');
 
-// The approved branding is the first rendered app surface while Supabase
-// restores the session, profile and age/guardian policy. No invented user data.
 export default function StartupScreen({theme,error,onRetry}){
-  return <View style={[styles.root,{backgroundColor:theme.bg}]}>
+  return <View style={styles.root}>
+    <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF"/>
     <View style={styles.center}>
-      <Image source={theme.isLight?LOGO_LIGHT:LOGO_DARK} style={styles.logo} resizeMode="contain"/>
-      <Text style={[styles.tagline,{color:theme.muted}]}>YOUR CAMPUS. YOUR PEOPLE.</Text>
+      <Image source={STARTUP_LOGO} style={styles.logo} resizeMode="contain"/>
+      <Text style={styles.tagline}>YOUR CAMPUS. YOUR PEOPLE.</Text>
       {error?
         <View style={styles.message}>
           <Text accessibilityRole="alert" style={[styles.error,{color:theme.danger}]}>{error}</Text>
@@ -18,19 +18,22 @@ export default function StartupScreen({theme,error,onRetry}){
         </View>:
         <View style={styles.loading}>
           <ActivityIndicator color={theme.accent} size="small"/>
-          <Text style={[styles.messageText,{color:theme.muted}]}>Opening StudentHood…</Text>
+          <Text style={styles.messageText}>Opening StudentHood…</Text>
         </View>}
     </View>
   </View>;
 }
+
 const styles=StyleSheet.create({
-  root:{flex:1,alignItems:'center',justifyContent:'center',padding:24},
-  center:{width:'100%',maxWidth:390,alignItems:'center'},
+  root:{flex:1,alignItems:'center',justifyContent:'center',padding:24,backgroundColor:'#FFFFFF'},
+  // Keep the logo vertically centered exactly as in the native Expo splash.
+  // Adding the tagline/loading text must not shift the logo at handoff.
+  center:{width:'100%',maxWidth:390,height:76,alignItems:'center'},
   logo:{width:250,height:76},
-  tagline:{fontSize:10,fontWeight:'800',letterSpacing:2.3,marginTop:12},
-  loading:{alignItems:'center',gap:12,marginTop:46},
-  messageText:{fontSize:12},
-  message:{width:'100%',alignItems:'center',gap:17,marginTop:38},
+  tagline:{position:'absolute',top:88,fontSize:10,fontWeight:'800',letterSpacing:2.3,color:'#706E6B'},
+  loading:{position:'absolute',top:145,alignItems:'center',gap:12},
+  messageText:{fontSize:12,color:'#706E6B'},
+  message:{position:'absolute',top:145,width:'100%',alignItems:'center',gap:17},
   error:{fontSize:12,textAlign:'center',lineHeight:20},
   retry:{fontSize:13,fontWeight:'800',padding:12}
 });
