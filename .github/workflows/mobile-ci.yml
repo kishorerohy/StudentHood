@@ -38,6 +38,9 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Verify single branded startup screen
+        run: node scripts/check-single-startup.js
+
       - name: Expo Doctor
         run: npx expo-doctor@latest
 
