@@ -3,7 +3,7 @@
     "name": "StudentHood",
     "slug": "studenthood",
     "scheme": "studenthood",
-    "version": "0.1.8",
+    "version": "0.1.9",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -27,7 +27,7 @@
         "backgroundColor": "#0B0D0F",
         "foregroundImage": "assets/studenthood-app-icon-foreground.png"
       },
-      "versionCode": 9,
+      "versionCode": 10,
       "softwareKeyboardLayoutMode": "resize"
     },
     "plugins": [
@@ -48,13 +48,13 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F5F4F0",
+          "backgroundColor": "#FFFFFF",
           "image": "./assets/studenthood-logo-light.png",
-          "imageWidth": 220,
+          "imageWidth": 250,
           "resizeMode": "contain",
           "dark": {
-            "backgroundColor": "#0B0D0F",
-            "image": "./assets/studenthood-logo.png"
+            "backgroundColor": "#FFFFFF",
+            "image": "./assets/studenthood-logo-light.png"
           }
         }
       ]
@@ -68,6 +68,10 @@
       }
     },
     "icon": "assets/studenthood-app-icon-compact-1024.png",
-    "owner": "studenthood-0920"
+    "owner": "studenthood-0920",
+    "androidStatusBar": {
+      "barStyle": "dark-content",
+      "backgroundColor": "#FFFFFF"
+    }
   }
 }
