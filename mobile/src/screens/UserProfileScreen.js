@@ -177,7 +177,7 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
       {outgoing&&<Text style={[styles.note,{color:theme.muted}]}>Peep request sent. Awaiting acceptance.</Text>}
       {incoming&&<Text style={[styles.note,{color:theme.muted}]}>This student has already sent you a Peep request.</Text>}
       <Text style={[styles.note,{color:theme.muted}]}>
-        {canPing?'Ping messaging is coming soon. No message has been sent.':'Ping is restricted by Peep and safety permissions.'}
+        {canPing?'Tap Ping to compose a message or continue a permitted conversation.':'Ping is restricted by this account’s privacy or safety permissions.'}
       </Text>
     </View>}
   />
