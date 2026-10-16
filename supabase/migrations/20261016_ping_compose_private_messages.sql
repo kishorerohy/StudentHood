@@ -75,8 +75,8 @@ BEGIN
   RETURN true;
 END;
 $fn$;
-REVOKE ALL ON FUNCTION public.studenthood_ping_recipient_ready(uuid) FROM PUBLIC,anon;
-GRANT EXECUTE ON FUNCTION public.studenthood_ping_recipient_ready(uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.studenthood_ping_recipient_ready(uuid) FROM PUBLIC,anon,authenticated;
+-- Internal helper only; callers may not probe another student's age readiness.
 
 CREATE OR REPLACE FUNCTION public.studenthood_ping_send(p_target uuid,p_body text)
 RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER
@@ -116,7 +116,7 @@ BEGIN
   SELECT ping_permissions INTO recipient_privacy FROM public.profiles
   WHERE id=p_target;
   existing_consent:=thread.id IS NOT NULL AND thread.status='active'
-    AND recipient_privacy IS DISTINCT FROM 'none'
+    AND coalesce(recipient_privacy,'none')<>'none'
     AND NOT coalesce((private.studenthood_age_context(sender)->>'youth_account')::boolean,true)
     AND NOT coalesce((private.studenthood_age_context(p_target)->>'youth_account')::boolean,true);
   IF NOT public.studenthood_can_ping(p_target) AND NOT existing_consent
@@ -215,11 +215,15 @@ BEGIN
   IF NOT EXISTS(SELECT 1 FROM public.studenthood_ping_threads t
     WHERE t.id=p_thread AND auth.uid() IN (t.user_a,t.user_b) AND t.status<>'declined')
     THEN RETURN; END IF;
-  RETURN QUERY SELECT m.id,m.sender_id,m.body,m.created_at
-  FROM public.studenthood_ping_text_messages m
-  WHERE m.thread_id=p_thread
-  ORDER BY m.created_at ASC,m.id ASC
-  LIMIT least(greatest(coalesce(p_limit,100),1),200);
+  -- Fetch the most recent messages, not the oldest, then render chronologically.
+  RETURN QUERY
+  SELECT recent.id,recent.sender_id,recent.body,recent.created_at FROM (
+    SELECT m.id,m.sender_id,m.body,m.created_at
+    FROM public.studenthood_ping_text_messages m
+    WHERE m.thread_id=p_thread
+    ORDER BY m.created_at DESC,m.id DESC
+    LIMIT least(greatest(coalesce(p_limit,100),1),200)
+  ) recent ORDER BY recent.created_at ASC,recent.id ASC;
 END;
 $fn$;
 REVOKE ALL ON FUNCTION public.studenthood_ping_messages_list(uuid,integer) FROM PUBLIC,anon;
