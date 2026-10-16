@@ -1,6 +1,6 @@
 name: StudentHood Expo APK Readout
 
-# Read-only status of the *already submitted* v0.1.8 EAS build.
+# Read-only status of the owner-approved submitted v0.1.9 EAS build; never queues another APK.
 # This workflow never invokes "eas build" and cannot queue another APK.
 on:
   push:
@@ -38,15 +38,15 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           CI: '1'
         run: |
-          npx --yes eas-cli@latest build:view ef509aea-4f0b-4385-a6dc-ee7c376010bb --json > "$RUNNER_TEMP/studenthood-eas-status.json"
+          npx --yes eas-cli@latest build:view d33d26bc-eec8-4306-adc5-8216f99a166c --json > "$RUNNER_TEMP/studenthood-eas-status.json"
           node -e '
             const fs=require("fs");
             const p=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/studenthood-eas-status.json","utf8"));
             const status=String(p.status||"UNKNOWN");
-            const url="https://expo.dev/accounts/studenthood-0920/projects/studenthood/builds/ef509aea-4f0b-4385-a6dc-ee7c376010bb";
+            const url="https://expo.dev/accounts/studenthood-0920/projects/studenthood/builds/d33d26bc-eec8-4306-adc5-8216f99a166c";
             const artifact=p.artifacts?.buildUrl||p.artifacts?.applicationArchiveUrl||"";
             const lines=[
-              "# StudentHood v0.1.8 Android EAS build",
+              "# StudentHood v0.1.9 Android EAS build",
               "",
               "**Expo status:** "+status,
               "",
@@ -57,7 +57,7 @@ jobs:
               "Read-only check; no new APK was requested."
             ];
             fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join("\n")+"\n");
-            console.log("Existing v0.1.8 EAS status: "+status);
+            console.log("Existing v0.1.9 EAS status: "+status);
             console.log("Expo build details: "+url);
             if(artifact)console.log("APK artifact available: "+artifact);
           '
