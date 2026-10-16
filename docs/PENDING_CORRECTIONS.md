@@ -1,6 +1,6 @@
 # StudentHood — Complete Correction Ledger
 
-Last reviewed: 16 October 2026 (IST). **Track all 15 reported corrections through device verification.**
+Last reviewed: 16 October 2026 (IST). **Track all 16 reported corrections through device verification.**
 
 ## Release checkpoints
 - Live installed baseline: **v0.1.7**, Android versionCode **8**, Expo build c82f47fe-5056-454a-bbe3-d25d86562528, submitted 9 Oct.
@@ -26,7 +26,9 @@ Last reviewed: 16 October 2026 (IST). **Track all 15 reported corrections throug
 
 - **16 Oct 2026 two-device screenshot (#13/#14):** A student's uploaded profile avatar appears on their own device but not on another discoverable account, and incoming Peep requests show only a disabled `Request received` label without Accept/Decline. Verified `profile-avatars` is private and both saved avatar paths have real linked storage objects. **Production migration `peep_recipient_decisions_and_profile_media` APPLIED**, restricting storage-object avatar/cover reads with a limited saved-path authorization helper, removing signed-in direct UPDATE on Peep connections, adding recipient-only decision and incoming-request RPCs; one real pending request unchanged. PR #13 stages Android actions in UserProfileScreen, DiscoverPeoplePanel and Drops. Pending real two-device QA and consolidated owner-approved APK. **No new APK built, no real request accepted/declined by us.**
 
-- **16 Oct 2026 Ping Compose report:** Screenshot shows Ping placeholder rather than actual message composer. **PR #14** stages Compose Ping, private one-to-one text threads and recipient-accepted non-Peep message requests under existing age/guardian and Ping permission rules. **Production SQL migration APPLIED** and audited (two RLS-protected tables, 0 existing threads/messages, signed-in RPC grants verified, no direct authenticated table access); Android bundle CI passed. Real-device messaging QA and approved APK still pending; no automated real-user messages. No test-profile privacy bypass.\n\n## All fifteen corrections
+- **16 Oct 2026 Ping Compose report:** Screenshot shows Ping placeholder rather than actual message composer. **PR #14** stages Compose Ping, private one-to-one text threads and recipient-accepted non-Peep message requests under existing age/guardian and Ping permission rules. **Production SQL migration APPLIED** and audited (two RLS-protected tables, 0 existing threads/messages, signed-in RPC grants verified, no direct authenticated table access); Android bundle CI passed. Real-device messaging QA and approved APK still pending; no automated real-user messages. No test-profile privacy bypass.\n\n- **16 Oct 2026 Android Edit Profile screenshot:** institution full-screen modal's title/back/refresh overlap the system status bar. **PR #15** wraps the native Modal in its own SafeAreaProvider and inset-aware SafeAreaView; keeps the header fixed, constrains content widths, improves keyboard resizing and avoids excessive bottom padding. Android bundle export and real-device aspect/keyboard QA still required. This is a **mobile UI fix**, not possible via Supabase backend or installed APK.
+
+## All sixteen corrections
 
 | # | Reported correction | In PR #9 / backend | Remaining validation |
 |---|---|---|---|
@@ -45,6 +47,7 @@ Last reviewed: 16 October 2026 (IST). **Track all 15 reported corrections throug
 
 | 13 | Approved viewer sees another user's uploaded profile photo | **PR #13 / production backend migration**: scoped object-access predicate for avatar/cover signed URLs; Discover refresh; no public-bucket change | Test actual images on two accounts and both themes; confirm unauthorized/underage access remains denied |
 | 14 | Received Peep request cannot be accepted or declined | **PR #13 / production RPC**: recipient-only Accept/Decline, Discover and visited-profile actions, Drops pending-request list; direct table UPDATE revoked | Real Android accept/decline and persisted mutual status tests; do not decide real requests automatically |\n| 15 | No actual Compose Ping or text messages | **PR #14** adds recipient selection, one-to-one text threads and private Ping message requests; production migration applied, permission-gated RPCs, age/guardian checks. | Confirm database activation, latest CI, eligible 2-device tests, request approval, text sending, and one consolidated APK. No unrestricted test bypass. |
+| 16 | Edit Profile institution picker header overlaps Android status bar | **PR #15** native modal safe-area provider/insets, responsive fixed header and readable content, keyboard resize and result-list padding | CI and Android hole-punch/gesture bar, keyboard, landscape, dark/light physical QA; requires next approved APK |
 
 ## Critical open gates
 - Automated Expo Doctor, native introspection, Android JS export must pass at latest release HEAD.
