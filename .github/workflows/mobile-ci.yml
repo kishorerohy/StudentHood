@@ -47,6 +47,9 @@ jobs:
       - name: Verify universal Ping settings, privacy and history contract
         run: node scripts/check-ping-conversation-settings.js
 
+      - name: Verify heading-free live Peeps Pulse strip
+        run: node scripts/check-peeps-pulse-row.js
+
       - name: Expo Doctor
         run: npx expo-doctor@latest
 
