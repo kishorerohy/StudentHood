@@ -4,6 +4,7 @@ import {
   Pressable,ScrollView,StyleSheet,Text,TextInput,View
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
+import useLiveRefresh from '../useLiveRefresh';
 import {
   decidePingRequest,getCampusPeeps,getPingMessages,getPingSceneInbox,
   getPingThreads,getSceneSharingPeeps,sendPingText,
@@ -77,11 +78,9 @@ export default function PingScreen({theme,profile,onBack,onOpenProfile,onOpenSce
     finally{if(!silent)setMessagesLoading(false)}
   },[]);
 
-  useEffect(()=>{
-    refreshThreads();
-    const interval=setInterval(()=>refreshThreads(true),12000);
-    return()=>clearInterval(interval);
-  },[refreshThreads]);
+  useEffect(()=>{refreshThreads()},[refreshThreads]);
+  useLiveRefresh({tables:['studenthood_ping_threads','studenthood_ping_text_messages','peep_connections','ping_scene_shares'],
+    intervalMs:6000,refresh:()=>refreshThreads(true)});
 
   useEffect(()=>{
     if(!selected?.other_user_id)return;
@@ -111,9 +110,10 @@ export default function PingScreen({theme,profile,onBack,onOpenProfile,onOpenSce
   useEffect(()=>{
     if(!selected?.id||mode!=='thread')return;
     refreshMessages(selected.id);
-    const interval=setInterval(()=>refreshMessages(selected.id,true),10000);
-    return()=>clearInterval(interval);
   },[selected?.id,mode,refreshMessages]);
+  useLiveRefresh({tables:['studenthood_ping_text_messages','studenthood_ping_threads'],
+    intervalMs:5000,enabled:!!selected?.id&&mode==='thread',
+    refresh:()=>refreshMessages(selected?.id,true)});
 
   useEffect(()=>{
     if(!pingTarget?.id)return;
