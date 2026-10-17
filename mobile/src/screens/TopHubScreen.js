@@ -289,7 +289,9 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
               key={item.name}
               accessibilityRole="button"
               accessibilityState={{selected:discoverSection===item.name}}
-              onPress={()=>{setDiscoverSection(item.name);if(item.name!=='People')onOpenFeature?.(item.name)}}
+              onPress={()=>{setDiscoverSection(item.name);
+                if(item.name==='Crews'&&experienceFlags.crews_hq)onOpenExperience?.('crews_hq');
+                else if(item.name!=='People')onOpenFeature?.(item.name)}}
               style={[styles.discoverCard,{backgroundColor:theme.surface,borderColor:discoverSection===item.name?theme.accent:theme.line}]}
             >
               <Feather name={item.icon} size={22} color={theme.accent}/>
