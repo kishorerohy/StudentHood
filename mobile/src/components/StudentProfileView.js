@@ -8,7 +8,7 @@ import CampusPresenceBadge from './CampusPresenceBadge';
 // student profiles. No fake verification badges or invented social counts.
 export default function StudentProfileView({
   theme,student,avatarUrl,scenes=[],sceneCount=null,peepCount=null,
-  onBack,onMenu,onEdit,onEditPhoto,actions=null,footer=null,own=false,
+  onBack,onMenu,onEdit,onEditPhoto,onEditCover,actions=null,footer=null,own=false,
   onRefresh=null,refreshing=false,onMoveScene=null
 }){
   const scroll=useRef(null);
@@ -62,7 +62,10 @@ export default function StudentProfileView({
         {!!onBack?<Pressable onPress={onBack} style={styles.topAction} accessibilityRole="button" accessibilityLabel="Back to Scenes">
           <Feather name="arrow-left" size={24} color="#fff"/>
         </Pressable>:<View style={{width:43}}/>}
-
+        {own&&onEditCover&&<Pressable onPress={onEditCover} style={styles.topAction}
+          accessibilityRole="button" accessibilityLabel="Edit cover picture">
+          <Feather name="edit-2" size={18} color="#fff"/>
+        </Pressable>}
       </View>
     </View>
 
