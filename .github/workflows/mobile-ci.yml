@@ -71,6 +71,9 @@ jobs:
       - name: Verify Crews HQ and capacity-safe Hang RSVP
         run: node scripts/check-crews-hq-rsvp.js
 
+      - name: Verify verified-employer Gigs Plus protections
+        run: node scripts/check-gigs-plus.js
+
       - name: Expo Doctor
         run: npx expo-doctor@latest
 
