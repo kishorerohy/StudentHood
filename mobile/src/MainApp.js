@@ -28,6 +28,7 @@ import MyGigApplicationsScreen from './screens/MyGigApplicationsScreen';
 import PassportScreen from './screens/PassportScreen';
 import PassportSharedScreen from './screens/PassportSharedScreen';
 import PartnerHubScreen from './screens/PartnerHubScreen';
+import CollaborationsScreen from './screens/CollaborationsScreen';
 
 const LOGO_DARK=require('../assets/studenthood-logo.png');
 const LOGO_LIGHT=require('../assets/studenthood-logo-light.png');
@@ -121,6 +122,9 @@ export default function MainApp({theme}){
       case 'passport-shared':
         return <PassportSharedScreen theme={theme} token={page.token} onBack={goBack}/>;
       case 'experience':
+        if(page.kind==='collaborations'||page.kind==='collaboration-create')
+          return <CollaborationsScreen theme={theme} profile={profile} onBack={goBack}
+            createMode={page.kind==='collaboration-create'}/>;
         if(page.kind==='partner_hub')return <PartnerHubScreen theme={theme} onBack={goBack}/>;
         if(page.kind==='passport')return <PassportScreen theme={theme} onBack={goBack}/>;
         if(page.kind==='gigs_applications')return <MyGigApplicationsScreen theme={theme} onBack={goBack}
@@ -181,6 +185,7 @@ export default function MainApp({theme}){
           onHang={()=>showPage({type:'create-feature',kind:'Hangs'})}
           onCrew={()=>showPage({type:'create-feature',kind:'Crews'})}
           onGig={()=>showPage({type:'create-feature',kind:'Gigs'})}
+          onCollaboration={()=>showPage({type:'experience',kind:'collaboration-create'})}
         />;
       case 'create-scene':
         return <CreateSceneSheet
