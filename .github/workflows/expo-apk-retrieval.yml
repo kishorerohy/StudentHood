@@ -1,0 +1,97 @@
+name: StudentHood v0.2.0 APK Retrieval (read-only)
+# Retrieves a successfully finished existing Expo build. NEVER creates a build.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/expo-apk-retrieval.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  retrieve-existing-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check Expo GraphQL build and retrieve signed APK
+        id: retrieve
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          BUILD_ID: 3a360f32-132c-4b15-be73-ddd8bebb3e9a
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const {Readable}=require('node:stream');
+          const {pipeline}=require('node:stream/promises');
+          const id=process.env.BUILD_ID;
+          const token=process.env.EXPO_TOKEN;
+          const dashboard='https://expo.dev/accounts/studenthood-0920/projects/studenthood/builds/'+id;
+          if(!token)throw Error('Missing protected Expo token');
+          const summary=msg=>fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,msg+'\n');
+          const query='query BuildsByIdQuery($buildId: ID!){builds{byId(buildId:$buildId){id status platform appVersion appBuildVersion artifacts{buildUrl applicationArchiveUrl} error{errorCode message}}}}';
+          const sleep=ms=>new Promise(done=>setTimeout(done,ms));
+          (async()=>{
+            summary('# StudentHood Android v0.2.0 / versionCode 11');
+            summary('**Original Expo build:** '+dashboard);
+            let record;
+            for(let attempt=1;attempt<=12;attempt++){
+              const abort=new AbortController();
+              const timer=setTimeout(()=>abort.abort(),20000);
+              let resp;
+              try{
+                resp=await fetch('https://api.expo.dev/graphql',{
+                  method:'POST',
+                  headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+                  body:JSON.stringify({query,variables:{buildId:id}}),
+                  signal:abort.signal
+                });
+              }finally{clearTimeout(timer);}
+              const raw=await resp.text();
+              if(!resp.ok)throw Error('Expo GraphQL HTTP '+resp.status+' '+raw.slice(0,300));
+              const obj=JSON.parse(raw);
+              if(obj.errors?.length)throw Error('Expo GraphQL '+JSON.stringify(obj.errors).slice(0,600));
+              record=obj?.data?.builds?.byId;
+              if(!record)throw Error('Existing Expo build ID not found or not accessible');
+              console.log('Attempt '+attempt+': '+record.status+'; '+record.appVersion+' / '+record.appBuildVersion);
+              if(['FINISHED','ERRORED','CANCELED'].includes(record.status))break;
+              if(attempt<12)await sleep(12000);
+            }
+            summary('**Expo status:** '+record.status);
+            if(record.status==='ERRORED'||record.status==='CANCELED'){
+              summary('**Expo error:** '+JSON.stringify(record.error||{}));
+              return;
+            }
+            if(record.status!=='FINISHED'){
+              summary('**APK:** Expo build has not finished during this read-only check. No new build was queued.');
+              return;
+            }
+            if(record.platform!=='ANDROID')throw Error('Expected Android build');
+            const uri=record.artifacts?.applicationArchiveUrl||record.artifacts?.buildUrl;
+            if(!uri)throw Error('Build reports FINISHED but APK URL missing');
+            const parsed=new URL(uri);
+            if(parsed.protocol!=='https:')throw Error('Artifact must be HTTPS');
+            summary('**Direct finished APK artifact:** '+uri);
+            const out='StudentHood-v0.2.0-11.apk';
+            const dl=await fetch(uri,{redirect:'follow',signal:AbortSignal.timeout(180000)});
+            if(!dl.ok||!dl.body)throw Error('APK download failed with HTTP '+dl.status);
+            await pipeline(Readable.fromWeb(dl.body),fs.createWriteStream(out));
+            const file=fs.statSync(out);
+            const header=Buffer.alloc(4),fd=fs.openSync(out,'r');
+            fs.readSync(fd,header,0,4,0);fs.closeSync(fd);
+            if(file.size<1000000||header[0]!==0x50||header[1]!==0x4b)
+              throw Error('Downloaded artifact does not appear to be a complete Android APK');
+            console.log('Verified APK download: '+file.size+' bytes');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,'apk_ready=true\n');
+            summary('**Verified Android APK file:** '+out+' ('+file.size+' bytes). See GitHub Actions artifacts.');
+          })().catch(e=>{console.error(e.message);process.exitCode=1});
+          NODE
+      - name: Upload finished APK without rebuilding
+        if: steps.retrieve.outputs.apk_ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: StudentHood-v0.2.0-Android-APK
+          path: StudentHood-v0.2.0-11.apk
+          if-no-files-found: error
+          retention-days: 14
