@@ -138,7 +138,7 @@ export default function MainApp({theme}){
       case 'gig-details':
         return <GigDetailsScreen gig={page.gig} theme={theme} onBack={goBack}/>;
       case 'hang-details':
-        return <HangDetailsScreen hang={page.hang} theme={theme} onBack={goBack}/>;
+        return <HangDetailsScreen hang={page.hang} theme={theme} profile={profile} onBack={goBack}/>;
       case 'student-profile':
         return <UserProfileScreen
           userId={page.userId}
