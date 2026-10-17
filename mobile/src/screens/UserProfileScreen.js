@@ -1,4 +1,4 @@
-import React,{useEffect,useState} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import {ActivityIndicator,Modal,Pressable,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {getAvatarDisplayUrl,getPeepConnection,getProfileCard,getVisibleProfileScenes,getVisibleSceneCount,getVisiblePeepCount,sendPeepRequest,respondToPeepRequest} from '../api';
@@ -19,23 +19,31 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
   const [sceneCount,setSceneCount]=useState(null);
   const [peepCount,setPeepCount]=useState(null);
   const [reloadKey,setReloadKey]=useState(0);
+  const [refreshing,setRefreshing]=useState(false);
+  const lastProfileId=useRef(null);
   const [profileOptionsOpen,setProfileOptionsOpen]=useState(false);
   const [reportBusy,setReportBusy]=useState(false);
   const [reportNotice,setReportNotice]=useState('');
 
   useEffect(()=>{
     let live=true;
-    setLoading(true);
-    setCard(null);
+    const sameStudent=lastProfileId.current===userId;
+    lastProfileId.current=userId;
+    if(sameStudent){
+      setRefreshing(true);
+    }else{
+      setLoading(true);
+      setCard(null);
+      setAvatar(null);
+      setConnection(null);
+      setPeepReady(false);
+      setPeepError('');
+      setPeepNotice('');
+      setScenes([]);
+      setSceneCount(null);
+      setPeepCount(null);
+    }
     setError('');
-    setAvatar(null);
-    setConnection(null);
-    setPeepReady(false);
-    setPeepError('');
-    setPeepNotice('');
-    setScenes([]);
-    setSceneCount(null);
-    setPeepCount(null);
 
     (async()=>{
       try{
@@ -66,7 +74,7 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
       }catch(e){
         if(live)setError(e?.message||'Unable to load this student profile.');
       }finally{
-        if(live)setLoading(false);
+        if(live){setLoading(false);setRefreshing(false);}
       }
     })();
     return()=>{live=false};
@@ -141,7 +149,7 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
     sceneCount={sceneCount}
     peepCount={peepCount}
     onRefresh={()=>setReloadKey(value=>value+1)}
-    refreshing={loading}
+    refreshing={refreshing}
     onBack={onBack}
     actions={<View style={styles.actionArea}>
       <View style={styles.actions}>
