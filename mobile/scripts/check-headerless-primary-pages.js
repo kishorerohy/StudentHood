@@ -10,6 +10,8 @@ const scenes=read('src/screens/ScenesScreen.js');
 const ping=read('src/screens/PingScreen.js');
 const hub=read('src/screens/TopHubScreen.js');
 const features=read('src/screens/FeatureLandingScreen.js');
+const createFeature=read('src/screens/CreateFeatureScreen.js');
+const createOptions=read('src/screens/CreateOptionsScreen.js');
 const profile=read('src/components/StudentProfileView.js');
 const discover=read('src/components/DiscoverPeoplePanel.js');
 
@@ -43,6 +45,14 @@ for(const x of [
   '>My submissions</Text>'
 ])absent(features,x,'Hangs/Gigs/Crews/Pulse');
 
+for(const x of [
+  '<Text style={[styles.headerTitle,{color:theme.text}]}>{config.heading}</Text>',
+  '>STUDENTHOOD · CREATE</Text>',
+  '<Text style={[styles.intro,{color:theme.muted}]}>{config.subheading}</Text>'
+])absent(createFeature,x,'Create Crew/Hang/Gig/Pulse form');
+absent(createOptions,'<Text style={[styles.title,{color:theme.text}]}>Create</Text>',
+  'Shared Create options');
+
 absent(profile,'<Text style={[styles.sceneTitle,{color:theme.text}]}>Scenes</Text>','own/visited Profile');
 absent(discover,'>Find your people</Text>','Discover people cards');
 
@@ -59,10 +69,17 @@ for(const [source,need,context] of [
   [features,'accessibilityLabel="Back to StudentHood"','Hangs/Gigs back action'],
   [features,'{config.filters.map','Hangs/Gigs filters'],
   [features,'accessibilityLabel={config.action}','creation entry point'],
+  [features,"Crews:{",'Crew landing config'],
+  [createFeature,'accessibilityLabel="Back to Create"','Crew editor back action'],
+  [createFeature,'label="Crew name"','Crew name form field'],
+  [createFeature,'label="Crew category"','Crew category form field'],
+  [createFeature,'label="About your Crew"','Crew description form field'],
+  [createFeature,'onPress={submit}','Crew editor submit action'],
+  [createOptions,"name:'Create a Crew'",'Crew creation action'],
   [profile,'style={[styles.name,{color:theme.text}]}>{title}</Text>','student name'],
   [profile,'<Stat value={peeps} label="Peeps" theme={theme}/>','profile stats'],
   [profile,'accessibilityLabel="Edit profile"','own profile edit'],
   [discover,'accessibilityLabel="Discover campus students"','discoverable students']
 ])assert(source.includes(need),context+' must remain functional');
 
-console.log('PASS: page titles removed across Scenes, Ping, Drops, Discover, Hangs, Gigs, Crews and own/visited Profile; navigation and identity preserved.');
+console.log('PASS: no duplicate headings across Scenes, Ping, Drops, Discover, Hangs, Gigs, Crews, creation and profiles; meaningful labels remain.');
