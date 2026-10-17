@@ -27,6 +27,7 @@ import EmployerPortalScreen from './screens/EmployerPortalScreen';
 import MyGigApplicationsScreen from './screens/MyGigApplicationsScreen';
 import PassportScreen from './screens/PassportScreen';
 import PassportSharedScreen from './screens/PassportSharedScreen';
+import PartnerHubScreen from './screens/PartnerHubScreen';
 
 const LOGO_DARK=require('../assets/studenthood-logo.png');
 const LOGO_LIGHT=require('../assets/studenthood-logo-light.png');
@@ -120,6 +121,7 @@ export default function MainApp({theme}){
       case 'passport-shared':
         return <PassportSharedScreen theme={theme} token={page.token} onBack={goBack}/>;
       case 'experience':
+        if(page.kind==='partner_hub')return <PartnerHubScreen theme={theme} onBack={goBack}/>;
         if(page.kind==='passport')return <PassportScreen theme={theme} onBack={goBack}/>;
         if(page.kind==='gigs_applications')return <MyGigApplicationsScreen theme={theme} onBack={goBack}
           onOpenGig={gig=>showPage({type:'gig-details',gig})}/>;
@@ -154,7 +156,7 @@ export default function MainApp({theme}){
           profile={profile}
           safety={safety}
           onBack={goBack}
-          onNavigate={section=>showPage(section==='moderation'?{type:'moderation'}:(section==='freshers'||section==='crews_hq'||section==='gigs_plus'||section==='gigs_applications'||section==='passport')?{type:'experience',kind:section}:{type:'profile-menu',section})}
+          onNavigate={section=>showPage(section==='moderation'?{type:'moderation'}:(section==='freshers'||section==='crews_hq'||section==='gigs_plus'||section==='gigs_applications'||section==='passport'||section==='partner_hub')?{type:'experience',kind:section}:{type:'profile-menu',section})}
           onDrops={()=>showPage({type:'hub',kind:'Drops'})}
         />;
       case 'moderation':
