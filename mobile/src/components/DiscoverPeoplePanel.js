@@ -8,8 +8,6 @@ import {getPeepConnection,getProfileCard,sendPeepRequest,respondToPeepRequest} f
 export default function DiscoverPeoplePanel({people=[],viewer,theme,onOpenProfile}){
   if(!people.length)return null;
   return <View style={styles.section}>
-    <Text style={[styles.heading,{color:theme.text}]}>Find your people</Text>
-    <Text style={[styles.subheading,{color:theme.muted}]}>Students you can discover from your campus</Text>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cards} accessibilityLabel="Discover campus students">
       {people.slice(0,16).map(person=><PersonCard key={person.id} person={person} viewer={viewer} theme={theme} onOpenProfile={onOpenProfile}/>)}
     </ScrollView>
@@ -83,7 +81,7 @@ function PersonCard({person,viewer,theme,onOpenProfile}){
   </View>;
 }
 const styles=StyleSheet.create({
-  section:{marginBottom:17},
+  section:{marginBottom:17,paddingTop:1},
   heading:{fontSize:19,fontWeight:'900',marginBottom:3},
   subheading:{fontSize:11,marginBottom:13},
   cards:{gap:11,paddingRight:16,paddingBottom:10},
