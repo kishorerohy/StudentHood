@@ -313,4 +313,97 @@ BEGIN
   RETURN true;
 END;
 $fn$;
+
+-- Report-only review operations for other content types. All are
+-- moderator-only, never general-user content edits or automatic removals.
+CREATE OR REPLACE FUNCTION public.studenthood_content_report_queue(
+  p_limit integer DEFAULT 50
+) RETURNS TABLE(
+  report_id uuid,content_kind text,content_id uuid,
+  reason text,reported_at timestamptz
+) LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path=public,private,pg_catalog AS $fn$
+BEGIN
+  IF NOT public.studenthood_is_scene_moderator() THEN
+    RAISE EXCEPTION 'Not authorized to review reports'; END IF;
+  RETURN QUERY
+    SELECT r.id,r.content_kind,r.content_id,r.reason,r.created_at
+    FROM private.studenthood_content_reports r
+    WHERE r.state='open'
+    ORDER BY r.created_at ASC
+    LIMIT least(greatest(coalesce(p_limit,50),1),100);
+END;
+$fn$;
+REVOKE ALL ON FUNCTION public.studenthood_content_report_queue(integer) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.studenthood_content_report_queue(integer) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.studenthood_decide_content_report(
+  p_report_id uuid,p_action text
+) RETURNS boolean LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path=public,private,pg_catalog AS $fn$
+DECLARE
+  r private.studenthood_content_reports%rowtype;
+BEGIN
+  IF NOT public.studenthood_is_scene_moderator() THEN
+    RAISE EXCEPTION 'Not authorized to review reports'; END IF;
+  IF p_action NOT IN ('keep','remove') OR p_action IS NULL THEN
+    RAISE EXCEPTION 'Choose Keep or Remove'; END IF;
+  SELECT * INTO r FROM private.studenthood_content_reports
+  WHERE id=p_report_id AND state='open' FOR UPDATE;
+  IF r.id IS NULL THEN RAISE EXCEPTION 'Report is no longer open'; END IF;
+
+  IF r.content_kind='scene' THEN
+    PERFORM public.studenthood_review_scene(
+      r.content_id,CASE WHEN p_action='keep' THEN 'approved' ELSE 'removed' END);
+  ELSIF r.content_kind='comment' THEN
+    UPDATE public.scene_comments
+    SET moderation_status=CASE WHEN p_action='keep' THEN 'approved' ELSE 'removed' END
+    WHERE id=r.content_id;
+  ELSIF r.content_kind='pulse' THEN
+    UPDATE public.pulse_entries
+    SET moderation_status=CASE WHEN p_action='keep' THEN 'approved' ELSE 'rejected' END
+    WHERE id=r.content_id;
+  ELSIF r.content_kind='hang' THEN
+    UPDATE public.hangs
+    SET moderation_status=CASE WHEN p_action='keep' THEN 'approved' ELSE 'rejected' END
+    WHERE id=r.content_id;
+  ELSIF r.content_kind='crew' THEN
+    UPDATE public.crews
+    SET moderation_status=CASE WHEN p_action='keep' THEN 'approved' ELSE 'rejected' END
+    WHERE id=r.content_id;
+  ELSIF r.content_kind='gig' THEN
+    UPDATE public.gigs
+    SET moderation_status=CASE WHEN p_action='keep' THEN 'approved' ELSE 'rejected' END
+    WHERE id=r.content_id;
+  ELSE RAISE EXCEPTION 'Unknown reported content type';
+  END IF;
+  UPDATE private.studenthood_content_reports
+    SET state='resolved',reviewed_at=now()
+  WHERE content_kind=r.content_kind AND content_id=r.content_id AND state='open';
+  RETURN true;
+END;
+$fn$;
+REVOKE ALL ON FUNCTION public.studenthood_decide_content_report(uuid,text) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.studenthood_decide_content_report(uuid,text) TO authenticated;
+
+-- A visiting student may see a public/eligible profile's total number of
+-- mutually accepted Peeps; never return names or relationship lists.
+CREATE OR REPLACE FUNCTION public.studenthood_visible_peep_count(p_target uuid)
+RETURNS bigint LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path=public,pg_catalog AS $fn$
+BEGIN
+  IF auth.uid() IS NULL OR p_target IS NULL THEN RETURN NULL; END IF;
+  IF auth.uid()<>p_target
+     AND NOT public.studenthood_are_peeps(auth.uid(),p_target)
+     AND NOT public.studenthood_can_discover_profile(p_target) THEN RETURN NULL; END IF;
+  RETURN (
+    SELECT count(*)::bigint
+    FROM public.peep_connections p
+    WHERE p.status='accepted' AND p_target IN (p.requester_id,p.addressee_id)
+  );
+END;
+$fn$;
+REVOKE ALL ON FUNCTION public.studenthood_visible_peep_count(uuid) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.studenthood_visible_peep_count(uuid) TO authenticated;
+
 COMMIT;
