@@ -259,19 +259,70 @@ async function searchRorByName(name:string,countryCode:string,scope:"country"|"w
   };
 }
 
-async function cityDirectoryWithFallback(city:string,countryCode:string,client:ReturnType<typeof serverClient>){
-  try{
-    const location=await locateCity(city,countryCode,client);
-    const mapped=await queryOSM(location.lat,location.lon,location.bounds,city);
-    if(mapped.length)return {institutions:mapped,source:"osm-city-directory"};
-  }catch{
-    console.warn("institution_search: mapped_city_directory_failed");
+// Only verified, city-matched catalog records are added to the local picker.
+// The global ROR provider remains a backend data source, never a user-facing tab.
+type LocalInstitution={id:string,name:string,type:string,city:string,distance_m:number|null,country_code?:string,entity_type?:string,source?:string};
+function mergeInstitutions(...groups:LocalInstitution[][]):LocalInstitution[]{
+  const seen=new Set<string>(),out:LocalInstitution[]=[];
+  for(const group of groups){
+    for(const institution of group){
+      const name=clean(institution.name,160);
+      const city=clean(institution.city,90);
+      const normalized=nameKey(name);
+      if(!normalized)continue;
+      // Exact normalized name + locality, not fuzzy school-name similarity:
+      // different campuses must never be silently conflated.
+      const key=normalized+"|"+nameKey(city);
+      if(seen.has(key))continue;
+      seen.add(key);
+      out.push(institution);
+      if(out.length>=350)return out;
+    }
   }
-  // If public OSM/geocoders are blocked, query a different authenticated-
-  // independent educational registry by city. Strict country/city filtering
-  // prevents a search match from adding an institution in the wrong city.
-  const educational=await queryRorEducation(city,countryCode);
-  if(educational.length)return {institutions:educational,source:"ror-education-directory"};
+  return out;
+}
+async function catalogCityRecords(
+  city:string,countryCode:string,client:ReturnType<typeof serverClient>
+):Promise<LocalInstitution[]>{
+  const {data,error}=await client.from("studenthood_institution_catalog")
+    .select("id,display_name,kind,entity_kind,city,country_code,verification_status")
+    .eq("country_code",countryCode).ilike("city",city)
+    .eq("verification_status","verified").limit(300);
+  if(error){
+    console.warn("institution_search: verified_catalog_read_failed");
+    return [];
+  }
+  return (data||[]).filter(item=>nameKey(clean(item.city,90))===nameKey(city)
+      &&clean(item.country_code,2).toUpperCase()===countryCode)
+    .map(item=>({
+      id:"catalog:"+item.id,name:clean(item.display_name,160),
+      type:clean(item.kind,30)||"institution",city:clean(item.city,90),
+      country_code:countryCode,distance_m:null,entity_type:clean(item.entity_kind,30),
+      source:"verified-catalog"
+    }));
+}
+function combineCityResponse(rows:unknown[],catalog:LocalInstitution[],countryCode:string){
+  return mergeInstitutions(
+    (Array.isArray(rows)?rows:[]) as LocalInstitution[],catalog
+  ).map(item=>({...item,country_code:item.country_code||countryCode}));
+}
+async function cityDirectoryWithFallback(city:string,countryCode:string,client:ReturnType<typeof serverClient>){
+  // Independent sources run concurrently; universities verified in the
+  // worldwide ROR registry are filtered to THIS city and country before use.
+  // OSM supplies local school/campus map objects where those exist.
+  const [mappedResult,rorResult]=await Promise.allSettled([
+    locateCity(city,countryCode,client)
+      .then(place=>queryOSM(place.lat,place.lon,place.bounds,city)),
+    queryRorEducation(city,countryCode)
+  ]);
+  const mapped=mappedResult.status==="fulfilled"
+    ?mappedResult.value as LocalInstitution[]:[];
+  const registered=rorResult.status==="fulfilled"
+    ?rorResult.value as LocalInstitution[]:[];
+  if(mappedResult.status==="rejected")console.warn("institution_search: city_map_unavailable");
+  if(rorResult.status==="rejected")console.warn("institution_search: city_registry_unavailable");
+  const institutions=mergeInstitutions(mapped,registered);
+  if(institutions.length)return {institutions,source:"mapped-and-registered-city-directory"};
   throw new Error("Institution directory is temporarily unavailable.");
 }
 async function queryOSM(lat:number,lon:number,bounds:[number,number,number,number],cityName:string){
@@ -367,7 +418,15 @@ Deno.serve(async(req:Request)=>{
         .select("response,refreshed_at").eq("lookup_key",key).maybeSingle();
       if(cacheError)throw new Error("City directory is temporarily unavailable.");
       const age=cached?.refreshed_at?Date.now()-new Date(cached.refreshed_at).getTime():Infinity;
-      if(cached?.response&&age<CACHE_MS)return json({...cached.response,source:"cached-city-directory"});
+      // Existing cached maps remain valid, but available verified catalog
+      // additions are always considered rather than requiring a cache reset.
+      const resolvedCity=alias?.metro||city;
+      const verifiedCatalog=await catalogCityRecords(resolvedCity,countryCode,client);
+      if(cached?.response&&age<CACHE_MS)return json({
+        ...cached.response,
+        institutions:combineCityResponse(cached.response.institutions,verifiedCatalog,countryCode),
+        source:"cached-location-directory"
+      });
       try{
         let response:Record<string,unknown>;
         if(alias){
@@ -383,10 +442,12 @@ Deno.serve(async(req:Request)=>{
           const directory=hasValidMetroCache
             ?{institutions:metroCache.response.institutions,source:"cached-academic-directory"}
             :await cityDirectoryWithFallback(alias.metro,countryCode,client);
-          response={...metroResponse(directory,city,alias),countryCode};
+          response={...metroResponse(directory,city,alias),countryCode,
+            institutions:combineCityResponse(directory.institutions,verifiedCatalog,countryCode)};
         }else{
           const directory=await cityDirectoryWithFallback(city,countryCode,client);
-          response={...directory,city,countryCode};
+          response={...directory,city,countryCode,
+            institutions:combineCityResponse(directory.institutions,verifiedCatalog,countryCode)};
         }
         // Serving the freshly fetched results does not require cache writes
         // to succeed. A cache write failure should not hide real results.
@@ -395,7 +456,14 @@ Deno.serve(async(req:Request)=>{
         },{onConflict:"lookup_key"});
         return json(response);
       }catch(e){
-        if(cached?.response)return json({...cached.response,source:"stale-city-directory"});
+        if(cached?.response)return json({
+          ...cached.response,
+          institutions:combineCityResponse(cached.response.institutions,verifiedCatalog,countryCode),
+          source:"stale-location-directory"
+        });
+        if(verifiedCatalog.length)return json({
+          city,countryCode,institutions:verifiedCatalog,source:"verified-city-catalog"
+        });
         throw e;
       }
     }
