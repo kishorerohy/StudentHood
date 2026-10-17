@@ -1,5 +1,5 @@
 import React,{useCallback,useEffect,useState} from 'react';
-import {ActivityIndicator,KeyboardAvoidingView,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from 'react-native';
+import {ActivityIndicator,Alert,KeyboardAvoidingView,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {addSceneComment,fetchSceneComments} from '../scenes';
 import {supabase} from '../supabase';
@@ -14,6 +14,7 @@ export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
   const [sending,setSending]=useState(false);
   const [error,setError]=useState('');
   const [feedback,setFeedback]=useState('');
+  const [reportingId,setReportingId]=useState(null);
 
   const load=useCallback(async()=>{
     if(!scene?.id)return;
@@ -49,6 +50,26 @@ export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
     finally{setSending(false);}
   }
 
+  function reportComment(item){
+    if(!item?.id||item.user_id===myId||reportingId)return;
+    const reasons=['Inappropriate content','Harassment or bullying','Spam or scam','Other safety concern'];
+    Alert.alert('Report comment','What concerns you about this comment?',
+      [{text:'Cancel',style:'cancel'},...reasons.map(reason=>({
+        text:reason,onPress:async()=>{
+          setReportingId(item.id);setError('');
+          try{
+            const {data,error}=await supabase.rpc('studenthood_report_content',{
+              p_kind:'comment',p_content_id:item.id,p_reason:reason
+            });
+            if(error)throw error;
+            if(data!==true)throw new Error('Report not confirmed.');
+            setFeedback('Comment reported to StudentHood safety for review.');
+          }catch(e){setError(e?.message||'Could not report comment.');}
+          finally{setReportingId(null)}
+        }
+      }))]);
+  }
+
   return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]} behavior={Platform.OS==='ios'?'padding':'height'}>
     <View style={[styles.header,{borderBottomColor:theme.line}]}>
       <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close comments" style={[styles.close,{backgroundColor:theme.surface,borderColor:theme.line}]}>
@@ -81,6 +102,12 @@ export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
                 <Text style={[styles.time,{color:theme.muted}]}>{new Date(item.created_at).toLocaleDateString()}</Text>
               </View>
               <Text style={[styles.body,{color:theme.text}]}>{item.body}</Text>
+              {!mine&&!pending&&<Pressable accessibilityRole="button" accessibilityLabel="Report comment"
+                disabled={!!reportingId} onPress={()=>reportComment(item)}
+                style={styles.reportAction}>
+                <Feather name="flag" size={13} color={theme.muted}/>
+                <Text style={{color:theme.muted,fontSize:11}}>Report</Text>
+              </Pressable>}
             </View>
           </View>;
         })}
@@ -122,6 +149,7 @@ const styles=StyleSheet.create({
   pending:{fontSize:10,fontWeight:'700'},
   time:{fontSize:10,marginLeft:'auto'},
   body:{fontSize:13,lineHeight:20},
+  reportAction:{alignSelf:'flex-start',minHeight:34,flexDirection:'row',alignItems:'center',gap:7,paddingVertical:7},
   error:{fontSize:12,lineHeight:18},
   feedback:{fontSize:12,lineHeight:18},
   composer:{minHeight:75,padding:12,flexDirection:'row',gap:9,alignItems:'flex-end',borderTopWidth:StyleSheet.hairlineWidth},
