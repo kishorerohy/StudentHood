@@ -6,6 +6,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import {Feather} from '@expo/vector-icons';
+import CompactPageBar from '../components/CompactPageBar';
 import {submitStudentCreation} from '../creation';
 import useKeyboardAwareForm from '../hooks/useKeyboardAwareForm';
 
@@ -89,13 +90,7 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
   }
 
   return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]} behavior={Platform.OS==='ios'?'padding':'height'}>
-    <View style={[styles.header,{borderBottomColor:theme.line}]}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Back to Create" onPress={onBack} style={styles.back}>
-        <Feather name="arrow-left" size={21} color={theme.text}/>
-      </Pressable>
-      <Text style={[styles.headerTitle,{color:theme.text}]}>{config.heading}</Text>
-      <View style={{width:43}}/>
-    </View>
+    <CompactPageBar theme={theme} onBack={onBack} backLabel={'Back from '+config.heading}/>
     <ScrollView ref={scrollRef} onLayout={onScrollLayout} onScroll={onScroll} scrollEventThrottle={16} automaticallyAdjustKeyboardInsets={Platform.OS==='ios'} contentContainerStyle={[styles.content,{paddingBottom:200+keyboardPadding}]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'} showsVerticalScrollIndicator={false}>
       {!!submitted?<View style={[styles.confirm,{backgroundColor:theme.surface,borderColor:theme.line}]}>
         <View style={[styles.confirmIcon,{backgroundColor:theme.accentSoft}]}><Feather name="check-circle" color={theme.success} size={34}/></View>
@@ -106,7 +101,6 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
         </Pressable>
       </View>:
       <>
-        <Text style={[styles.eyebrow,{color:theme.accent}]}>STUDENTHOOD · CREATE</Text>
         <Text style={[styles.intro,{color:theme.muted}]}>{config.subheading}</Text>
         {!!profile?.campus_name&&<View style={[styles.campus,{backgroundColor:theme.surface,borderColor:theme.line}]}>
           <Feather name="book-open" color={theme.accent} size={16}/>
