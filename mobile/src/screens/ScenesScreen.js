@@ -142,17 +142,10 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
 
       {/* Pulse strip intentionally has NO separate "Campus people" heading,
           See all link or campus-profile suggestions. Only real Pulse posts
-          from permitted accepted Peeps follow the personal create button. */}
+          from permitted accepted Peeps appear; create Pulse only through the main +. */}
       <View style={styles.pulseStrip}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.pulseRow}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Create a Pulse"
-            onPress={onOpenPulse} style={styles.pulse}>
-            <View style={[styles.pulseRing,{borderColor:theme.line,backgroundColor:theme.surface2}]}>
-              <Feather name="plus" size={22} color={theme.accent}/>
-            </View>
-            <Text style={[styles.pulseName,{color:theme.muted}]}>Pulse soon</Text>
-          </Pressable>
           {peepsPulses.filter(item=>new Date(item.expires_at).getTime()>Date.now()).map(item=>
             <Pressable key={item.author_id} accessibilityRole="button"
               accessibilityLabel={'View '+(item.author_name||item.author_username||'Peep')+' Pulse'}
