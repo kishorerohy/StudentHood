@@ -12,14 +12,10 @@ function validateEditableProfile({full_name,bio,city,campus_name}){
 // restricts this query to relationships involving the current user.
 export async function getMyPeepCount(){
   const {data:{user},error:authError}=await supabase.auth.getUser();
-  if(authError) throw authError;
-  if(!user) return 0;
-  const {count,error}=await supabase.from('peep_connections')
-    .select('id',{count:'exact',head:true})
-    .eq('status','accepted')
-    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
-  if(error) throw error;
-  return Number(count)||0;
+  if(authError)throw authError;
+  if(!user)return 0;
+  // Same permission-scoped and block-aware count used for other profiles.
+  return (await getVisiblePeepCount(user.id))??0;
 }
 
 // Count only the target's Scenes visible to the signed-in viewer. Never
