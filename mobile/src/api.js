@@ -306,7 +306,7 @@ export async function getPingBlockStatus(targetId){
   if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(target))throw new Error('Invalid Ping participant.');
   const {data,error}=await supabase.rpc('studenthood_ping_block_status',{p_target:target});
   if(error)throw error;
-  return {blocked_by_me:data?.blocked_by_me===true};
+  return {blocked_by_me:data?.blocked_by_me===true,interaction_available:data?.interaction_available===true};
 }
 export async function setPingBlock(targetId,blocked){
   const target=String(targetId||'').trim();
@@ -315,7 +315,7 @@ export async function setPingBlock(targetId,blocked){
     p_target:target,p_block:!!blocked
   });
   if(error)throw error;
-  return {blocked_by_me:data?.blocked_by_me===true};
+  return {blocked_by_me:data?.blocked_by_me===true,interaction_available:data?.interaction_available===true};
 }
 export async function searchPingHistory(threadId,query,{limit=40,offset=0}={}){
   const text=String(query||'').trim();
