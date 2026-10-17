@@ -1,5 +1,5 @@
 import React,{useRef,useState} from 'react';
-import {Image,Modal,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
+import {Image,Modal,Pressable,RefreshControl,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import Svg,{Defs,LinearGradient,Stop,Rect} from 'react-native-svg';
 import CampusPresenceBadge from './CampusPresenceBadge';
@@ -8,7 +8,8 @@ import CampusPresenceBadge from './CampusPresenceBadge';
 // student profiles. No fake verification badges or invented social counts.
 export default function StudentProfileView({
   theme,student,avatarUrl,scenes=[],sceneCount=null,peepCount=null,
-  onBack,onMenu,onEdit,onEditPhoto,actions=null,footer=null,own=false
+  onBack,onMenu,onEdit,onEditPhoto,actions=null,footer=null,own=false,
+  onRefresh=null,refreshing=false
 }){
   const scroll=useRef(null);
   const [openScene,setOpenScene]=useState(null);
@@ -27,6 +28,8 @@ export default function StudentProfileView({
     style={[styles.scroll,{backgroundColor:theme.bg}]}
     contentContainerStyle={styles.content}
     showsVerticalScrollIndicator={false}
+    refreshControl={onRefresh?<RefreshControl refreshing={refreshing}
+      onRefresh={onRefresh} tintColor={theme.accent}/> : undefined}
   >
     <View style={[styles.cover,{backgroundColor:theme.isLight?'#2E383E':'#121C24'}]}>
       {!!coverUrl&&<Image source={{uri:coverUrl}} style={styles.coverImage} resizeMode="cover"/>}
