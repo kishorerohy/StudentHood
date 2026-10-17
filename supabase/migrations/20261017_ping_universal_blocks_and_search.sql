@@ -150,6 +150,17 @@ BEGIN
   EXECUTE replace(definition,
     'pc.status=''pending''',
     'pc.status=''pending'' AND NOT public.studenthood_interaction_blocked(auth.uid(),pc.requester_id)');
+
+  -- Drops only display non-message activity. Hide historical activity from
+  -- blocked counterparties without destroying the underlying audit records.
+  SELECT pg_get_functiondef(p.oid) INTO definition FROM pg_proc p
+  JOIN pg_namespace n ON n.oid=p.pronamespace
+  WHERE n.nspname='public' AND p.proname='studenthood_drops_feed';
+  IF definition IS NULL OR position('where auth.uid() is not null' IN definition)=0
+    THEN RAISE EXCEPTION 'Cannot locate Drops actor filter'; END IF;
+  EXECUTE replace(definition,
+    'where auth.uid() is not null',
+    'where auth.uid() is not null AND (a.actor_id IS NULL OR NOT public.studenthood_interaction_blocked(auth.uid(),a.actor_id))');
 END;
 $migration$;
 
