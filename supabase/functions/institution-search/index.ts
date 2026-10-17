@@ -443,7 +443,9 @@ Deno.serve(async(req:Request)=>{
           const metroAge=metroCache?.refreshed_at
             ?Date.now()-new Date(metroCache.refreshed_at).getTime():Infinity;
           const hasValidMetroCache=Array.isArray(metroCache?.response?.institutions)
-            &&metroCache.response.institutions.length>0&&metroAge<CACHE_MS;
+            &&metroCache.response.institutions.length>0&&metroAge<CACHE_MS
+            &&typeof metroCache.response.source==="string"
+            &&metroCache.response.source.includes("mapped-and-registered-city-directory");
           const directory=hasValidMetroCache
             ?{institutions:metroCache.response.institutions,source:"cached-academic-directory"}
             :await cityDirectoryWithFallback(alias.metro,countryCode,client);
