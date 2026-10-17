@@ -19,6 +19,7 @@ import CreateSceneSheet from './components/CreateSceneSheet';
 import SlidePage from './components/SlidePage';
 import CampusStatusSlider from './components/CampusStatusSlider';
 import FeatureLandingScreen from './screens/FeatureLandingScreen';
+import FreshersJourneyScreen from './screens/FreshersJourneyScreen';
 
 const LOGO_DARK=require('../assets/studenthood-logo.png');
 const LOGO_LIGHT=require('../assets/studenthood-logo-light.png');
@@ -103,8 +104,15 @@ export default function MainApp({theme}){
           onTab={selectTab}
           onOpenProfile={userId=>showPage({type:'student-profile',userId})}
           onOpenFeature={kind=>showPage({type:'feature',kind})}
+          onOpenExperience={kind=>showPage({type:'experience',kind})}
           onOpenScene={sceneId=>openSharedLink('studenthood://scene/'+sceneId)}
         />;
+      case 'experience':
+        if(page.kind==='freshers') return <FreshersJourneyScreen theme={theme} onBack={goBack}
+          onDiscover={()=>showPage({type:'hub',kind:'Discover'})}
+          onCrews={()=>showPage({type:'feature',kind:'Crews'})}
+          onHangs={()=>selectTab('Hangs')}/>;
+        return null;
       case 'feature':
         return <FeatureLandingScreen kind={page.kind} theme={theme} profile={profile} reloadKey={reloadKey} onBack={goBack} onDiscover={()=>showPage({type:'hub',kind:'Discover'})} />;
       case 'student-profile':
@@ -122,7 +130,7 @@ export default function MainApp({theme}){
           profile={profile}
           safety={safety}
           onBack={goBack}
-          onNavigate={section=>showPage(section==='moderation'?{type:'moderation'}:{type:'profile-menu',section})}
+          onNavigate={section=>showPage(section==='moderation'?{type:'moderation'}:section==='freshers'?{type:'experience',kind:'freshers'}:{type:'profile-menu',section})}
           onDrops={()=>showPage({type:'hub',kind:'Drops'})}
         />;
       case 'moderation':

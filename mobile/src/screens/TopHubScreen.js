@@ -8,16 +8,24 @@ import {getCampusPeeps,searchDiscoverableStudents,getDropsFeed,getPeepConnection
 import CampusPresenceBadge from '../components/CampusPresenceBadge';
 import useLiveRefresh from '../useLiveRefresh';
 import DiscoverPeoplePanel from '../components/DiscoverPeoplePanel';
+import {getExperienceFlags} from '../experiences';
 
 const PING_TABS=['All','Peeps','Requests','Hang Chats','Crew Chats'];
 const DISCOVER_SECTIONS=[{name:'People',icon:'users',copy:'Meet students from your campus'},{name:'Hangs',icon:'calendar',copy:'Find campus plans'},{name:'Crews',icon:'users',copy:'Discover communities'},{name:'Gigs',icon:'briefcase',copy:'Explore student opportunities'}];
 const DROP_FILTERS=['All','Scenes','Peeps'];
 
-export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProfile,onOpenFeature,onOpenScene,pingTarget=null}){
+export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProfile,onOpenFeature,onOpenExperience,onOpenScene,pingTarget=null}){
   const [peeps,setPeeps]=useState([]);
   const [peepsLoading,setPeepsLoading]=useState(false);
   const [peepsError,setPeepsError]=useState('');
   const [discoverSection,setDiscoverSection]=useState('People');
+  const [experienceFlags,setExperienceFlags]=useState({});
+  useEffect(()=>{
+    if(kind!=='Discover')return;
+    let live=true;
+    getExperienceFlags().then(flags=>{if(live)setExperienceFlags(flags)}).catch(()=>{if(live)setExperienceFlags({})});
+    return()=>{live=false};
+  },[kind]);
   const [peopleQuery,setPeopleQuery]=useState('');
   const [searchResults,setSearchResults]=useState([]);
   const [searchLoading,setSearchLoading]=useState(false);
@@ -270,6 +278,13 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
             authorized matching profiles appear immediately above the keyboard. */}
         {!searchActive&&<>
           <View style={styles.grid}>
+            {experienceFlags.freshers&&<Pressable accessibilityRole="button" accessibilityLabel="Open Freshers Journey"
+              onPress={()=>onOpenExperience?.('freshers')}
+              style={[styles.discoverCard,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+              <Feather name="compass" size={22} color={theme.accent}/>
+              <Text style={[styles.discoverCardName,{color:theme.text}]}>Freshers Journey</Text>
+              <Text style={[styles.discoverCardCopy,{color:theme.muted}]}>Your optional first 30 days</Text>
+            </Pressable>}
             {DISCOVER_SECTIONS.map(item=><Pressable
               key={item.name}
               accessibilityRole="button"
