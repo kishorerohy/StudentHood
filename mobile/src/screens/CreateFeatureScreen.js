@@ -47,10 +47,10 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
   const futureTime=date.toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'});
   const sections=OPTIONS[kind]||[];
   const info=kind==='Gigs'
-    ?'Gig applications and payments will be enabled only after employer review and eligibility checks.'
-    :kind==='Crews'?'A Crew will become visible only after community safety review.'
-    :kind==='Pulse'?'Pulse is submitted privately for moderation before reaching your selected audience.'
-    :'Attendees and RSVPs will be available after event safety review.';
+    ?'Gigs appear immediately to eligible adults. Employers are not automatically verified; payments and applications are not yet available.'
+    :kind==='Crews'?'Your Crew is created immediately for the chosen audience.'
+    :kind==='Pulse'?'Your Pulse appears immediately to its selected audience.'
+    :'Your Hang appears immediately to eligible students; RSVPs are not yet available.';
 
   async function chooseMedia(){
     setError('');
