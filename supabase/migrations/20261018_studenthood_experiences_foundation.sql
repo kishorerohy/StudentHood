@@ -115,3 +115,39 @@ grant execute on function public.studenthood_freshers_my_status() to authenticat
 
 -- Feature flags intentionally all disabled at deployment.
 -- Only a reviewed, separately authorised rollout may activate specific campuses.
+
+
+-- Viewer-safe rollout read. Never rely on a client-supplied age, campus or flag.
+-- Disabled/unknown features remain false; conservative age and guardian checks
+-- are applied before the app renders optional entry points.
+create or replace function public.studenthood_experience_my_flags()
+returns jsonb language plpgsql stable security definer
+set search_path to pg_catalog,public,private
+as $function$
+declare
+ me uuid:=auth.uid();
+ person public.profiles%rowtype;
+ access jsonb;
+ row_flag record;
+ output jsonb:='{}'::jsonb;
+ eligible boolean;
+begin
+ if me is null then raise exception 'Authentication required';end if;
+ select * into person from public.profiles where id=me;
+ access:=public.studenthood_access_policy();
+ for row_flag in select * from public.studenthood_experience_flags loop
+  eligible:=coalesce((access->>'app_access')::boolean,false)
+    and coalesce(row_flag.enabled,false)
+    and coalesce((access->>'conservative_age')::integer,0)>=row_flag.min_age
+    and (row_flag.min_age<18 or coalesce((access->>'adult_access_verified')::boolean,false))
+    and (
+      cardinality(row_flag.allowed_campus_keys)=0
+      or public.studenthood_campus_label_key(person.campus_name)=any(row_flag.allowed_campus_keys)
+    );
+  output:=output||jsonb_build_object(row_flag.feature_key,coalesce(eligible,false));
+ end loop;
+ return output;
+end;
+$function$;
+revoke all on function public.studenthood_experience_my_flags() from public,anon;
+grant execute on function public.studenthood_experience_my_flags() to authenticated;
