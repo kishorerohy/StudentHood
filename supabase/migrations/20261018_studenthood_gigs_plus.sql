@@ -89,6 +89,9 @@ begin
     or not exists (select 1 from public.studenthood_experience_flags
         where feature_key='gigs_plus' and enabled)
   then raise exception 'Verified employer membership required';end if;
+  new.minimum_age:=coalesce(new.minimum_age,18);
+  new.expires_at:=coalesce(new.expires_at,now()+interval '30 days');
+  if new.expires_at<=now() then raise exception 'Employer Gig expiry must be in the future';end if;
  end if;
  return new;
 end;
