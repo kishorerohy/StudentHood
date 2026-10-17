@@ -55,3 +55,20 @@ export async function getApplicationsForEmployerGig(gigId){
  if(error)throw new Error('Application review is not permitted.');
  return data||[];
 }
+
+export async function getMyGigApplications(){
+ const {data:{user},error:authError}=await supabase.auth.getUser();
+ if(authError||!user)return [];
+ const {data,error}=await supabase.from('studenthood_gig_applications')
+   .select('id,gig_id,status,created_at,updated_at')
+   .eq('applicant_id',user.id).order('created_at',{ascending:false}).limit(50);
+ if(error)throw new Error('Unable to load your private applications.');
+ const ids=(data||[]).map(row=>row.gig_id);
+ if(!ids.length)return [];
+ const {data:gigs,error:gigError}=await supabase.from('gigs')
+   .select('id,title,campus_name,category,moderation_status,created_at,description,pay_amount,pay_currency,pay_unit,employer_name,employer_org_id,location_hint,application_deadline,expires_at')
+   .in('id',ids);
+ if(gigError)throw new Error('Unable to load permitted Gig details.');
+ const titles=new Map((gigs||[]).map(item=>[item.id,item]));
+ return (data||[]).map(row=>({...row,gig:titles.get(row.gig_id)||null}));
+}
