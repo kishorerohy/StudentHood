@@ -38,6 +38,6 @@ assert(backend.includes('Promise.allSettled(['),
   'Global verified and physical local sources should merge independently');
 assert(backend.includes('institutions:combineCityResponse(directory.institutions,verifiedCatalog,countryCode)'),
   'Return city-filtered combined institutions');
-assert(backend.includes('if(cached?.response&&age<CACHE_MS)'),
+assert(backend.includes('if(mergedCache&&age<CACHE_MS)'),
   'Retain rate-limited city caching and merge verified catalog');
 console.log('PASS: single city-based institution picker globally with hidden catalog and safe GPS country.');
