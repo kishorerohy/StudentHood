@@ -106,6 +106,13 @@ export default function ProfileMenuScreen({page='menu',theme,profile,safety,onBa
         <Text style={[styles.rowCopy,{color:theme.muted}]}>Your private Gig application history and decisions</Text></View>
         <Feather name="chevron-right" size={19} color={theme.muted}/>
       </Pressable>}
+      {page==='menu'&&experienceFlags.passport&&<Pressable accessibilityRole="button" accessibilityLabel="Open my StudentHood Passport"
+        onPress={()=>onNavigate('passport')} style={[styles.row,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+        <View style={[styles.rowIcon,{backgroundColor:theme.accentSoft}]}><Feather name="award" color={theme.accent} size={19}/></View>
+        <View style={{flex:1}}><Text style={[styles.rowTitle,{color:theme.text}]}>My Passport</Text>
+        <Text style={[styles.rowCopy,{color:theme.muted}]}>Private participation, visibility and expiring share links</Text></View>
+        <Feather name="chevron-right" size={19} color={theme.muted}/>
+      </Pressable>}
       {page==='menu'&&canSeeModeration&&<Pressable onPress={()=>onNavigate('moderation')} accessibilityRole="button" accessibilityLabel="Scene moderation queue" style={[styles.row,{backgroundColor:theme.surface,borderColor:theme.line}]}>
         <View style={[styles.rowIcon,{backgroundColor:theme.accentSoft}]}><Feather name="shield" size={19} color={theme.accent}/></View>
         <View style={{flex:1}}><Text style={[styles.rowTitle,{color:theme.text}]}>Scene review</Text><Text style={[styles.rowCopy,{color:theme.muted}]}>Review pending Scenes with verified adult moderator access</Text></View>
