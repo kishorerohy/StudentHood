@@ -44,6 +44,9 @@ jobs:
       - name: Verify immediate publishing and profile privacy contract
         run: node scripts/check-report-first-publishing.js
 
+      - name: Verify universal Ping settings, privacy and history contract
+        run: node scripts/check-ping-conversation-settings.js
+
       - name: Expo Doctor
         run: npx expo-doctor@latest
 
