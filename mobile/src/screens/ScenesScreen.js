@@ -1,12 +1,12 @@
 import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {
-  ActivityIndicator,Animated,Image,Modal,PanResponder,Pressable,RefreshControl,ScrollView,
+  ActivityIndicator,Animated,Image,Linking,Modal,PanResponder,Pressable,RefreshControl,ScrollView,
   StyleSheet,Text,useWindowDimensions,View
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {SceneIcon} from '../icons';
-import {getCampusPeeps} from '../api';
+import {getActivePeepsPulses,reportPulse} from '../api';
 import {fetchScenes,fetchSharedScene,toggleSceneLike} from '../scenes';
 import SceneShareSheet from '../components/SceneShareSheet';
 import SceneCommentsPanel from '../components/SceneCommentsPanel';
@@ -27,22 +27,20 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
   const [hiddenIds,setHiddenIds]=useState([]);
   const [sharedScene,setSharedScene]=useState(null);
   const [sharedLoading,setSharedLoading]=useState(false);
-  const [pulsePeeps,setPulsePeeps]=useState([]);
+  const [peepsPulses,setPeepsPulses]=useState([]);
+  const [openPulse,setOpenPulse]=useState(null);
+  const [pulseError,setPulseError]=useState('');
 
   const loadPulse=useCallback(async()=>{
     try{
-      const rows=await getCampusPeeps({limit:12,offset:0});
-      const selfId=profile?.id;
-      const seen=new Set();
-      setPulsePeeps((rows||[]).filter(item=>{
-        if(!item?.id||item.id===selfId||seen.has(item.id)) return false;
-        seen.add(item.id);
-        return true;
-      }).slice(0,8));
-    }catch{
-      setPulsePeeps([]);
+      const rows=await getActivePeepsPulses({limit:16});
+      setPeepsPulses(rows.filter(row=>row?.id && new Date(row.expires_at).getTime()>Date.now()));
+      setPulseError('');
+    }catch(e){
+      setPeepsPulses([]);
+      setPulseError(e?.message||'Peeps’ Pulses could not be loaded.');
     }
-  },[profile?.id,profile?.campus_name]);
+  },[profile?.id]);
 
   const load=useCallback(async(nextFilter=filter,{refresh=false}={})=>{
     refresh?setRefreshing(true):setLoading(true);
@@ -79,7 +77,12 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
     setItems(current=>current.filter(item=>item.id!==sceneId));
     setViewerIndex(null);
   }
-  useEffect(()=>{loadPulse()},[loadPulse,reloadKey]);
+  useEffect(()=>{
+    loadPulse();
+    // Only the mounted Scenes page polls for new eligible Peeps' Pulses.
+    const refreshPulse=setInterval(loadPulse,60000);
+    return()=>clearInterval(refreshPulse);
+  },[loadPulse,reloadKey]);
 
   useEffect(()=>{
     if(!focusScene?.id)return;
@@ -117,7 +120,7 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
     <ScrollView
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={()=>load(filter,{refresh:true})} tintColor={theme.accent}/>}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={()=>{load(filter,{refresh:true});loadPulse()}} tintColor={theme.accent}/>} }
     >
       <View style={styles.intro}>
         <View>
@@ -135,20 +138,35 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
         </View>
       </View>
 
-      <View style={[styles.panel,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-        <View style={styles.sectionHead}><Text style={[styles.h2,{color:theme.text}]}>Campus people</Text><Pressable accessibilityRole="button" accessibilityLabel="See all campus people" onPress={onOpenDiscover}><Text style={[styles.link,{color:theme.accent}]}>See all →</Text></Pressable></View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pulseRow}>
-          <Pressable onPress={onOpenPulse} style={styles.pulse}>
-            <View style={[styles.pulseRing,{borderColor:theme.line,backgroundColor:theme.surface2}]}><Feather name="plus" size={22} color={theme.accent}/></View>
+      {/* Pulse strip intentionally has NO separate "Campus people" heading,
+          See all link or campus-profile suggestions. Only real Pulse posts
+          from permitted accepted Peeps follow the personal create button. */}
+      <View style={styles.pulseStrip}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.pulseRow}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Create a Pulse"
+            onPress={onOpenPulse} style={styles.pulse}>
+            <View style={[styles.pulseRing,{borderColor:theme.line,backgroundColor:theme.surface2}]}>
+              <Feather name="plus" size={22} color={theme.accent}/>
+            </View>
             <Text style={[styles.pulseName,{color:theme.muted}]}>Pulse soon</Text>
           </Pressable>
-          {pulsePeeps.map(item=><Pressable key={item.id} onPress={()=>onOpenProfile?.(item.id)} style={styles.pulse}>
-            <View style={[styles.pulseRing,{borderColor:theme.accent,backgroundColor:theme.surface2}]}>
-              {item.avatar_url?<Image source={{uri:item.avatar_url}} style={styles.pulseImage}/>:<Feather name="user" size={22} color={theme.muted}/>}
-            </View>
-            <Text numberOfLines={1} style={[styles.pulseName,{color:theme.muted}]}>{item.full_name?.split(' ')[0]||item.username||'Peep'}</Text>
-          </Pressable>)}
+          {peepsPulses.filter(item=>new Date(item.expires_at).getTime()>Date.now()).map(item=>
+            <Pressable key={item.author_id} accessibilityRole="button"
+              accessibilityLabel={'View '+(item.author_name||item.author_username||'Peep')+' Pulse'}
+              onPress={()=>setOpenPulse(item)} style={styles.pulse}>
+              <View style={[styles.pulseRing,{borderColor:theme.accent,backgroundColor:theme.surface2}]}>
+                {item.author_avatar_url?<Image source={{uri:item.author_avatar_url}} style={styles.pulseImage}/>:
+                  <Feather name="user" size={22} color={theme.muted}/>}
+              </View>
+              <Text numberOfLines={1} style={[styles.pulseName,{color:theme.muted}]}>
+                {item.author_name?.trim().split(' ')[0]||item.author_username||'Peep'}
+              </Text>
+            </Pressable>)}
         </ScrollView>
+        {!!pulseError&&<Text accessibilityRole="alert" style={[styles.pulseError,{color:theme.muted}]}>
+          {pulseError}
+        </Text>}
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters} accessibilityLabel="Scenes filters">
@@ -189,6 +207,10 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
     </ScrollView>
 
     {sharedLoading&&<View style={[styles.message,{backgroundColor:theme.surface,borderColor:theme.line}]}><ActivityIndicator color={theme.accent}/><Text style={{color:theme.muted}}>Opening shared Scene…</Text></View>}
+    <PeepsPulseViewer pulse={openPulse} theme={theme}
+      onClose={()=>setOpenPulse(null)}
+      onCreator={authorId=>{setOpenPulse(null);onOpenProfile?.(authorId)}}
+    />
     <SceneViewer
       visible={viewerIndex!==null}
       scenes={sharedScene?[sharedScene]:items}
@@ -218,6 +240,83 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
       {!!optionsTarget&&<SceneOptionsMenu scene={optionsTarget.scene} anchor={optionsTarget.anchor} theme={theme} currentUserId={profile?.id} onClose={()=>setOptionsTarget(null)} onProfile={userId=>onOpenProfile?.(userId)} onHide={hideScene} onDeleted={handleDeleted}/>}
     </Modal>
   </View>;
+}
+
+const PULSE_REPORT_REASONS=['Inappropriate content','Harassment or bullying','Spam or scam','Other safety concern'];
+
+function PeepsPulseViewer({pulse,theme,onClose,onCreator}){
+  const [reportOpen,setReportOpen]=useState(false);
+  const [reportBusy,setReportBusy]=useState(false);
+  const [error,setError]=useState('');
+  useEffect(()=>{setReportOpen(false);setError('')},[pulse?.id]);
+  if(!pulse)return null;
+
+  async function submitPulseReport(reason){
+    if(reportBusy)return;
+    setReportBusy(true);setReportOpen(false);setError('');
+    try{
+      await reportPulse(pulse.id,reason);
+      onClose();
+    }catch(e){setError(e?.message||'Unable to report this Pulse.')}
+    finally{setReportBusy(false)}
+  }
+  async function playVideo(){
+    if(!pulse.media_signed_url)return setError('Pulse video is temporarily unavailable.');
+    try{await Linking.openURL(pulse.media_signed_url)}
+    catch(e){setError('Could not open Pulse video on this device.')}
+  }
+  const active=new Date(pulse.expires_at).getTime()>Date.now();
+  return <Modal visible animationType="fade" transparent={false} statusBarTranslucent
+    onRequestClose={onClose}>
+    <View style={styles.pulseViewer}>
+      <View style={styles.pulseViewerTop}>
+        <Pressable accessibilityRole="button" accessibilityLabel="View Pulse creator profile"
+          onPress={()=>onCreator?.(pulse.author_id)} style={styles.pulseViewerCreator}>
+          <View style={styles.pulseViewerAvatar}>
+            {pulse.author_avatar_url?<Image style={styles.avatarImage} source={{uri:pulse.author_avatar_url}}/>:
+              <Feather name="user" size={19} color="#fff"/>}
+          </View>
+          <View style={{flex:1}}>
+            <Text style={styles.pulseViewerCreatorName}>{pulse.author_name||pulse.author_username||'Peep'}</Text>
+            <Text style={styles.pulseViewerTime}>{timeAgo(pulse.created_at)}</Text>
+          </View>
+        </Pressable>
+        <Pressable onPress={()=>setReportOpen(current=>!current)}
+          accessibilityLabel="Report Pulse" accessibilityRole="button"
+          style={styles.pulseViewerTopButton}>
+          <Feather name="flag" size={19} color="#fff"/>
+        </Pressable>
+        <Pressable onPress={onClose} accessibilityLabel="Close Pulse"
+          accessibilityRole="button" style={styles.pulseViewerTopButton}>
+          <Feather name="x" color="#fff" size={25}/>
+        </Pressable>
+      </View>
+      {!active?<Text style={styles.pulseViewerText}>This Pulse has expired.</Text>:
+        <View style={styles.pulseViewerBody}>
+          {pulse.media_type==='image'&&!!pulse.media_signed_url&&
+            <Image source={{uri:pulse.media_signed_url}} resizeMode="contain"
+              style={styles.pulseViewerMedia}/>}
+          {pulse.media_type==='video'&&
+            <Pressable onPress={playVideo} accessibilityRole="button" accessibilityLabel="Play Pulse video"
+              style={styles.pulseVideoButton}>
+              <Feather name="play-circle" size={55} color="#fff"/>
+              <Text style={styles.pulseVideoCaption}>Play Pulse video</Text>
+            </Pressable>}
+          {!!pulse.body&&<Text style={styles.pulseViewerText}>{pulse.body}</Text>}
+          {!pulse.body&&pulse.media_type==='image'&&!pulse.media_signed_url&&
+            <Text style={styles.pulseViewerText}>Pulse image is unavailable right now.</Text>}
+        </View>}
+      {reportOpen&&<View style={styles.pulseReportReasons}>
+        <Text style={styles.pulseViewerReportTitle}>Report Pulse</Text>
+        {PULSE_REPORT_REASONS.map(reason=><Pressable key={reason}
+          disabled={reportBusy} accessibilityRole="button"
+          onPress={()=>submitPulseReport(reason)} style={styles.pulseReportReason}>
+          <Text style={{color:'#fff'}}>{reason}</Text>
+        </Pressable>)}
+      </View>}
+      {!!error&&<Text accessibilityRole="alert" style={styles.pulseViewerError}>{error}</Text>}
+    </View>
+  </Modal>;
 }
 
 function SceneCard({scene,theme,onOpen,onProfile,onLike,onComments,onShare,onMore}){
@@ -363,7 +462,9 @@ const styles=StyleSheet.create({
   h2:{fontSize:16,fontWeight:'800'},
   link:{fontSize:10,fontWeight:'800'},
   live:{fontSize:9,fontWeight:'900',letterSpacing:1.2,marginBottom:3},
-  pulseRow:{gap:10,paddingTop:13},
+  pulseStrip:{paddingVertical:3},
+  pulseError:{fontSize:11,marginTop:5,paddingHorizontal:3},
+  pulseRow:{gap:12,paddingTop:5,paddingBottom:5},
   pulse:{width:58,alignItems:'center',gap:5},
   pulseRing:{width:52,height:52,borderRadius:26,borderWidth:2,padding:2,alignItems:'center',justifyContent:'center',overflow:'hidden'},
   pulseImage:{width:'100%',height:'100%',borderRadius:24},
@@ -386,6 +487,22 @@ const styles=StyleSheet.create({
   emptyButton:{marginTop:16,paddingHorizontal:18,paddingVertical:11,borderRadius:13},
   emptyButtonText:{color:'#fff',fontSize:11,fontWeight:'900'},
   feed:{gap:14},
+  pulseViewer:{flex:1,backgroundColor:'#08090d',justifyContent:'center'},
+  pulseViewerTop:{position:'absolute',top:57,left:14,right:13,flexDirection:'row',alignItems:'center',gap:10,zIndex:2},
+  pulseViewerCreator:{flex:1,flexDirection:'row',alignItems:'center',gap:9},
+  pulseViewerAvatar:{width:41,height:41,borderRadius:21,overflow:'hidden',backgroundColor:'#303036',alignItems:'center',justifyContent:'center'},
+  pulseViewerCreatorName:{color:'#fff',fontWeight:'800',fontSize:14},
+  pulseViewerTime:{color:'#aaa',fontSize:11,marginTop:3},
+  pulseViewerTopButton:{width:38,height:38,alignItems:'center',justifyContent:'center'},
+  pulseViewerBody:{flex:1,alignItems:'center',justifyContent:'center',paddingHorizontal:16,paddingTop:100,paddingBottom:85,gap:16},
+  pulseViewerMedia:{width:'100%',height:'70%'},
+  pulseViewerText:{color:'#fff',fontSize:19,lineHeight:28,textAlign:'center',paddingHorizontal:12},
+  pulseVideoButton:{minHeight:130,alignItems:'center',justifyContent:'center',gap:12},
+  pulseVideoCaption:{color:'#fff',fontWeight:'800',fontSize:14},
+  pulseReportReasons:{position:'absolute',left:15,right:15,bottom:75,padding:15,borderRadius:19,backgroundColor:'#25252c',gap:8,zIndex:4},
+  pulseViewerReportTitle:{fontSize:16,fontWeight:'800',color:'#fff',marginBottom:5},
+  pulseReportReason:{padding:11,borderRadius:9,backgroundColor:'#40404b'},
+  pulseViewerError:{position:'absolute',bottom:20,left:15,right:15,color:'#ffc8c8',textAlign:'center',fontSize:12},
   sceneCard:{borderWidth:1,borderRadius:20,overflow:'hidden'},
   sceneHead:{height:66,flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:13},
   creator:{flex:1,flexDirection:'row',alignItems:'center',gap:9},
