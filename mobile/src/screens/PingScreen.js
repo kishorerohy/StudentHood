@@ -302,12 +302,12 @@ export default function PingScreen({theme,profile,onBack,onOpenProfile,onOpenSce
           </View>
           <Feather name="chevron-right" size={21} color={theme.accent}/>
         </Pressable>
-        :<View style={{flex:1}}>
-          <Text style={[styles.eyebrow,{color:theme.accent}]}>STUDENTHOOD</Text>
-          <Text numberOfLines={1} style={[styles.heading,{color:theme.text}]}>
-            {mode==='list'?'Ping':mode==='compose'?'Compose Ping':mode==='settings'?'Ping settings':mode==='search'?'Search chat':mode==='history'?'Conversation history':selected?.other_name||'Conversation'}
-          </Text>
-        </View>}
+        :<View style={{flex:1}} accessibilityLabel={
+          mode==='list'?'Ping inbox':
+          mode==='compose'?'Compose Ping':
+          mode==='settings'?'Ping settings':
+          mode==='search'?'Search in conversation':'Conversation history'
+        }/>}
       {mode==='list'?<>
         <Pressable accessibilityRole="button" accessibilityLabel="Refresh Ping inbox"
           onPress={()=>refreshThreads(false)} style={[styles.iconButton,{backgroundColor:theme.surface}]}>
@@ -571,7 +571,7 @@ export default function PingScreen({theme,profile,onBack,onOpenProfile,onOpenSce
 
 const styles=StyleSheet.create({
   root:{flex:1},
-  header:{minHeight:72,borderBottomWidth:StyleSheet.hairlineWidth,paddingHorizontal:15,
+  header:{minHeight:58,borderBottomWidth:StyleSheet.hairlineWidth,paddingHorizontal:15,
     flexDirection:'row',alignItems:'center',gap:12},
   iconButton:{width:41,height:41,borderRadius:15,alignItems:'center',justifyContent:'center'},
   eyebrow:{fontSize:9,fontWeight:'800',letterSpacing:1.6},
