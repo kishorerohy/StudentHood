@@ -3,7 +3,7 @@ import {AppState,Platform} from 'react-native';
 import * as Notifications from 'expo-notifications';
 import {getDropsFeed,getPingMessages,getPingThreads} from './api';
 
-const SOUND='studenthood-notification.wav';
+const SOUND='studenthood_notification.wav';
 const PING_CHANNEL='studenthood-pings-v1';
 const DROPS_CHANNEL='studenthood-drops-v1';
 
