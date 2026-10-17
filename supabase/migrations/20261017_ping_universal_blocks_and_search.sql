@@ -67,68 +67,56 @@ REVOKE ALL ON FUNCTION public.studenthood_ping_set_block(uuid,boolean)
 FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.studenthood_ping_set_block(uuid,boolean) TO authenticated;
 
--- Keep legacy eligibility logic intact while adding one universal block gate
--- shared by all discovery/Scene/Peeps/Ping callers. Never expose _unblocked
--- functions to client roles.
-ALTER FUNCTION public.studenthood_are_peeps(uuid,uuid)
-  RENAME TO studenthood_are_peeps_unblocked;
-REVOKE ALL ON FUNCTION public.studenthood_are_peeps_unblocked(uuid,uuid)
-  FROM PUBLIC,anon,authenticated;
-CREATE FUNCTION public.studenthood_are_peeps(p_user_a uuid,p_user_b uuid)
+-- Replace eligibility checks IN PLACE. RLS policies and other functions may
+-- refer to their original function OIDs; renaming old implementations would
+-- silently bypass new block gates in those existing dependent policies.
+-- Replacing original functions preserves OID, grants and dependent bindings.
+CREATE OR REPLACE FUNCTION public.studenthood_are_peeps(p_user_a uuid,p_user_b uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path=public,pg_catalog AS $fn$
- SELECT NOT public.studenthood_interaction_blocked(p_user_a,p_user_b)
-        AND public.studenthood_are_peeps_unblocked(p_user_a,p_user_b);
+  SELECT NOT public.studenthood_interaction_blocked(p_user_a,p_user_b)
+    AND EXISTS(
+      SELECT 1 FROM public.peep_connections pc
+      WHERE pc.status='accepted' AND
+        ((pc.requester_id=p_user_a AND pc.addressee_id=p_user_b)
+         OR (pc.requester_id=p_user_b AND pc.addressee_id=p_user_a))
+    );
 $fn$;
-REVOKE ALL ON FUNCTION public.studenthood_are_peeps(uuid,uuid) FROM PUBLIC,anon;
-GRANT EXECUTE ON FUNCTION public.studenthood_are_peeps(uuid,uuid) TO authenticated;
 
-ALTER FUNCTION public.studenthood_can_discover_profile(uuid)
-  RENAME TO studenthood_can_discover_profile_unblocked;
-REVOKE ALL ON FUNCTION public.studenthood_can_discover_profile_unblocked(uuid)
-  FROM PUBLIC,anon,authenticated;
-CREATE FUNCTION public.studenthood_can_discover_profile(p_target_user uuid)
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path=public,pg_catalog AS $fn$
- SELECT auth.uid() IS NOT NULL
-   AND NOT public.studenthood_interaction_blocked(auth.uid(),p_target_user)
-   AND public.studenthood_can_discover_profile_unblocked(p_target_user);
-$fn$;
-REVOKE ALL ON FUNCTION public.studenthood_can_discover_profile(uuid) FROM PUBLIC,anon;
-GRANT EXECUTE ON FUNCTION public.studenthood_can_discover_profile(uuid) TO authenticated;
-
-ALTER FUNCTION public.studenthood_can_ping(uuid)
-  RENAME TO studenthood_can_ping_unblocked;
-REVOKE ALL ON FUNCTION public.studenthood_can_ping_unblocked(uuid)
-  FROM PUBLIC,anon,authenticated;
-CREATE FUNCTION public.studenthood_can_ping(p_target_user uuid)
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path=public,pg_catalog AS $fn$
- SELECT auth.uid() IS NOT NULL
-   AND NOT public.studenthood_interaction_blocked(auth.uid(),p_target_user)
-   AND public.studenthood_can_ping_unblocked(p_target_user);
-$fn$;
-REVOKE ALL ON FUNCTION public.studenthood_can_ping(uuid) FROM PUBLIC,anon;
-GRANT EXECUTE ON FUNCTION public.studenthood_can_ping(uuid) TO authenticated;
-
-ALTER FUNCTION public.studenthood_can_view_scene(uuid,text,text,text,text)
-  RENAME TO studenthood_can_view_scene_unblocked;
-REVOKE ALL ON FUNCTION public.studenthood_can_view_scene_unblocked(uuid,text,text,text,text)
-  FROM PUBLIC,anon,authenticated;
-CREATE FUNCTION public.studenthood_can_view_scene(
-  p_author_id uuid,p_campus_name text,p_visibility text,
-  p_content_class text,p_moderation_status text
-) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path=public,pg_catalog AS $fn$
- SELECT auth.uid() IS NOT NULL
-   AND NOT public.studenthood_interaction_blocked(auth.uid(),p_author_id)
-   AND public.studenthood_can_view_scene_unblocked(
-     p_author_id,p_campus_name,p_visibility,p_content_class,p_moderation_status);
-$fn$;
-REVOKE ALL ON FUNCTION public.studenthood_can_view_scene(uuid,text,text,text,text)
-  FROM PUBLIC,anon;
-GRANT EXECUTE ON FUNCTION public.studenthood_can_view_scene(uuid,text,text,text,text)
-  TO authenticated;
+-- Preserve ALL original age, consent, guardian, visibility and campus checks
+-- rather than rewriting their lengthy behavior. Inject a single early
+-- denial into the body of the EXISTING functions at migration time.
+DO $migration$
+DECLARE
+  name text;
+  definition text;
+  guarded text;
+  subject text;
+BEGIN
+  FOREACH name IN ARRAY ARRAY[
+    'studenthood_can_discover_profile','studenthood_can_ping',
+    'studenthood_can_view_scene'
+  ] LOOP
+    SELECT pg_get_functiondef(p.oid) INTO definition
+    FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+    WHERE n.nspname='public' AND p.proname=name;
+    IF definition IS NULL THEN RAISE EXCEPTION 'Missing eligibility function %',name; END IF;
+    subject:=CASE WHEN name='studenthood_can_view_scene'
+      THEN 'p_author_id' ELSE 'p_target_user' END;
+    IF position('studenthood_interaction_blocked' IN definition)>0 THEN
+      RAISE EXCEPTION 'Block gate already installed in %',name;
+    END IF;
+    guarded:=regexp_replace(definition,'([[:space:]]begin[[:space:]]+)',
+      E'\\1    IF public.studenthood_interaction_blocked(auth.uid(),'
+      ||subject||E') THEN RETURN false; END IF;\n',
+      'i');
+    IF guarded=definition THEN
+      RAISE EXCEPTION 'Cannot safely update existing eligibility function %',name;
+    END IF;
+    EXECUTE guarded;
+  END LOOP;
+END;
+$migration$;
 
 -- Existing Ping send RPC has a consent branch permitting active threads.
 -- A DB trigger is the final universal denial for EVERY message insertion,
