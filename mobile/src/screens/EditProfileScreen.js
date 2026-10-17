@@ -7,7 +7,7 @@ import * as Location from 'expo-location';
 import {findInstitutionsByCity,getAvatarDisplayUrl,saveMyProfileChanges,uploadMyAvatar,uploadMyCover} from '../api';
 import useKeyboardAwareForm from '../hooks/useKeyboardAwareForm';
 
-export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnly=false}){
+export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnly=false,coverOnly=false}){
   const [fullName,setFullName]=useState(profile?.full_name||'');
   const [bio,setBio]=useState(profile?.bio||'');
   const [city,setCity]=useState(profile?.city||'');
@@ -41,6 +41,7 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
   },[profile?.cover_url]);
 
   useEffect(()=>{if(photoOnly&&!newPhoto)choosePhoto()},[photoOnly]);
+  useEffect(()=>{if(coverOnly&&!newCover)chooseCover()},[coverOnly]);
 
   async function chooseCover(){
     setError('');
@@ -75,8 +76,10 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
   async function save(){
     if(busy)return;
     if(photoOnly&&!newPhoto){
-      setError('Choose a profile photo before saving.');
-      return;
+      setError('Choose a profile photo before saving.');return;
+    }
+    if(coverOnly&&!newCover){
+      setError('Choose a cover picture before saving.');return;
     }
     setBusy(true);
     setError('');
@@ -85,7 +88,7 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
     let coverSaved=false;
     try{
       // These calls verify the saved record before returning success.
-      if(!photoOnly){
+      if(!photoOnly&&!coverOnly){
         await saveMyProfileChanges({fullName,bio,city,campusName:campus});
         profileSaved=true;
       }
