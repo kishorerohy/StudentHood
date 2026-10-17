@@ -12,7 +12,7 @@ import CountryPicker,{CountryPickerPage} from '../components/CountryPicker';
 import SlidePage from '../components/SlidePage';
 import {localeRegion} from '../countries';
 import {
-  checkUsernameAvailability,completeProfile,findNearbyInstitutions,findInstitutionsByCity,searchInstitutionsByName,initializeSafetyProfile,
+  checkUsernameAvailability,completeProfile,findNearbyInstitutions,findInstitutionsByCity,initializeSafetyProfile,
   recordPlatformAgeSignal,recordPlatformAgeStatus
 } from '../api';
 import {platformAgeSignalsAvailable,requestPlatformAgeSignal} from '../ageAssurance';
@@ -72,17 +72,9 @@ export default function OnboardingScreen({theme}){
   const [selector,setSelector]=useState(null);
   const [selectorClosing,setSelectorClosing]=useState(false);
   const [campusQuery,setCampusQuery]=useState('');
-  const [campusMode,setCampusMode]=useState('nearby');
-  const [globalRows,setGlobalRows]=useState([]);
-  const [globalLoading,setGlobalLoading]=useState(false);
-  const [globalError,setGlobalError]=useState('');
-  const [globalPage,setGlobalPage]=useState(1);
-  const [globalHasMore,setGlobalHasMore]=useState(false);
-  const [globalSearched,setGlobalSearched]=useState(false);
   const usernameRequest=useRef(0);
   const locationAttempted=useRef(false);
   const institutionRequest=useRef(0);
-  const globalRequest=useRef(0);
   // Rounded GPS coordinates are used only when the auto-detected city still matches.
   const detectedCityLocation=useRef(null);
   const {scrollRef,onFieldFocus,onScrollLayout,onScroll,keyboardPadding}=useKeyboardAwareForm();
@@ -192,11 +184,6 @@ export default function OnboardingScreen({theme}){
   function openInstitutionPicker(){
     setSelector('campus');
     setCampusQuery('');
-    setCampusMode('nearby');
-    setGlobalRows([]);
-    setGlobalError('');
-    setGlobalSearched(false);
-    globalRequest.current++;
     if(city.trim().length>=2){
       loadCityInstitutions(city,detectedCityLocation.current?.country||country);
     }else if(currentCoords){
@@ -251,49 +238,6 @@ export default function OnboardingScreen({theme}){
       setLocationNote(e?.message||'Could not detect your location. You can retry.');
     }finally{
       setLocating(false);
-    }
-  }
-
-  function changeCampusMode(nextMode){
-    setCampusMode(nextMode);
-    setCampusQuery('');
-    setGlobalRows([]);
-    setGlobalError('');
-    setGlobalSearched(false);
-    setGlobalHasMore(false);
-    globalRequest.current++;
-  }
-
-  async function searchGlobalCampuses(nextPage=1){
-    const scope=campusMode;
-    const name=campusQuery.trim();
-    if(name.length<3){
-      setGlobalError('Enter at least 3 letters of the institution name.');
-      return;
-    }
-    const request=++globalRequest.current;
-    setGlobalLoading(true);
-    setGlobalError('');
-    setGlobalSearched(true);
-    try{
-      const result=await searchInstitutionsByName({
-        query:name,scope,countryCode:country,page:nextPage
-      });
-      if(request!==globalRequest.current)return;
-      setGlobalRows(existing=>{
-        if(nextPage===1)return result.institutions;
-        const seen=new Set(existing.map(item=>item.id));
-        return [...existing,...result.institutions.filter(item=>!seen.has(item.id))];
-      });
-      setGlobalPage(nextPage);
-      setGlobalHasMore(result.hasMore);
-    }catch(e){
-      if(request!==globalRequest.current)return;
-      if(nextPage===1)setGlobalRows([]);
-      setGlobalError(e?.message||'Global institution search is unavailable.');
-      if(nextPage===1)setGlobalHasMore(false);
-    }finally{
-      if(request===globalRequest.current)setGlobalLoading(false);
     }
   }
 
@@ -546,54 +490,50 @@ export default function OnboardingScreen({theme}){
             <View style={{width:42}}/>
           </View>
           <Text style={[styles.pickerCopy,{color:theme.muted}]}>
-            {campusMode==='nearby'
-              ?'Schools, colleges and universities near '+(city.trim()||'your city')+'. Global registry matches are included automatically where available.'
-              :'Search higher-education organizations by name '+(campusMode==='country'?'in your selected country':'worldwide')+'. School and individual campus coverage is incomplete.'}
+            Schools, colleges and universities around {city.trim()||'your detected city'}.
+            Worldwide registry records are matched to this location automatically.
           </Text>
           <View style={[styles.pickerSearch,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
             <Feather name="search" size={17} color={theme.muted}/>
-            <TextInput value={campusQuery}
-              onChangeText={value=>{setCampusQuery(value);if(campusMode!=='nearby'){setGlobalRows([]);setGlobalSearched(false);setGlobalError('');setGlobalHasMore(false);globalRequest.current++;}}}
-              placeholder={'Search institutions in your city'}
-              autoCapitalize="words"
+            <TextInput value={campusQuery} onChangeText={setCampusQuery}
+              accessibilityLabel="Filter local institutions"
+              placeholder="Search institutions in your city" autoCapitalize="words"
               placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text}]}/>
           </View>
-          {campusMode!=='nearby'&&<Pressable accessibilityRole="button" onPress={()=>searchGlobalCampuses(1)}
-            disabled={globalLoading} style={[styles.safetyButton,{backgroundColor:theme.accent,marginHorizontal:14}]}>
-            <Text style={styles.primaryText}>Search {campusMode==='country'?'country':'worldwide'}</Text>
-          </Pressable>}
-          {(campusMode==='nearby'?institutionLoading:globalLoading&&globalRows.length===0)?
-            <View style={styles.pickerLoading}><ActivityIndicator color={theme.accent}/><Text style={[styles.pickerCopy,{color:theme.muted}]}>Searching institutions...</Text></View>:
-            <ScrollView style={{flex:1}} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
-              showsVerticalScrollIndicator={false} contentContainerStyle={styles.pickerList}>
-              {(campusMode==='nearby'?filteredInstitutions:globalRows).map(item=><Pressable key={item.id}
-                onPress={()=>chooseInstitution(item)} style={[styles.institutionRow,{borderBottomColor:theme.line}]}>
-                <View style={[styles.institutionIcon,{backgroundColor:theme.accentSoft}]}><Feather name="book-open" size={17} color={theme.accent}/></View>
+          {institutionLoading?
+            <View style={styles.pickerLoading}>
+              <ActivityIndicator color={theme.accent}/>
+              <Text style={[styles.pickerCopy,{color:theme.muted}]}>Finding local institutions…</Text>
+            </View>:
+            <ScrollView style={{flex:1}} keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.pickerList}>
+              {filteredInstitutions.map(item=><Pressable key={item.id}
+                onPress={()=>chooseInstitution(item)} accessibilityRole="button"
+                accessibilityLabel={'Choose '+item.name}
+                style={[styles.institutionRow,{borderBottomColor:theme.line}]}>
+                <View style={[styles.institutionIcon,{backgroundColor:theme.accentSoft}]}>
+                  <Feather name="book-open" size={17} color={theme.accent}/>
+                </View>
                 <View style={{flex:1}}>
                   <Text style={[styles.institutionName,{color:theme.text}]}>{item.name}</Text>
-                  <Text style={[styles.institutionMeta,{color:theme.muted}]}>{String(item.type||'institution').replace(/^./,c=>c.toUpperCase())}{item.city?' · '+item.city:''}{item.country_code?' · '+item.country_code:''}{Number.isFinite(item.distance_m)?' · '+(item.distance_m/1000).toFixed(1)+' km':''}</Text>
+                  <Text style={[styles.institutionMeta,{color:theme.muted}]}>
+                    {String(item.type||'institution').replace(/^./,c=>c.toUpperCase())}
+                    {item.city?' · '+item.city:''}{item.country_code?' · '+item.country_code:''}
+                    {Number.isFinite(item.distance_m)?' · '+(item.distance_m/1000).toFixed(1)+' km':''}
+                  </Text>
                 </View>
                 {campus===item.name&&<Feather name="check" size={18} color={theme.accent}/>}
               </Pressable>)}
-              {campusMode==='nearby'&&!filteredInstitutions.length&&<View style={styles.pickerLoading}>
-                <Text style={[styles.pickerCopy,{color:theme.muted}]}>{institutionError||'No matching institutions in this city. Try a different spelling or refresh.'}</Text>
-                <Pressable onPress={()=>loadCityInstitutions(city,country)} style={[styles.safetyButton,{backgroundColor:theme.accent}]}>
+              {filteredInstitutions.length===0&&<View style={styles.pickerLoading}>
+                <Text style={[styles.pickerCopy,{color:theme.muted}]}>
+                  {institutionError||'No matching institutions in this city. Try a different spelling or retry.'}
+                </Text>
+                <Pressable onPress={()=>loadCityInstitutions(city,detectedCityLocation.current?.country||country)}
+                  accessibilityRole="button" style={[styles.safetyButton,{backgroundColor:theme.accent}]}>
                   <Text style={styles.primaryText}>Search city again</Text>
                 </Pressable>
               </View>}
-              {campusMode!=='nearby'&&globalRows.length===0&&<View style={styles.pickerLoading}>
-                <Text style={[styles.pickerCopy,{color:globalError?theme.danger:theme.muted}]}>
-                  {globalError||(globalSearched?'No matching registered higher-education organizations found.':'Enter an institution name and tap Search.')}
-                </Text>
-              </View>}
-              {campusMode!=='nearby'&&globalRows.length>0&&globalHasMore&&<Pressable
-                accessibilityRole="button" disabled={globalLoading}
-                onPress={()=>searchGlobalCampuses(globalPage+1)}
-                style={[styles.safetyButton,{backgroundColor:theme.accent}]}>
-                {globalLoading?<ActivityIndicator color="#fff"/>:<Text style={styles.primaryText}>More results</Text>}
-              </Pressable>}
-              {campusMode!=='nearby'&&!!globalError&&globalRows.length>0&&
-                <Text style={[styles.pickerCopy,{color:theme.danger}]}>{globalError}</Text>}
             </ScrollView>}
         </View>}
     </SlidePage>}
