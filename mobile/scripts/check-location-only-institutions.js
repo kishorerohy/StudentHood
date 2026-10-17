@@ -16,7 +16,7 @@ for(const [screen,name] of [[onboarding,'Onboarding'],[edit,'Edit Profile']]){
 }
 assert(!edit.includes('institutionMode'), 'Edit Profile must have no global scope modes');
 assert(edit.includes('Location.requestForegroundPermissionsAsync()'),
-  'Profile institution picker should detect the student's current location');
+  "Profile institution picker should detect the student's current location");
 assert(edit.includes('Location.reverseGeocodeAsync(coords)'),
   'Profile picker must resolve the real city and country of travel');
 assert(edit.includes('searchInstitutions(detectedCity,detectedCountry)'),
