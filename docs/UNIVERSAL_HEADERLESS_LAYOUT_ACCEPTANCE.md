@@ -20,3 +20,9 @@ Remove the prominent screen title and decorative redundant section headings from
 
 ## Non-goals
 No changes to user data, Supabase age/guardian rules, Scene moderation, privacy/RLS, account permissions, Ping messages, or published content. This is a universal client layout update.
+
+## Additional Crews-specific verification
+- The Crews landing page uses the same heading-free FeatureLandingScreen as Hangs/Gigs/Pulse; there is no Crews masthead or decorative 'A place for every Crew' empty-state headline. Explanatory empty-state copy remains.
+- The Create a Crew editor hides the top Create a Crew title and duplicated STUDENTHOOD · CREATE label. Required Crew name, category and description field labels remain visible, along with the Save/Create button and back action.
+- The shared creation menu has no generic Create heading but still includes the actionable Create a Crew option.
+- Universal CI asserts the heading-free Crews landing, empty state, editor and creation selector, along with preserved actions. No account-specific exceptions.
