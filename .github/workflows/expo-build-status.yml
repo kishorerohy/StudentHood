@@ -1,6 +1,6 @@
 name: StudentHood Expo APK Readout
 
-# Read-only status of the owner-approved submitted v0.1.9 EAS build; never queues another APK.
+# Read-only status of the owner-approved submitted v0.2.0 EAS build; never queues another APK.
 # This workflow never invokes "eas build" and cannot queue another APK.
 on:
   push:
@@ -42,12 +42,12 @@ jobs:
           node -e '
             const fs=require("fs");
             const all=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/studenthood-eas-status.json","utf8"));
-            const p=(Array.isArray(all)?all:(Array.isArray(all.builds)?all.builds:[])).find(b=>b.id==="d33d26bc-eec8-4306-adc5-8216f99a166c")||{};
+            const p=(Array.isArray(all)?all:(Array.isArray(all.builds)?all.builds:[])).find(b=>b.id==="3a360f32-132c-4b15-be73-ddd8bebb3e9a")||{};
             const status=String(p.status||"NOT_RETURNED_BY_EAS");
-            const url="https://expo.dev/accounts/studenthood-0920/projects/studenthood/builds/d33d26bc-eec8-4306-adc5-8216f99a166c";
+            const url="https://expo.dev/accounts/studenthood-0920/projects/studenthood/builds/3a360f32-132c-4b15-be73-ddd8bebb3e9a";
             const artifact=p.artifacts?.buildUrl||p.artifacts?.applicationArchiveUrl||p.artifacts?.androidBuildUrl||"";
             const lines=[
-              "# StudentHood v0.1.9 Android EAS build",
+              "# StudentHood v0.2.0 Android EAS build",
               "",
               "**Expo status:** "+status,
               "",
@@ -58,7 +58,7 @@ jobs:
               "Read-only build:list check; no new APK was requested."
             ];
             fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join("\n")+"\n");
-            console.log("Existing v0.1.9 EAS status: "+status);
+            console.log("Existing v0.2.0 EAS status: "+status);
             console.log("Expo build details: "+url);
             if(artifact)console.log("APK artifact available: "+artifact);
           '
