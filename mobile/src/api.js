@@ -24,6 +24,16 @@ export async function getMyPeepCount(){
 
 // Count only the target's Scenes visible to the signed-in viewer. Never
 // return an unrestricted creator total or bypass the Scene RLS policy.
+// Only authorized viewers can retrieve an aggregate accepted-Peeps count.
+// No connection roster, private requester info or private profile is exposed.
+export async function getVisiblePeepCount(userId){
+  const target=String(userId||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(target))return null;
+  const {data,error}=await supabase.rpc('studenthood_visible_peep_count',{p_target:target});
+  if(error)throw error;
+  return data===null||data===undefined?null:Number(data);
+}
+
 export async function getVisibleSceneCount(userId){
   if(!userId) return 0;
   const {count,error}=await supabase.from('scenes')
