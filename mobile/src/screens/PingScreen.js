@@ -4,6 +4,7 @@ import {
   Pressable,ScrollView,StyleSheet,Text,TextInput,View
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
+import CompactPageBar from '../components/CompactPageBar';
 import {
   decidePingRequest,getCampusPeeps,getPingMessages,getPingSceneInbox,
   getPingThreads,getSceneSharingPeeps,sendPingText,
@@ -284,11 +285,7 @@ export default function PingScreen({theme,profile,onBack,onOpenProfile,onOpenSce
 
   return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]}
     behavior={Platform.OS==='ios'?'padding':'height'}>
-    <View style={[styles.header,{borderBottomColor:theme.line}]}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Back"
-        onPress={back} style={[styles.iconButton,{backgroundColor:theme.surface}]}>
-        <Feather name="arrow-left" size={21} color={theme.text}/>
-      </Pressable>
+    <CompactPageBar theme={theme} onBack={back} backLabel="Back">
       {mode==='thread'&&selected?
         <Pressable onPress={openSettings} accessibilityRole="button"
           accessibilityLabel={'Open Ping settings for '+(selected.other_name||selected.other_username||'student')}
@@ -301,14 +298,13 @@ export default function PingScreen({theme,profile,onBack,onOpenProfile,onOpenSce
             {!!selected.other_username&&<Text style={{fontSize:11,color:theme.muted}}>@{selected.other_username}</Text>}
           </View>
           <Feather name="chevron-right" size={21} color={theme.accent}/>
-        </Pressable>
-        :<View style={{flex:1}}>
-          <Text style={[styles.eyebrow,{color:theme.accent}]}>STUDENTHOOD</Text>
-          <Text numberOfLines={1} style={[styles.heading,{color:theme.text}]}>
-            {mode==='list'?'Ping':mode==='compose'?'Compose Ping':mode==='settings'?'Ping settings':mode==='search'?'Search chat':mode==='history'?'Conversation history':selected?.other_name||'Conversation'}
-          </Text>
-        </View>}
-      {mode==='list'?<>
+        </Pressable>:
+        <View accessible accessibilityLabel={
+          mode==='list'?'Ping inbox':mode==='compose'?'Compose Ping':
+          mode==='settings'?'Ping settings':mode==='search'?'Search chat':
+          mode==='history'?'Conversation history':'Ping'
+        } style={{flex:1}}/>}
+      {mode==='list'&&<>
         <Pressable accessibilityRole="button" accessibilityLabel="Refresh Ping inbox"
           onPress={()=>refreshThreads(false)} style={[styles.iconButton,{backgroundColor:theme.surface}]}>
           <Feather name="refresh-cw" size={20} color={theme.text}/>
@@ -317,14 +313,13 @@ export default function PingScreen({theme,profile,onBack,onOpenProfile,onOpenSce
           onPress={showComposer} style={[styles.iconButton,{backgroundColor:theme.accentSoft}]}>
           <Feather name="edit-3" size={21} color={theme.accent}/>
         </Pressable>
-      </>:null}
-    </View>
+      </>}
+    </CompactPageBar>
 
     {!!error&&<Text accessibilityRole="alert" style={[styles.feedback,{color:theme.danger}]}>{error}</Text>}
     {!!notice&&<Text accessibilityRole="alert" style={[styles.feedback,{color:theme.accent}]}>{notice}</Text>}
 
     {mode==='list'&&<>
-      <Text style={[styles.helper,{color:theme.muted}]}>Conversations and private message requests.</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.tabs} keyboardShouldPersistTaps="handled">
         {TABS.map(name=><Pressable key={name} accessibilityRole="button"
