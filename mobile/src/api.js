@@ -26,6 +26,17 @@ export async function getMyPeepCount(){
 // return an unrestricted creator total or bypass the Scene RLS policy.
 // Only authorized viewers can retrieve an aggregate accepted-Peeps count.
 // No connection roster, private requester info or private profile is exposed.
+// Explicit, owner-controlled re-share of ONE old campus Scene.
+// Never silently expand the audience when a student updates institution.
+export async function shareOwnSceneWithCurrentCampus(sceneId){
+  const id=String(sceneId||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id))throw new Error('Invalid Scene.');
+  const {data,error}=await supabase.rpc('studenthood_move_my_scene_to_current_campus',{p_scene_id:id});
+  if(error)throw error;
+  if(data!==true)throw new Error('Could not confirm updated Scene audience.');
+  return true;
+}
+
 export async function getVisiblePeepCount(userId){
   const target=String(userId||'').trim();
   if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(target))return null;
@@ -541,7 +552,7 @@ export async function getIncomingPeepRequests({limit=25}={}){
 export async function getVisibleProfileScenes(targetUserId,{limit=12}={}){
   const target=String(targetUserId||'').trim();
   const {data,error}=await supabase.from('scenes')
-    .select('id,body,media_url,media_type,created_at')
+    .select('id,body,media_url,media_type,visibility,campus_name,created_at')
     .eq('author_id',target)
     .neq('moderation_status','removed')
     .order('created_at',{ascending:false})
