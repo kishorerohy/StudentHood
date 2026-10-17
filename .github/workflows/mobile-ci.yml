@@ -59,6 +59,9 @@ jobs:
       - name: Verify Hang date/time button labels
         run: node scripts/check-hang-date-time-buttons.js
 
+      - name: Verify location-only institution picker and global data preservation
+        run: node scripts/check-location-only-institutions.js
+
       - name: Expo Doctor
         run: npx expo-doctor@latest
 
