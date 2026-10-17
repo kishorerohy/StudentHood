@@ -365,6 +365,21 @@ export async function getPingSceneInbox({limit=50}={}){
   })));
 }
 
+// Reports on Pulses go to authorized moderators; the report doesn't
+// automatically remove another student's creation.
+export async function reportPulse(pulseId,reason){
+  const id=String(pulseId||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id))throw new Error('Invalid Pulse.');
+  if(!['Inappropriate content','Harassment or bullying','Spam or scam','Other safety concern'].includes(reason))
+    throw new Error('Select a report reason.');
+  const {data,error}=await supabase.rpc('studenthood_report_content',{
+    p_kind:'pulse',p_content_id:id,p_reason:reason
+  });
+  if(error)throw error;
+  if(data!==true)throw new Error('Pulse report could not be confirmed.');
+  return true;
+}
+
 // Scenes Pulse strip: real unexpired posts by accepted mutual Peeps only.
 // The RPC checks account safety, per-Pulse audience and universal blocks.
 // The Pulse media bucket remains private; no generic public media links.
