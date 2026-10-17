@@ -38,7 +38,8 @@ export async function getVisibleSceneCount(userId){
   if(!userId) return 0;
   const {count,error}=await supabase.from('scenes')
     .select('id',{count:'exact',head:true})
-    .eq('author_id',userId);
+    .eq('author_id',userId)
+    .neq('moderation_status','removed');
   if(error) throw error;
   return Number(count)||0;
 }
@@ -542,6 +543,7 @@ export async function getVisibleProfileScenes(targetUserId,{limit=12}={}){
   const {data,error}=await supabase.from('scenes')
     .select('id,body,media_url,media_type,created_at')
     .eq('author_id',target)
+    .neq('moderation_status','removed')
     .order('created_at',{ascending:false})
     .limit(Math.min(18,Math.max(1,Number(limit)||12)));
   if(error) throw error;
