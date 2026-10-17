@@ -5,12 +5,14 @@ on:
     branches: [main, 'feat/**']
     paths:
       - 'mobile/**'
+      - 'supabase/migrations/**'
       - 'assets/**'
       - '.github/workflows/mobile-ci.yml'
   push:
     branches: [main, 'feat/**']
     paths:
       - 'mobile/**'
+      - 'supabase/migrations/**'
       - 'assets/**'
       - '.github/workflows/mobile-ci.yml'
   workflow_dispatch:
@@ -79,6 +81,9 @@ jobs:
 
       - name: Verify Campus Partner Hub verification and sponsored safeguards
         run: node scripts/check-partner-hub.js
+
+      - name: Verify adult canonical cross-campus projects
+        run: node scripts/check-cross-campus-collaborations.js
 
       - name: Expo Doctor
         run: npx expo-doctor@latest

@@ -110,6 +110,8 @@ as $function$
 declare me uuid:=auth.uid();e public.studenthood_passport_entries%rowtype;
 begin
  if me is null then raise exception 'Authentication required';end if;
+ if not exists(select 1 from public.studenthood_experience_flags where feature_key='passport' and enabled)
+   then raise exception 'Passport disabled';end if;
  select * into e from public.studenthood_passport_entries where id=p_entry_id for update;
  if e.id is null then raise exception 'Passport entry unavailable';end if;
  if p_action in ('show','hide') and me=e.owner_id then
@@ -137,6 +139,8 @@ as $function$
 declare me uuid:=auth.uid();records jsonb;
 begin
  if me is null then raise exception 'Authentication required';end if;
+ if not exists(select 1 from public.studenthood_experience_flags where feature_key='passport' and enabled)
+   then return '[]'::jsonb;end if;
  if p_owner<>me and (
   not public.studenthood_can_discover_profile(p_owner) or
   public.studenthood_interaction_blocked(me,p_owner))
@@ -162,6 +166,8 @@ declare me uuid:=auth.uid();raw_token text;
 begin
  if me is null or p_hours not between 1 and 168
    then raise exception 'Invalid share request';end if;
+ if not exists(select 1 from public.studenthood_experience_flags where feature_key='passport' and enabled)
+   then raise exception 'Passport disabled';end if;
  if not coalesce((public.studenthood_access_policy()->>'app_access')::boolean,false)
    or coalesce((public.studenthood_access_policy()->>'conservative_age')::integer,0)<18
    or not coalesce((public.studenthood_access_policy()->>'adult_access_verified')::boolean,false)
@@ -184,7 +190,39 @@ set search_path to pg_catalog,public,extensions
 as $function$
 declare me uuid:=auth.uid();record jsonb;
 begin
- if me is null or p_token !~ '^[0-9a-f]{48}$' then raise exception 'Invalid share';end if;
+ if me is null or p_token !~ '^[0-9a-f]{48}
+ if not coalesce((public.studenthood_access_policy()->>'app_access')::boolean,false)
+   or coalesce((public.studenthood_access_policy()->>'conservative_age')::integer,0)<18
+ then raise exception 'Share unavailable';end if;
+ select jsonb_build_object('title',e.title,'entry_type',e.entry_type,'assurance',e.assurance,
+   'issued_at',e.issued_at,'status',e.status) into record
+ from public.studenthood_passport_share_grants g
+ join public.studenthood_passport_entries e on e.id=g.entry_id
+ where g.token_hash=encode(extensions.digest(p_token,'sha256'),'hex')
+   and g.revoked_at is null and g.expires_at>now()
+   and e.status='active' and not public.studenthood_interaction_blocked(me,e.owner_id);
+ return coalesce(record,'{}'::jsonb);
+end;
+$function$;
+revoke all on function public.studenthood_passport_read_share(text) from public,anon;
+grant execute on function public.studenthood_passport_read_share(text) to authenticated;
+
+create or replace function public.studenthood_passport_revoke_share(p_share_id uuid)
+returns boolean language plpgsql security definer
+set search_path to pg_catalog,public
+as $function$
+begin
+ if auth.uid() is null then raise exception 'Authentication required';end if;
+ update public.studenthood_passport_share_grants set revoked_at=now()
+  where id=p_share_id and owner_id=auth.uid() and revoked_at is null;
+ return found;
+end;
+$function$;
+revoke all on function public.studenthood_passport_revoke_share(uuid) from public,anon;
+grant execute on function public.studenthood_passport_revoke_share(uuid) to authenticated;
+ then raise exception 'Invalid share';end if;
+ if not exists(select 1 from public.studenthood_experience_flags where feature_key='passport' and enabled)
+   then return '{}'::jsonb;end if;
  if not coalesce((public.studenthood_access_policy()->>'app_access')::boolean,false)
    or coalesce((public.studenthood_access_policy()->>'conservative_age')::integer,0)<18
  then raise exception 'Share unavailable';end if;

@@ -16,16 +16,10 @@ export const EXPERIENCE_LABELS=Object.freeze({
 // Client flags only control presentation. Every sensitive action must be
 // authorised again in Postgres, not by this module or a user-supplied flag.
 export async function getExperienceFlags(){
- const {data,error}=await supabase.from('studenthood_experience_flags')
-   .select('feature_key,enabled,min_age,allowed_campus_keys');
+ const {data,error}=await supabase.rpc('studenthood_experience_my_flags');
  if(error)throw new Error('StudentHood experiences are not available yet.');
  const flags={};
- for(const name of EXPERIENCE_KEYS)flags[name]=false;
- for(const item of data||[]) {
-   if(EXPERIENCE_KEYS.includes(item.feature_key)){
-     flags[item.feature_key]=item.enabled===true;
-   }
- }
+ for(const name of EXPERIENCE_KEYS)flags[name]=data?.[name]===true;
  return flags;
 }
 
