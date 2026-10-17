@@ -142,3 +142,21 @@ export async function getMyStudentSubmissions(kind,{limit=20}={}){
   if(error)throw error;
   return data||[];
 }
+
+
+// Browse other students' live Hangs/Gigs, never the owner's submission queue.
+// Existing SELECT RLS enforces campus, age, block and moderation eligibility.
+export async function getVisibleCampusCreations(kind,{limit=40}={}){
+  if(kind!=='Hangs'&&kind!=='Gigs')return [];
+  const {data:{user},error:authError}=await supabase.auth.getUser();
+  if(authError)throw authError;
+  if(!user)return [];
+  const {data,error}=await supabase.from(TYPES[kind].table)
+    .select('*')
+    .eq('moderation_status','approved')
+    .neq('creator_id',user.id)
+    .order('created_at',{ascending:false})
+    .limit(Math.min(Math.max(Number(limit)||40,1),60));
+  if(error)throw error;
+  return data||[];
+}
