@@ -77,7 +77,7 @@ jobs:
                   for(const decode of ['brotliDecompressSync','gunzipSync']){
                     try{decoded=zlib[decode](buffer).toString('utf8');break;}catch{}
                   }
-                  const lines=decoded.split(/\\r?\\n/);
+                  const lines=decoded.split(/\r?\n/);
                   const errors=lines.map((value,i)=>({value,i})).filter(o=>
                     /error|failed|prebuild|plugin|expo-notifications|config|exception|cannot find|could not/i.test(o.value));
                   const relevant=errors.slice(-22).map(o=>o.value)
