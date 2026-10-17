@@ -1,7 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {ActivityIndicator,Modal,Pressable,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
-import {getAvatarDisplayUrl,getPeepConnection,getProfileCard,getVisibleProfileScenes,getVisibleSceneCount,sendPeepRequest,respondToPeepRequest} from '../api';
+import {getAvatarDisplayUrl,getPeepConnection,getProfileCard,getVisibleProfileScenes,getVisibleSceneCount,getVisiblePeepCount,sendPeepRequest,respondToPeepRequest} from '../api';
 import StudentProfileView from '../components/StudentProfileView';
 import {supabase} from '../supabase';
 
@@ -17,6 +17,8 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
   const [requestBusy,setRequestBusy]=useState(false);
   const [scenes,setScenes]=useState([]);
   const [sceneCount,setSceneCount]=useState(null);
+  const [peepCount,setPeepCount]=useState(null);
+  const [reloadKey,setReloadKey]=useState(0);
   const [profileOptionsOpen,setProfileOptionsOpen]=useState(false);
   const [reportBusy,setReportBusy]=useState(false);
   const [reportNotice,setReportNotice]=useState('');
@@ -33,6 +35,7 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
     setPeepNotice('');
     setScenes([]);
     setSceneCount(null);
+    setPeepCount(null);
 
     (async()=>{
       try{
@@ -40,12 +43,13 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
         if(!live)return;
         setCard(result);
         if(!result)return;
-        const [photo,relationship,recent,count,cover]=await Promise.allSettled([
+        const [photo,relationship,recent,count,cover,peeps]=await Promise.allSettled([
           getAvatarDisplayUrl(result.avatar_url),
           getPeepConnection(userId),
           getVisibleProfileScenes(userId,{limit:12}),
           getVisibleSceneCount(userId),
-          getAvatarDisplayUrl(result.cover_url)
+          getAvatarDisplayUrl(result.cover_url),
+          getVisiblePeepCount(userId)
         ]);
         if(!live)return;
         if(photo.status==='fulfilled')setAvatar(photo.value);
@@ -58,6 +62,7 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
         }
         if(recent.status==='fulfilled')setScenes(recent.value);
         if(count.status==='fulfilled')setSceneCount(count.value);
+        if(peeps.status==='fulfilled')setPeepCount(peeps.value);
       }catch(e){
         if(live)setError(e?.message||'Unable to load this student profile.');
       }finally{
@@ -65,7 +70,7 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
       }
     })();
     return()=>{live=false};
-  },[userId]);
+  },[userId,reloadKey]);
 
   const isPeep=!!card?.is_peep||connection?.status==='accepted';
   const outgoing=connection?.status==='pending'&&connection?.requester_id!==userId;
@@ -134,6 +139,9 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
     avatarUrl={avatar}
     scenes={scenes}
     sceneCount={sceneCount}
+    peepCount={peepCount}
+    onRefresh={()=>setReloadKey(value=>value+1)}
+    refreshing={loading}
     onBack={onBack}
     actions={<View style={styles.actionArea}>
       <View style={styles.actions}>
