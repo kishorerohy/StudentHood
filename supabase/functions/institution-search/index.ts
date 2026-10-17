@@ -422,7 +422,11 @@ Deno.serve(async(req:Request)=>{
       // additions are always considered rather than requiring a cache reset.
       const resolvedCity=alias?.metro||city;
       const verifiedCatalog=await catalogCityRecords(resolvedCity,countryCode,client);
-      if(cached?.response&&age<CACHE_MS)return json({
+      // An old cached one-provider result must not suppress the new merged
+      // city directory. Refresh it once, while keeping stale-cache fallback
+      // if map/registry providers are temporarily unavailable.
+      const mergedCache=cached?.response?.source==="mapped-and-registered-city-directory";
+      if(mergedCache&&age<CACHE_MS)return json({
         ...cached.response,
         institutions:combineCityResponse(cached.response.institutions,verifiedCatalog,countryCode),
         source:"cached-location-directory"
