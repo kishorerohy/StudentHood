@@ -120,7 +120,7 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
     <ScrollView
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={()=>{load(filter,{refresh:true});loadPulse()}} tintColor={theme.accent}/>} }
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={()=>{load(filter,{refresh:true});loadPulse()}} tintColor={theme.accent}/>}
     >
       <View style={styles.intro}>
         <View>
