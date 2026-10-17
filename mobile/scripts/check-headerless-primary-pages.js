@@ -14,8 +14,6 @@ const createFeature=read('src/screens/CreateFeatureScreen.js');
 const createOptions=read('src/screens/CreateOptionsScreen.js');
 const profile=read('src/components/StudentProfileView.js');
 const discover=read('src/components/DiscoverPeoplePanel.js');
-const createFeature=read('src/screens/CreateFeatureScreen.js');
-const createOptions=read('src/screens/CreateOptionsScreen.js');
 
 const absent=(source,fragment,context)=>{
   assert(!source.includes(fragment),context+' has a redundant heading: '+fragment);
@@ -76,11 +74,6 @@ for(const [source,need,context] of [
   [hub,'accessibilityLabel="Refresh campus people and profile photos"','Discover refresh'],
   [hub,'accessibilityLabel="Accept Peep request"','Peep request actions'],
   [features,'accessibilityLabel="Back to StudentHood"','Hangs/Gigs back action'],
-  [createFeature,'accessibilityLabel="Back to Create"','Create Crew back navigation'],
-  [createFeature,'label="Crew name"','Create Crew name field'],
-  [createFeature,'label="Crew category"','Create Crew category field'],
-  [createFeature,'label="About your Crew"','Create Crew description field'],
-  [createOptions,"name:'Create a Crew'",'Create Crew action in selector'],
   [features,'{config.filters.map','Hangs/Gigs filters'],
   [features,'accessibilityLabel={config.action}','creation entry point'],
   [features,"Crews:{",'Crew landing config'],
