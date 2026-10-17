@@ -1,4 +1,4 @@
-import React,{useMemo,useState} from 'react';
+import React,{useEffect,useMemo,useState} from 'react';
 import {
   ActivityIndicator,Image,Keyboard,KeyboardAvoidingView,Platform,Pressable,ScrollView,
   StyleSheet,Text,TextInput,View
@@ -8,6 +8,8 @@ import * as ImagePicker from 'expo-image-picker';
 import {Feather} from '@expo/vector-icons';
 import {submitStudentCreation} from '../creation';
 import useKeyboardAwareForm from '../hooks/useKeyboardAwareForm';
+import {getExperienceFlags} from '../experiences';
+import {getMyEmployerOrganizations} from '../gigsPlus';
 
 const SETTINGS={
   Pulse:{heading:'Add to Pulse',subheading:'A quick moment with your campus circle.',cta:'Share Pulse'},
@@ -28,7 +30,7 @@ function nextHour(){
 export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved}){
   const config=SETTINGS[kind]||SETTINGS.Hangs;
   const [values,setValues]=useState({
-    title:'',name:'',body:'',description:'',employerName:'',
+    title:'',name:'',body:'',description:'',employerName:'',employerOrgId:'',
     category:OPTIONS[kind]?.[0]||'',
     visibility:kind==='Pulse'?'peeps':'campus',
     locationHint:'',capacity:'',payAmount:'',payCurrency:'',payUnit:'hour',
@@ -39,6 +41,15 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
   const [dateChosen,setDateChosen]=useState(false);
   const [timeChosen,setTimeChosen]=useState(false);
   const [media,setMedia]=useState(null);
+  const [verifiedEmployers,setVerifiedEmployers]=useState([]);
+  useEffect(()=>{
+    if(kind!=='Gigs')return;
+    let active=true;
+    getExperienceFlags().then(flags=>flags.gigs_plus?getMyEmployerOrganizations():[])
+      .then(rows=>{if(active)setVerifiedEmployers(rows.filter(x=>x.verification_status==='verified'))})
+      .catch(()=>{});
+    return()=>{active=false};
+  },[kind]);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
   const {scrollRef,onFieldFocus,onScrollLayout,onScroll,keyboardPadding}=useKeyboardAwareForm();
@@ -54,7 +65,7 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
     :'Choose time';
   const sections=OPTIONS[kind]||[];
   const info=kind==='Gigs'
-    ?'Gigs appear immediately to eligible adults. Employers are not automatically verified; payments and applications are not yet available.'
+    ?'Gigs appear immediately to eligible adults. Only genuinely verified employers can receive private Gigs Plus applications. StudentHood does not guarantee payments.'
     :kind==='Crews'?'Your Crew is created immediately for the chosen audience.'
     :kind==='Pulse'?'Your Pulse appears immediately to its selected audience.'
     :'Your Hang appears immediately to eligible students; RSVPs are not yet available.';
@@ -184,6 +195,10 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
 
         {kind==='Gigs'&&<>
           <View style={[styles.note,{borderColor:theme.line,backgroundColor:theme.surface2}]}><Feather name="shield" color={theme.accent} size={17}/><Text style={[styles.info,{color:theme.muted,flex:1}]}>Only eligible adults can publish Gigs. Employers are not automatically verified. Report misleading or unsafe opportunities.</Text></View>
+          {verifiedEmployers.length>0&&<Choices theme={theme} label="Verified employer affiliation (optional)"
+            options={[["","Ordinary student Gig"],...verifiedEmployers.map(org=>[org.id,org.legal_name])]}
+            value={values.employerOrgId} onChange={value=>setValues(old=>({...old,employerOrgId:value,
+              employerName:verifiedEmployers.find(x=>x.id===value)?.legal_name||old.employerName}))}/>}
           <Field theme={theme} onFocus={onFieldFocus} label="Role / Gig title" value={values.title} onChangeText={text=>set('title',text)} maxLength={100} placeholder="Weekend research assistant"/>
           <Field theme={theme} onFocus={onFieldFocus} label="Employer or organisation" value={values.employerName} onChangeText={text=>set('employerName',text)} maxLength={120} placeholder="Official business name"/>
           <Choices theme={theme} label="Opportunity type" options={sections.map(x=>[x,x])} value={values.category} onChange={v=>set('category',v)}/>
