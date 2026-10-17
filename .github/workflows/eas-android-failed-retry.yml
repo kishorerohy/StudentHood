@@ -1,0 +1,167 @@
+name: StudentHood One-Time Corrected Android APK Retry
+
+# The owner explicitly requested a second submission after the 18 Oct 2026
+# first v0.2.0 build failed. This is a ONE-OFF override of the daily cap,
+# only for the confirmed expo-notifications resource-name prebuild error.
+# No schedule or workflow_dispatch trigger: creating this file runs ONCE.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/eas-android-failed-retry.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: studenthood-eas-android-preview
+  cancel-in-progress: false
+
+jobs:
+  corrected-build:
+    name: Build fixed v0.2.0 APK and upload completed installer
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Confirm release version, fixed WAV, and foreground notification contract
+        run: |
+          node scripts/check-live-campus-feeds.js
+          node - <<'NODE'
+          const a=require('./app.json').expo;
+          const fs=require('node:fs');
+          if(a.version!=='0.2.0'||a.android.versionCode!==11)
+            throw new Error('Unexpected release version for single authorized retry');
+          if(!fs.existsSync('assets/studenthood_notification.wav')
+             ||fs.existsSync('assets/studenthood-notification.wav'))
+            throw new Error('Original invalid native WAV path still present');
+          console.log('Confirmed v0.2.0 versionCode 11 and Android-safe notification sound');
+          NODE
+
+      - name: Confirm original Expo build failed, not finished
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          node - <<'NODE'
+          const token=process.env.EXPO_TOKEN;
+          if(!token)throw new Error('Missing Expo token');
+          const query='query BuildById($id: ID!){builds{byId(buildId:$id){id status appVersion appBuildVersion error{errorCode buildPhase message}}}}';
+          (async()=>{
+            const r=await fetch('https://api.expo.dev/graphql',{
+              method:'POST',
+              headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+              body:JSON.stringify({query,variables:{id:'3a360f32-132c-4b15-be73-ddd8bebb3e9a'}}),
+              signal:AbortSignal.timeout(20000)
+            });
+            if(!r.ok)throw Error('Expo build query failed HTTP '+r.status);
+            const json=await r.json();
+            if(json.errors?.length)throw Error(JSON.stringify(json.errors));
+            const b=json.data?.builds?.byId;
+            if(b?.status!=='ERRORED'||b?.appVersion!=='0.2.0'
+              ||b?.appBuildVersion!=='11'||b?.error?.buildPhase!=='PREBUILD')
+              throw Error('Original build not confirmed failed in expected Android prebuild phase');
+            console.log('Verified prior build errored at PREBUILD; one owner-requested corrected retry authorized');
+          })().catch(e=>{console.error(e.message);process.exitCode=1});
+          NODE
+
+      - name: Configure protected Expo EAS session
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: npm
+
+      - name: Install application dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Submit ONE corrected signed Android APK
+        id: submit
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          eas build --platform android --profile preview --non-interactive --no-wait --json > "$RUNNER_TEMP/studenthood-retry-build.json"
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const v=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/studenthood-retry-build.json','utf8'));
+          const b=Array.isArray(v)?v[0]:(v.build||v);
+          const id=String(b?.id||'');
+          if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id))
+            throw Error('Expo submitted but did not return a valid new build ID. Inspect this job log.');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'build_id='+id+'\n');
+          console.log('Corrected Expo Android build ID: '+id);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+            '# StudentHood v0.2.0 corrected Android APK\n\nExpo build ID: '+id+
+            '\n\nhttps://expo.dev/accounts/studenthood-0920/projects/studenthood/builds/'+id+'\n');
+          NODE
+
+      - name: Wait for this exact Expo build and download signed APK
+        id: artifact
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          BUILD_ID: ${{ steps.submit.outputs.build_id }}
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const {pipeline}=require('node:stream/promises');
+          const {Readable}=require('node:stream');
+          const id=process.env.BUILD_ID,token=process.env.EXPO_TOKEN;
+          if(!id)throw Error('Missing submitted build ID');
+          const query='query BuildById($id: ID!){builds{byId(buildId:$id){id status platform appVersion appBuildVersion error{errorCode message buildPhase} artifacts{buildUrl applicationArchiveUrl}}}}';
+          const snooze=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+          (async()=>{
+            let b;
+            for(let tries=1;tries<=120;tries++){
+              const response=await fetch('https://api.expo.dev/graphql',{
+                method:'POST',
+                headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+                body:JSON.stringify({query,variables:{id}}),
+                signal:AbortSignal.timeout(20000)
+              });
+              if(!response.ok)throw Error('Expo build query HTTP '+response.status);
+              const x=await response.json();
+              if(x.errors?.length)throw Error('Expo build query '+JSON.stringify(x.errors));
+              b=x.data?.builds?.byId;
+              if(!b)throw Error('Submitted build not found');
+              if(tries===1||tries%8===0||['FINISHED','ERRORED','CANCELED'].includes(b.status))
+                console.log('Existing Expo build '+id+': '+b.status);
+              if(['FINISHED','ERRORED','CANCELED'].includes(b.status))break;
+              if(tries<120)await snooze(15000);
+            }
+            if(b?.status!=='FINISHED')
+              throw Error('Expo Android did not finish successfully: '+b?.status+' '+JSON.stringify(b?.error||{}));
+            if(b.platform!=='ANDROID'||b.appVersion!=='0.2.0'||b.appBuildVersion!=='11')
+              throw Error('Finished artifact version or platform differs from the approved release');
+            const url=b.artifacts?.applicationArchiveUrl||b.artifacts?.buildUrl;
+            if(!url||!url.startsWith('https://'))throw Error('Finished EAS APK URL missing');
+            const resp=await fetch(url,{redirect:'follow',signal:AbortSignal.timeout(240000)});
+            if(!resp.ok||!resp.body)throw Error('Signed APK download HTTP '+resp.status);
+            const output='StudentHood-v0.2.0-11.apk';
+            await pipeline(Readable.fromWeb(resp.body),fs.createWriteStream(output));
+            const size=fs.statSync(output).size;
+            const h=Buffer.alloc(4),f=fs.openSync(output,'r');fs.readSync(f,h,0,4,0);fs.closeSync(f);
+            if(size<1000000||h[0]!==0x50||h[1]!==0x4b)
+              throw Error('Downloaded artifact is not a complete Android APK');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,'apk_ready=true\n');
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+              '\n**Expo status:** FINISHED\n\n**APK filename:** '+output+
+              '\n\n**APK size:** '+size+' bytes\n\n**Expo artifact:** '+url+'\n');
+            console.log('VERIFIED APK '+output+', '+size+' bytes');
+          })().catch(e=>{console.error(e.message);process.exitCode=1});
+          NODE
+
+      - name: Publish actual built Android APK
+        if: steps.artifact.outputs.apk_ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: StudentHood-v0.2.0-11-APK
+          path: mobile/StudentHood-v0.2.0-11.apk
+          retention-days: 14
+          if-no-files-found: error
