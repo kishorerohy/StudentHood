@@ -56,7 +56,7 @@ for(const [source,need,context] of [
   [hub,'accessibilityLabel="Back to StudentHood"','Discover/Drops back action'],
   [hub,'accessibilityLabel="Refresh campus people and profile photos"','Discover refresh'],
   [hub,'accessibilityLabel="Accept Peep request"','Peep request actions'],
-  [features,'accessibilityLabel="Back"','Hangs/Gigs back action'],
+  [features,'accessibilityLabel="Back to StudentHood"','Hangs/Gigs back action'],
   [features,'{config.filters.map','Hangs/Gigs filters'],
   [features,'accessibilityLabel={config.action}','creation entry point'],
   [profile,'style={[styles.name,{color:theme.text}]}>{title}</Text>','student name'],
