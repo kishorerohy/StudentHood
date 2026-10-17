@@ -5,12 +5,14 @@ on:
     branches: [main, 'feat/**']
     paths:
       - 'mobile/**'
+      - 'supabase/migrations/**'
       - 'assets/**'
       - '.github/workflows/mobile-ci.yml'
   push:
     branches: [main, 'feat/**']
     paths:
       - 'mobile/**'
+      - 'supabase/migrations/**'
       - 'assets/**'
       - '.github/workflows/mobile-ci.yml'
   workflow_dispatch:
