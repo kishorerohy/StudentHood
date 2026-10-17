@@ -60,7 +60,10 @@ jobs:
             }
             summary('**Expo status:** '+record.status);
             if(record.status==='ERRORED'||record.status==='CANCELED'){
-              summary('**Expo error:** '+JSON.stringify(record.error||{}));
+              const details=JSON.stringify(record.error||{});
+              console.error('EXPO BUILD FAILED:',details);
+              summary('**Expo error:** '+details);
+              process.exitCode=1;
               return;
             }
             if(record.status!=='FINISHED'){
