@@ -324,14 +324,23 @@ CREATE OR REPLACE FUNCTION public.studenthood_content_report_queue(
   p_limit integer DEFAULT 50
 ) RETURNS TABLE(
   report_id uuid,content_kind text,content_id uuid,
-  reason text,reported_at timestamptz
+  reason text,reported_at timestamptz,summary text
 ) LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path=public,private,pg_catalog AS $fn$
 BEGIN
   IF NOT public.studenthood_is_scene_moderator() THEN
     RAISE EXCEPTION 'Not authorized to review reports'; END IF;
   RETURN QUERY
-    SELECT r.id,r.content_kind,r.content_id,r.reason,r.created_at
+    SELECT r.id,r.content_kind,r.content_id,r.reason,r.created_at,
+      CASE r.content_kind
+        WHEN 'scene' THEN (SELECT left(coalesce(s.body,'[Scene media]'),360) FROM public.scenes s WHERE s.id=r.content_id)
+        WHEN 'comment' THEN (SELECT left(c.body,360) FROM public.scene_comments c WHERE c.id=r.content_id)
+        WHEN 'pulse' THEN (SELECT left(coalesce(p.body,'[Pulse media: inspect securely]'),360) FROM public.pulse_entries p WHERE p.id=r.content_id)
+        WHEN 'hang' THEN (SELECT left(h.title||': '||h.description,360) FROM public.hangs h WHERE h.id=r.content_id)
+        WHEN 'crew' THEN (SELECT left(c.name||': '||c.description,360) FROM public.crews c WHERE c.id=r.content_id)
+        WHEN 'gig' THEN (SELECT left(g.title||' / '||g.employer_name||': '||g.description,360) FROM public.gigs g WHERE g.id=r.content_id)
+        ELSE '[Content no longer available]'
+      END
     FROM private.studenthood_content_reports r
     WHERE r.state='open'
     ORDER BY r.created_at ASC
