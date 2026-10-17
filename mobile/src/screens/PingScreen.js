@@ -374,7 +374,7 @@ export default function PingScreen({theme,profile,onBack,onOpenProfile,onOpenSce
             </View>}
           </View>)}
         {(tab==='All'||tab==='Peeps')&&sceneShares.length>0&&<View style={styles.sceneSection}>
-          <Text style={[styles.sectionTitle,{color:theme.text}]}>Scenes shared in Ping</Text>
+          {/* Shared Scenes remain accessible without a standalone heading. */}
           {sceneShares.map(item=><Pressable key={item.id} onPress={()=>onOpenScene?.(item.scene_id)}
             style={[styles.sceneRow,{borderColor:theme.line}]} accessibilityRole="button">
             <Feather name="image" color={theme.accent} size={18}/>
