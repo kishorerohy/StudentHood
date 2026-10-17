@@ -15,6 +15,17 @@ for(const [screen,name] of [[onboarding,'Onboarding'],[edit,'Edit Profile']]){
   assert(screen.includes('filteredInstitutions.map('),name+' must display city results');
 }
 assert(!edit.includes('institutionMode'), 'Edit Profile must have no global scope modes');
+assert(edit.includes('Location.requestForegroundPermissionsAsync()'),
+  'Profile institution picker should detect the student's current location');
+assert(edit.includes('Location.reverseGeocodeAsync(coords)'),
+  'Profile picker must resolve the real city and country of travel');
+assert(edit.includes('searchInstitutions(detectedCity,detectedCountry)'),
+  'Travel to Chicago/London should use current GPS country, not stored safety country');
+assert(edit.includes('setCity(directoryCity)'),
+  'Selecting a new campus should save the city used for its lookup');
+assert(edit.includes('if(request!==directoryRequest.current)return;'),
+  'Old city search responses must not overwrite newer detected location');
+
 assert(!edit.includes('searchGlobalInstitutions'), 'Edit Profile must not expose global name search');
 assert(onboarding.includes("const lookupCountry=/^[A-Z]{2}$/.test(detectedCountry)?detectedCountry:country;"),
   'GPS-derived city must use the detected ISO country without rewriting age/safety region');
