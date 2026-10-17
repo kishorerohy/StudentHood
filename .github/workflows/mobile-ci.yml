@@ -53,6 +53,9 @@ jobs:
       - name: Verify universal heading-free primary screens
         run: node scripts/check-headerless-primary-pages.js
 
+      - name: Verify Discover search visibility and privacy
+        run: node scripts/check-discover-search.js
+
       - name: Expo Doctor
         run: npx expo-doctor@latest
 
