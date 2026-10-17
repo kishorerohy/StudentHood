@@ -24,6 +24,7 @@ import CrewsHQScreen from './screens/CrewsHQScreen';
 import HangDetailsScreen from './screens/HangDetailsScreen';
 import GigDetailsScreen from './screens/GigDetailsScreen';
 import EmployerPortalScreen from './screens/EmployerPortalScreen';
+import MyGigApplicationsScreen from './screens/MyGigApplicationsScreen';
 
 const LOGO_DARK=require('../assets/studenthood-logo.png');
 const LOGO_LIGHT=require('../assets/studenthood-logo-light.png');
@@ -112,6 +113,8 @@ export default function MainApp({theme}){
           onOpenScene={sceneId=>openSharedLink('studenthood://scene/'+sceneId)}
         />;
       case 'experience':
+        if(page.kind==='gigs_applications')return <MyGigApplicationsScreen theme={theme} onBack={goBack}
+          onOpenGig={gig=>showPage({type:'gig-details',gig})}/>;
         if(page.kind==='gigs_plus')return <EmployerPortalScreen theme={theme} onBack={goBack}
           onOpenGig={gig=>showPage({type:'gig-details',gig})}/>;
         if(page.kind==='crews_hq') return <CrewsHQScreen theme={theme} profile={profile} onBack={goBack}
@@ -143,7 +146,7 @@ export default function MainApp({theme}){
           profile={profile}
           safety={safety}
           onBack={goBack}
-          onNavigate={section=>showPage(section==='moderation'?{type:'moderation'}:(section==='freshers'||section==='crews_hq'||section==='gigs_plus')?{type:'experience',kind:section}:{type:'profile-menu',section})}
+          onNavigate={section=>showPage(section==='moderation'?{type:'moderation'}:(section==='freshers'||section==='crews_hq'||section==='gigs_plus'||section==='gigs_applications')?{type:'experience',kind:section}:{type:'profile-menu',section})}
           onDrops={()=>showPage({type:'hub',kind:'Drops'})}
         />;
       case 'moderation':
