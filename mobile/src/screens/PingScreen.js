@@ -39,6 +39,7 @@ export default function PingScreen({theme,profile,onBack,onOpenProfile,onOpenSce
   const [sceneShares,setSceneShares]=useState([]);
   const [sceneSharesError,setSceneSharesError]=useState('');
   const [blockedByMe,setBlockedByMe]=useState(null);
+  const [interactionAvailable,setInteractionAvailable]=useState(null);
   const [blockBusy,setBlockBusy]=useState(false);
   const [history,setHistory]=useState([]);
   const [historyLoading,setHistoryLoading]=useState(false);
@@ -85,10 +86,10 @@ export default function PingScreen({theme,profile,onBack,onOpenProfile,onOpenSce
   useEffect(()=>{
     if(!selected?.other_user_id)return;
     let live=true;
-    setBlockedByMe(null);
+    setBlockedByMe(null);setInteractionAvailable(null);
     getPingBlockStatus(selected.other_user_id)
-      .then(result=>{if(live)setBlockedByMe(result.blocked_by_me)})
-      .catch(()=>{if(live)setBlockedByMe(null)});
+      .then(result=>{if(live){setBlockedByMe(result.blocked_by_me);setInteractionAvailable(result.interaction_available)}})
+      .catch(()=>{if(live){setBlockedByMe(null);setInteractionAvailable(null)}});
     return()=>{live=false};
   },[selected?.other_user_id,mode==='settings']);
 
@@ -151,7 +152,7 @@ export default function PingScreen({theme,profile,onBack,onOpenProfile,onOpenSce
 
   function openThread(item){
     Keyboard.dismiss();
-    setBlockedByMe(null);
+    setBlockedByMe(null);setInteractionAvailable(null);
     setHistory([]);setChatQuery('');setSearchResults([]);
     setSelected(item);setMode('thread');setMessageText('');
     setError('');setNotice('');setMessages([]);
@@ -208,6 +209,7 @@ export default function PingScreen({theme,profile,onBack,onOpenProfile,onOpenSce
          try{
            const next=await setPingBlock(selected.other_user_id,block);
            setBlockedByMe(next.blocked_by_me);
+           setInteractionAvailable(next.interaction_available);
            setNotice(next.blocked_by_me?'Student blocked. New interactions are disabled.':'Student unblocked.');
            await refreshThreads(true);
          }catch(e){setError(e?.message||'Could not update block settings.')}
@@ -450,8 +452,8 @@ export default function PingScreen({theme,profile,onBack,onOpenProfile,onOpenSce
           </View>)}
         {!messagesLoading&&!messages.length&&<Text style={[styles.empty,{color:theme.muted}]}>No messages yet.</Text>}
       </ScrollView>
-      {blockedByMe===true&&<Text style={[styles.helper,{color:theme.muted}]}>You blocked this student. Open their Ping settings to unblock. Your existing history remains available.</Text>}
-      {selected.incoming_request&&blockedByMe!==true&&<View style={styles.decisionRow}>
+      {interactionAvailable===false&&<Text style={[styles.helper,{color:theme.muted}]}>{blockedByMe?'You blocked this student. Open Ping settings to unblock.':'This conversation is currently unavailable.'} Your existing history remains available.</Text>}
+      {selected.incoming_request&&interactionAvailable===true&&<View style={styles.decisionRow}>
         <Pressable onPress={()=>decide(selected,'accept')} disabled={working} style={[styles.decision,{backgroundColor:theme.accent}]}>
           <Text style={styles.buttonLabel}>Accept Ping request</Text>
         </Pressable>
@@ -460,9 +462,9 @@ export default function PingScreen({theme,profile,onBack,onOpenProfile,onOpenSce
           <Text style={{color:theme.text,fontWeight:'700'}}>Decline</Text>
         </Pressable>
       </View>}
-      {selected.status==='pending'&&!selected.incoming_request&&blockedByMe!==true?
+      {selected.status==='pending'&&!selected.incoming_request&&interactionAvailable===true?
         <Text style={[styles.helper,{color:theme.muted}]}>Waiting for the student to accept your Ping request.</Text>:
-        selected.status==='active'&&blockedByMe===false&&<View style={[styles.composer,{borderTopColor:theme.line}]}>
+        selected.status==='active'&&interactionAvailable===true&&<View style={[styles.composer,{borderTopColor:theme.line}]}>
           <TextInput value={messageText} onChangeText={setMessageText}
             accessibilityLabel="Write Ping reply" maxLength={1500} multiline
             placeholder="Write a Ping…" placeholderTextColor={theme.muted}
@@ -473,7 +475,7 @@ export default function PingScreen({theme,profile,onBack,onOpenProfile,onOpenSce
             {working?<ActivityIndicator color="#fff" size="small"/>:<Feather name="send" color="#fff" size={19}/>}
           </Pressable>
         </View>}
-      {blockedByMe===null&&<Text style={[styles.helper,{color:theme.muted}]}>Checking conversation permissions…</Text>}
+      {interactionAvailable===null&&<Text style={[styles.helper,{color:theme.muted}]}>Checking conversation permissions…</Text>}
     </>}
 
     {mode==='settings'&&selected&&<ScrollView style={{flex:1}}
