@@ -294,7 +294,7 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
             </Pressable>
           </View>
           {!peepsError&&!peepsLoading&&peeps.length>0&&
-            <DiscoverPeoplePanel people={peeps} viewer={profile} theme={theme} onOpenProfile={onOpenProfile}/>}
+            <DiscoverPeoplePanel people={peeps} viewer={profile} theme={theme} onOpenProfile={onOpenProfile} refreshKey={discoverRefresh}/>}
         </>}
 
         {searchActive&&peopleQuery.trim().length<2?
