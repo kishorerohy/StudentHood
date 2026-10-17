@@ -111,7 +111,7 @@ export default function FeatureLandingScreen({kind,theme,profile,onDiscover,onBa
       <View style={[styles.emptyBadge,{backgroundColor:theme.accentSoft}]}>
         <Feather name="clock" color={theme.accent} size={22}/>
       </View>
-      <Text style={[styles.emptyTitle,{color:theme.text}]}>{config.emptyTitle}</Text>
+      {/* Heading-free empty state shared by Hangs, Gigs, Crews and Pulse. */}
       <Text style={[styles.emptyText,{color:theme.muted}]}>{config.emptyText}</Text>
       <View style={[styles.pending,{borderColor:theme.line,backgroundColor:theme.surface2}]}>
         <Feather name="lock" color={theme.muted} size={14}/>
