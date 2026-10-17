@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {ActivityIndicator,Modal,Pressable,StyleSheet,Text,View} from 'react-native';
+import {ActivityIndicator,Modal,Platform,Pressable,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {getAvatarDisplayUrl,getPeepConnection,getProfileCard,getVisibleProfileScenes,getVisibleSceneCount,getVisiblePeepCount,sendPeepRequest,respondToPeepRequest} from '../api';
 import StudentProfileView from '../components/StudentProfileView';
@@ -228,7 +228,7 @@ const styles=StyleSheet.create({
   actionArea:{paddingHorizontal:20,paddingTop:23},
   actions:{flexDirection:'row',gap:12},
   action:{flex:1,minHeight:50,borderWidth:1,borderRadius:25,paddingHorizontal:8,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8},
-  actionText:{fontWeight:'800',fontSize:12,textAlign:'center'},
+  actionText:{fontFamily:Platform.OS==='android'?'sans-serif':undefined,fontWeight:'800',fontSize:12,textAlign:'center'},
   more:{height:50,width:48,borderWidth:1,borderRadius:25,alignItems:'center',justifyContent:'center'},
   optionsOverlay:{flex:1,backgroundColor:'rgba(0,0,0,.6)',justifyContent:'flex-end'},
   optionsCard:{borderWidth:1,borderTopLeftRadius:24,borderTopRightRadius:24,paddingHorizontal:20,paddingTop:25,paddingBottom:38},
@@ -236,6 +236,6 @@ const styles=StyleSheet.create({
   optionsCopy:{fontSize:12,lineHeight:18,marginTop:7,marginBottom:13},
   reportOption:{height:49,flexDirection:'row',alignItems:'center',gap:12,borderBottomWidth:StyleSheet.hairlineWidth},
   cancel:{height:45,borderRadius:13,alignItems:'center',justifyContent:'center',marginTop:16},
-  note:{marginTop:10,textAlign:'center',fontSize:11,lineHeight:16},
+  note:{fontFamily:Platform.OS==='android'?'sans-serif':undefined,marginTop:10,textAlign:'center',fontSize:11,lineHeight:16},
   decline:{height:43,borderWidth:1,borderRadius:22,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:7,marginTop:10}
 });
