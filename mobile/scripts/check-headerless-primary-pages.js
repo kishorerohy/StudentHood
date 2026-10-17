@@ -14,6 +14,8 @@ const createFeature=read('src/screens/CreateFeatureScreen.js');
 const createOptions=read('src/screens/CreateOptionsScreen.js');
 const profile=read('src/components/StudentProfileView.js');
 const discover=read('src/components/DiscoverPeoplePanel.js');
+const createFeature=read('src/screens/CreateFeatureScreen.js');
+const createOptions=read('src/screens/CreateOptionsScreen.js');
 
 const absent=(source,fragment,context)=>{
   assert(!source.includes(fragment),context+' has a redundant heading: '+fragment);
@@ -56,6 +58,13 @@ absent(createOptions,'<Text style={[styles.title,{color:theme.text}]}>Create</Te
 absent(profile,'<Text style={[styles.sceneTitle,{color:theme.text}]}>Scenes</Text>','own/visited Profile');
 absent(discover,'>Find your people</Text>','Discover people cards');
 
+// Crews shares these screens with Hangs, Gigs and Pulse, so the same rule
+// applies to EVERY creation flow and its empty state, without account exceptions.
+absent(features,'<Text style={[styles.emptyTitle,{color:theme.text}]}>{config.emptyTitle}</Text>','Crews/feature empty state');
+absent(createFeature,'<Text style={[styles.headerTitle,{color:theme.text}]}>{config.heading}</Text>','Create Crew form');
+absent(createFeature,'STUDENTHOOD · CREATE','Create Crew form');
+absent(createOptions,'<Text style={[styles.title,{color:theme.text}]}>Create</Text>','Create feature chooser');
+
 for(const [source,need,context] of [
   [scenes,'profile?.campus_name','Scenes campus context'],
   [scenes,'>Pulse soon</Text>','Pulse create shortcut'],
@@ -67,6 +76,11 @@ for(const [source,need,context] of [
   [hub,'accessibilityLabel="Refresh campus people and profile photos"','Discover refresh'],
   [hub,'accessibilityLabel="Accept Peep request"','Peep request actions'],
   [features,'accessibilityLabel="Back to StudentHood"','Hangs/Gigs back action'],
+  [createFeature,'accessibilityLabel="Back to Create"','Create Crew back navigation'],
+  [createFeature,'label="Crew name"','Create Crew name field'],
+  [createFeature,'label="Crew category"','Create Crew category field'],
+  [createFeature,'label="About your Crew"','Create Crew description field'],
+  [createOptions,"name:'Create a Crew'",'Create Crew action in selector'],
   [features,'{config.filters.map','Hangs/Gigs filters'],
   [features,'accessibilityLabel={config.action}','creation entry point'],
   [features,"Crews:{",'Crew landing config'],
