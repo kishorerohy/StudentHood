@@ -122,20 +122,18 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={()=>{load(filter,{refresh:true});loadPulse()}} tintColor={theme.accent}/>}
     >
-      <View style={styles.intro}>
-        <View>
-          <Text style={[styles.kicker,{color:theme.accent}]}>YOUR CAMPUS, RIGHT NOW</Text>
-          <Text style={[styles.h1,{color:theme.text}]}>Scenes</Text>
+      {/* Universal compact navigation: no duplicate "Scenes" page heading. */}
+      <View style={styles.intro} accessibilityLabel="Current campus and safety status">
+        <View style={[styles.campusPill,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+          <Feather name="map-pin" size={14} color={theme.accent}/>
+          <Text numberOfLines={1} style={[styles.campusText,{color:theme.muted}]}>
+            {profile?.campus_name||'Your campus'}
+          </Text>
         </View>
-        <View style={styles.introRight}>
-          {safety?.youth_account&&<View style={[styles.teenBadge,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-            <Feather name="shield" size={14} color={theme.accent}/><Text style={[styles.teenText,{color:theme.text}]}>Teen Mode</Text>
-          </View>}
-          <View style={[styles.campusPill,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-            <Feather name="map-pin" size={14} color={theme.accent}/>
-            <Text numberOfLines={1} style={[styles.campusText,{color:theme.muted}]}>{profile?.campus_name||'Your campus'}</Text>
-          </View>
-        </View>
+        {safety?.youth_account&&<View style={[styles.teenBadge,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+          <Feather name="shield" size={14} color={theme.accent}/>
+          <Text style={[styles.teenText,{color:theme.text}]}>Teen Mode</Text>
+        </View>}
       </View>
 
       {/* Pulse strip intentionally has NO separate "Campus people" heading,
@@ -176,9 +174,9 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
       </ScrollView>
 
       <View style={[styles.panel,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-        <View style={styles.sectionHead}>
-          <View><Text style={[styles.live,{color:theme.accent}]}>● LIVE</Text><Text style={[styles.h2,{color:theme.text}]}>Happening around campus</Text></View>
-          <Feather name="arrow-up-right" size={18} color={theme.accent}/>
+        <View style={styles.liveCompact} accessibilityLabel="Live campus activity filters">
+          <View style={[styles.liveDot,{backgroundColor:theme.accent}]}/>
+          <Text style={[styles.live,{color:theme.accent}]}>LIVE</Text>
         </View>
         <View style={styles.happeningRow}>
           {[
@@ -448,20 +446,22 @@ function timeAgo(value){
 
 const styles=StyleSheet.create({
   root:{flex:1},
-  content:{paddingHorizontal:12,paddingTop:18,paddingBottom:120,gap:14,maxWidth:980,width:'100%',alignSelf:'center'},
-  intro:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12},
+  content:{paddingHorizontal:12,paddingTop:10,paddingBottom:120,gap:12,maxWidth:980,width:'100%',alignSelf:'center'},
+  intro:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12,minHeight:40},
   kicker:{fontSize:9,fontWeight:'900',letterSpacing:1.6,marginBottom:5},
   h1:{fontSize:34,fontWeight:'800',letterSpacing:-1.4},
   introRight:{alignItems:'flex-end',gap:6,maxWidth:'55%'},
   teenBadge:{height:30,borderWidth:1,borderRadius:99,flexDirection:'row',alignItems:'center',gap:5,paddingHorizontal:9},
   teenText:{fontSize:9,fontWeight:'800'},
-  campusPill:{height:34,borderWidth:1,borderRadius:99,flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:10,maxWidth:180},
+  campusPill:{height:34,borderWidth:1,borderRadius:99,flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:10,maxWidth:'72%'},
   campusText:{fontSize:10,flexShrink:1},
   panel:{borderWidth:1,borderRadius:20,padding:15},
   sectionHead:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   h2:{fontSize:16,fontWeight:'800'},
   link:{fontSize:10,fontWeight:'800'},
-  live:{fontSize:9,fontWeight:'900',letterSpacing:1.2,marginBottom:3},
+  live:{fontSize:9,fontWeight:'900',letterSpacing:1.2},
+  liveCompact:{flexDirection:'row',alignItems:'center',gap:7},
+  liveDot:{width:7,height:7,borderRadius:4},
   pulseStrip:{paddingVertical:3},
   pulseError:{fontSize:11,marginTop:5,paddingHorizontal:3},
   pulseRow:{gap:12,paddingTop:5,paddingBottom:5},
