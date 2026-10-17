@@ -21,7 +21,7 @@ AS $function$
    join public.profiles a on a.id=p_author_id
    where v.id=p_viewer_id
  ),false);
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.studenthood_can_discover_profile(p_target_user uuid)
  RETURNS boolean
@@ -77,7 +77,7 @@ if auth.uid() is null or p_target_user is null then return false; end if;
 
       return target.profile_visibility='public';
     end;
-    $function$
+    $function$;
 
 CREATE OR REPLACE FUNCTION public.studenthood_scene_feed(p_filter text DEFAULT 'for_you'::text, p_limit integer DEFAULT 20, p_offset integer DEFAULT 0)
  RETURNS TABLE(id uuid, author_id uuid, author_name text, author_username text, author_avatar_url text, author_campus_name text, body text, media_url text, media_type text, content_class text, visibility text, created_at timestamp with time zone, like_count bigint, comment_count bigint, liked_by_me boolean)
@@ -169,7 +169,7 @@ begin
     s.created_at desc
   limit limit_value offset offset_value;
 end;
-$function$
+$function$;
 
 -- Enable realtime only for tables that already have viewer-scoped SELECT RLS policies.
 -- Profiles are intentionally excluded: they include private DOB/guardian fields.
