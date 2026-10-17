@@ -30,7 +30,7 @@ jobs:
           const dashboard='https://expo.dev/accounts/studenthood-0920/projects/studenthood/builds/'+id;
           if(!token)throw Error('Missing protected Expo token');
           const summary=msg=>fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,msg+'\n');
-          const query='query BuildsByIdQuery($buildId: ID!){builds{byId(buildId:$buildId){id status platform appVersion appBuildVersion artifacts{buildUrl applicationArchiveUrl} error{errorCode message}}}}';
+          const query='query BuildsByIdQuery($buildId: ID!){builds{byId(buildId:$buildId){id status platform appVersion appBuildVersion artifacts{buildUrl applicationArchiveUrl} logFiles error{errorCode message buildPhase}}}}';
           const sleep=ms=>new Promise(done=>setTimeout(done,ms));
           (async()=>{
             summary('# StudentHood Android v0.2.0 / versionCode 11');
@@ -63,6 +63,30 @@ jobs:
               const details=JSON.stringify(record.error||{});
               console.error('EXPO BUILD FAILED:',details);
               summary('**Expo error:** '+details);
+              const files=record.logFiles||[];
+              console.log('Expo build log files available:',files.length);
+              for(let index=0;index<files.length;index++){
+                try{
+                  const url=new URL(files[index]);
+                  if(url.protocol!=='https:')continue;
+                  const response=await fetch(url,{signal:AbortSignal.timeout(25000)});
+                  if(!response.ok)throw Error('Log HTTP '+response.status);
+                  const buffer=Buffer.from(await response.arrayBuffer());
+                  const zlib=require('node:zlib');
+                  let decoded=buffer.toString('utf8');
+                  for(const decode of ['brotliDecompressSync','gunzipSync']){
+                    try{decoded=zlib[decode](buffer).toString('utf8');break;}catch{}
+                  }
+                  const lines=decoded.split(/\\r?\\n/);
+                  const errors=lines.map((value,i)=>({value,i})).filter(o=>
+                    /error|failed|prebuild|plugin|expo-notifications|config|exception|cannot find|could not/i.test(o.value));
+                  const relevant=errors.slice(-22).map(o=>o.value)
+                    .filter(x=>x.length<3000)
+                    .map(x=>x.slice(0,800).replace(/Bearer\\s+[^\\s"']+/ig,'Bearer [REDACTED]'));
+                  console.log('Expo log '+index+': '+lines.length+' lines, error excerpts '+relevant.length);
+                  for(const line of relevant)console.log('EXPO LOG: '+line);
+                }catch(e){console.error('Could not fetch Expo log file '+index+': '+e.message);}
+              }
               process.exitCode=1;
               return;
             }
