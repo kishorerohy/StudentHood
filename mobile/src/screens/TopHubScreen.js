@@ -1,10 +1,10 @@
 import React,{useEffect,useState} from 'react';
 import {
-  ActivityIndicator,Image,Pressable,ScrollView,StyleSheet,Text,TextInput,View
+  ActivityIndicator,Image,Keyboard,Pressable,ScrollView,StyleSheet,Text,TextInput,View
 } from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {DiscoverIcon,DropsIcon,PingIcon} from '../icons';
-import {getCampusPeeps,getDropsFeed,getPeepConnection,getProfileCard,getPingSceneInbox,getIncomingPeepRequests,respondToPeepRequest} from '../api';
+import {getCampusPeeps,searchDiscoverableStudents,getDropsFeed,getPeepConnection,getProfileCard,getPingSceneInbox,getIncomingPeepRequests,respondToPeepRequest} from '../api';
 import CampusPresenceBadge from '../components/CampusPresenceBadge';
 import DiscoverPeoplePanel from '../components/DiscoverPeoplePanel';
 
@@ -18,6 +18,9 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
   const [peepsError,setPeepsError]=useState('');
   const [discoverSection,setDiscoverSection]=useState('People');
   const [peopleQuery,setPeopleQuery]=useState('');
+  const [searchResults,setSearchResults]=useState([]);
+  const [searchLoading,setSearchLoading]=useState(false);
+  const [searchError,setSearchError]=useState('');
   const [discoverRefresh,setDiscoverRefresh]=useState(0);
   const [pingTab,setPingTab]=useState('All');
   const [pingCampusPresence,setPingCampusPresence]=useState(null);
@@ -51,6 +54,32 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
     }).finally(()=>{if(live) setPeepsLoading(false)});
     return ()=>{live=false};
   },[kind,profile?.id,profile?.campus_name,discoverRefresh]);
+
+  // Search on the backend rather than filtering only the first campus page.
+  // Stale responses cannot overwrite a newer name or username query.
+  useEffect(()=>{
+    if(kind!=='Discover')return;
+    const term=peopleQuery.trim();
+    if(term.length<2){
+      setSearchLoading(false);
+      setSearchResults([]);
+      setSearchError('');
+      return;
+    }
+    let active=true;
+    setSearchLoading(true);
+    setSearchError('');
+    const delay=setTimeout(()=>{
+      searchDiscoverableStudents(term,{limit:30})
+        .then(rows=>{if(active)setSearchResults(rows);})
+        .catch(e=>{if(active){
+          setSearchResults([]);
+          setSearchError(e?.message||'Unable to search students.');
+        }})
+        .finally(()=>{if(active)setSearchLoading(false)});
+    },350);
+    return()=>{active=false;clearTimeout(delay)};
+  },[kind,peopleQuery]);
 
   useEffect(()=>{
     let live=true;
@@ -118,7 +147,10 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
   },[kind,pingRefresh]);
 
   const visibleDrops=drops.filter(item=>dropFilter==='All'||(dropFilter==='Scenes'&&String(item.activity_type||'').startsWith('scene_'))||(dropFilter==='Peeps'&&String(item.activity_type||'').startsWith('peep_')));
-  const visiblePeople=peeps.filter(item=>(item.full_name||'').toLocaleLowerCase().includes(peopleQuery.trim().toLocaleLowerCase())||(item.username||'').toLocaleLowerCase().includes(peopleQuery.trim().toLocaleLowerCase()));
+  const searchActive=peopleQuery.trim().length>0;
+  const visiblePeople=searchActive?searchResults:peeps;
+  const peopleBusy=searchActive?searchLoading:peepsLoading;
+  const peopleError=searchActive?searchError:peepsError;
 
   const icon=kind==='Discover'
     ?<DiscoverIcon color={theme.accent} size={22}/>
@@ -131,6 +163,8 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
       style={styles.scroll}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
     >
       {/* Universal Discover/Drops header: navigation and icon without a redundant page title. */}
       <View style={styles.pageHeader} accessibilityLabel={kind+' navigation'}>
@@ -200,68 +234,100 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
       </>}
 
       {kind==='Discover'&&<>
-        <Text style={[styles.subtitle,{color:theme.muted}]}>Real people and opportunities around your campus, with student privacy respected.</Text>
         <View style={[styles.searchBox,{backgroundColor:theme.surface,borderColor:theme.line}]}>
           <Feather name="search" color={theme.muted} size={18}/>
           <TextInput
-            accessibilityLabel="Search campus students"
-            placeholder="Search students on your campus"
+            accessibilityLabel="Search student by name or username"
+            placeholder="Search student name or username"
             placeholderTextColor={theme.muted}
             value={peopleQuery}
-            onChangeText={text=>{setPeopleQuery(text);setDiscoverSection('People')}}
+            onChangeText={value=>{
+              setPeopleQuery(value);
+              setDiscoverSection('People');
+              setSearchResults([]);
+              setSearchError('');
+              setSearchLoading(value.trim().length>=2);
+            }}
             autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+            onSubmitEditing={()=>Keyboard.dismiss()}
             style={[styles.searchInput,{color:theme.text}]}
           />
-          {!!peopleQuery&&<Pressable onPress={()=>setPeopleQuery('')} accessibilityLabel="Clear student search">
+          {!!peopleQuery&&<Pressable onPress={()=>{
+            setPeopleQuery('');setSearchResults([]);setSearchError('');Keyboard.dismiss();
+          }} accessibilityRole="button" accessibilityLabel="Clear student search">
             <Feather name="x" color={theme.muted} size={18}/>
           </Pressable>}
         </View>
-        <View style={styles.grid}>
-          {DISCOVER_SECTIONS.map(item=><Pressable
-            key={item.name}
-            accessibilityRole="button"
-            accessibilityState={{selected:discoverSection===item.name}}
-            onPress={()=>{setDiscoverSection(item.name);if(item.name!=='People')onOpenFeature?.(item.name)}}
-            style={[styles.discoverCard,{backgroundColor:theme.surface,borderColor:discoverSection===item.name?theme.accent:theme.line}]}
-          >
-            <Feather name={item.icon} size={22} color={theme.accent}/>
-            <Text style={[styles.discoverCardName,{color:theme.text}]}>{item.name}</Text>
-            <Text style={[styles.discoverCardCopy,{color:theme.muted}]}>{item.copy}</Text>
-          </Pressable>)}
-        </View>
-        <View style={styles.sectionHeading} accessibilityLabel="Campus discovery controls">
-          <Text style={[styles.sectionCaption,{color:theme.muted,flex:1}]} numberOfLines={1}>
-            {profile?.campus_name||'Your campus'}
-          </Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Refresh campus people and profile photos"
-            disabled={peepsLoading} onPress={()=>setDiscoverRefresh(x=>x+1)}
-            style={[styles.refresh,{backgroundColor:theme.surface,borderRadius:13}]}>
-            {peepsLoading?<ActivityIndicator color={theme.accent} size="small"/>:
-              <Feather name="refresh-cw" color={theme.accent} size={18}/>}
-          </Pressable>
-        </View>
-        {!peepsError&&!peepsLoading&&visiblePeople.length>0&&<DiscoverPeoplePanel people={visiblePeople} viewer={profile} theme={theme} onOpenProfile={onOpenProfile}/>}
-        {peepsError?<EmptyMessage theme={theme} icon="alert-circle" title="Unable to load students" copy={peepsError}/>:
-          peepsLoading?<Loading theme={theme} label="Finding permitted campus students…"/>:
-          visiblePeople.length===0?<EmptyMessage theme={theme} icon="users" title={peopleQuery?'No matching students':'No students to show yet'} copy={peopleQuery?'Try a different name or username.':'Students from your campus will appear when their privacy settings allow discovery.'}/>:
-          <View style={[styles.panel,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-            {visiblePeople.map((peep,index)=><Pressable
-              key={peep.id}
+
+        {/* Searching hides category tiles and campus suggestions, so the first
+            authorized matching profiles appear immediately above the keyboard. */}
+        {!searchActive&&<>
+          <View style={styles.grid}>
+            {DISCOVER_SECTIONS.map(item=><Pressable
+              key={item.name}
               accessibilityRole="button"
-              accessibilityLabel={'View '+(peep.full_name||peep.username||'student')+' profile'}
-              onPress={()=>onOpenProfile?.(peep.id)}
-              style={[styles.peepRow,{borderBottomColor:theme.line,borderBottomWidth:index===visiblePeople.length-1?0:StyleSheet.hairlineWidth}]}
+              accessibilityState={{selected:discoverSection===item.name}}
+              onPress={()=>{setDiscoverSection(item.name);if(item.name!=='People')onOpenFeature?.(item.name)}}
+              style={[styles.discoverCard,{backgroundColor:theme.surface,borderColor:discoverSection===item.name?theme.accent:theme.line}]}
             >
-              <View style={[styles.avatar,{backgroundColor:theme.surface2}]}>
-                {peep.avatar_url?<Image source={{uri:peep.avatar_url}} style={styles.avatarImage}/>:<Feather name="user" size={21} color={theme.accent}/>}
-              </View>
-              <View style={{flex:1}}>
-                <Text style={[styles.peepName,{color:theme.text}]}>{peep.full_name||peep.username||'Student'}</Text>
-                {!!peep.username&&<Text style={[styles.peepHandle,{color:theme.muted}]}>@{peep.username}</Text>}
-              </View>
-              <Feather name="chevron-right" color={theme.muted} size={19}/>
+              <Feather name={item.icon} size={22} color={theme.accent}/>
+              <Text style={[styles.discoverCardName,{color:theme.text}]}>{item.name}</Text>
+              <Text style={[styles.discoverCardCopy,{color:theme.muted}]}>{item.copy}</Text>
             </Pressable>)}
-          </View>}
+          </View>
+          <View style={styles.sectionHeading} accessibilityLabel="Campus discovery controls">
+            <Text style={[styles.sectionCaption,{color:theme.muted,flex:1}]} numberOfLines={1}>
+              {profile?.campus_name||'Your campus'}
+            </Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Refresh campus people and profile photos"
+              disabled={peepsLoading} onPress={()=>setDiscoverRefresh(x=>x+1)}
+              style={[styles.refresh,{backgroundColor:theme.surface,borderRadius:13}]}>
+              {peepsLoading?<ActivityIndicator color={theme.accent} size="small"/>:
+                <Feather name="refresh-cw" color={theme.accent} size={18}/>}
+            </Pressable>
+          </View>
+          {!peepsError&&!peepsLoading&&peeps.length>0&&
+            <DiscoverPeoplePanel people={peeps} viewer={profile} theme={theme} onOpenProfile={onOpenProfile}/>}
+        </>}
+
+        {searchActive&&peopleQuery.trim().length<2?
+          <Text style={[styles.searchHint,{color:theme.muted}]}>Enter at least two letters to find a student.</Text>:
+         peopleError?<EmptyMessage theme={theme} icon="alert-circle" title="Search unavailable" copy={peopleError}/>:
+         peopleBusy?<Loading theme={theme} label={searchActive?'Searching students…':'Finding permitted campus students…'}/>:
+         visiblePeople.length===0?<EmptyMessage theme={theme} icon="users"
+           title={searchActive?'No matching students':'No students to show yet'}
+           copy={searchActive?'No permitted profile matches this name or username. Try another spelling.':'Students from your campus will appear when their privacy settings allow discovery.'}/>:
+         !searchActive?null:
+           <View style={[styles.panel,{backgroundColor:theme.surface,borderColor:theme.line}]}
+             accessibilityLabel="Matching student profiles">
+             {visiblePeople.map((peep,index)=><Pressable
+               key={peep.id}
+               accessibilityRole="button"
+               accessibilityLabel={'View '+(peep.full_name||peep.username||'student')+' profile'}
+               onPress={()=>{Keyboard.dismiss();onOpenProfile?.(peep.id)}}
+               style={[styles.peepRow,{borderBottomColor:theme.line,
+                 borderBottomWidth:index===visiblePeople.length-1?0:StyleSheet.hairlineWidth}]}
+             >
+               <View style={[styles.avatar,{backgroundColor:theme.surface2}]}>
+                 {peep.avatar_url?<Image source={{uri:peep.avatar_url}} style={styles.avatarImage}/>:
+                   <Feather name="user" size={21} color={theme.accent}/>}
+               </View>
+               <View style={{flex:1}}>
+                 <Text numberOfLines={1} style={[styles.peepName,{color:theme.text}]}>
+                   {peep.full_name||peep.username||'Student'}
+                 </Text>
+                 {!!peep.username&&<Text numberOfLines={1} style={[styles.peepHandle,{color:theme.muted}]}>
+                   @{peep.username}
+                 </Text>}
+                 {!!peep.campus_name&&<Text numberOfLines={1} style={[styles.peepHandle,{color:theme.muted}]}>
+                   {peep.campus_name}
+                 </Text>}
+               </View>
+               <Feather name="chevron-right" color={theme.muted} size={19}/>
+             </Pressable>)}
+           </View>}
       </>}
 
       {kind==='Ping'&&<>
@@ -369,6 +435,7 @@ const styles=StyleSheet.create({
   dropTitle:{fontSize:12,lineHeight:19,fontWeight:'700'},
   dropTime:{fontSize:10,marginTop:4},
   subtitle:{fontSize:12,lineHeight:18,marginBottom:16},
+  searchHint:{fontSize:12,paddingVertical:12,paddingHorizontal:4},
   searchBox:{borderWidth:1,borderRadius:16,minHeight:47,paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:9,marginBottom:14},
   searchInput:{fontSize:12,flex:1,minHeight:44},
   dropFilters:{gap:9,paddingVertical:12},
