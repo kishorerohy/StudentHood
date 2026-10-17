@@ -133,8 +133,7 @@ export default function StudentProfileView({
       )}
     </View>
 
-    <View style={styles.sceneSection}>
-      <Text style={[styles.sceneTitle,{color:theme.text}]}>Scenes</Text>
+    <View style={styles.sceneSection} accessibilityLabel="Visible profile Scenes">
       {originalCampusScenes.map(scene=><Pressable key={'reshare:'+scene.id}
         accessibilityRole="button" accessibilityLabel="Share older Scene with current campus"
         onPress={()=>offerMoveScene(scene)}
