@@ -1,6 +1,7 @@
 import React,{useCallback,useEffect,useState} from 'react';
 import {ActivityIndicator,Alert,Image,Linking,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
+import CompactPageBar from '../components/CompactPageBar';
 import {supabase} from '../supabase';
 
 // Private, opt-in review surface. All queue/review/media requests are guarded
@@ -76,15 +77,12 @@ export default function SceneModerationScreen({theme,onBack}){
     ]);
   }
   return <View style={[styles.root,{backgroundColor:theme.bg}]}>
-    <View style={[styles.header,{borderBottomColor:theme.line}]}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Back to profile menu" onPress={onBack} style={styles.back}>
-        <Feather name="arrow-left" size={22} color={theme.text}/>
-      </Pressable>
-      <Text style={[styles.heading,{color:theme.text}]}>Scene review</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel="Refresh moderation queue" onPress={reload} style={styles.back}>
+    <CompactPageBar theme={theme} onBack={onBack} backLabel="Back to profile menu">
+      <Pressable accessibilityRole="button" accessibilityLabel="Refresh moderation queue"
+        onPress={reload} style={styles.back}>
         <Feather name="refresh-cw" size={19} color={theme.accent}/>
       </Pressable>
-    </View>
+    </CompactPageBar>
     <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
       <Text style={[styles.note,{color:theme.muted}]}>Scenes and student creations publish without routine preapproval. Only reported or previously flagged content appears here for adult safety review. Review evidence before restricting a student.</Text>
       {!!error&&<Text accessibilityRole="alert" style={[styles.error,{color:theme.danger}]}>{error}</Text>}
