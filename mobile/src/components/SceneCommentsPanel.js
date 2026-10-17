@@ -1,5 +1,5 @@
 import React,{useCallback,useEffect,useState} from 'react';
-import {ActivityIndicator,Alert,KeyboardAvoidingView,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from 'react-native';
+import {ActivityIndicator,KeyboardAvoidingView,Modal,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {addSceneComment,fetchSceneComments} from '../scenes';
 import {supabase} from '../supabase';
@@ -15,6 +15,7 @@ export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
   const [error,setError]=useState('');
   const [feedback,setFeedback]=useState('');
   const [reportingId,setReportingId]=useState(null);
+  const [reportTarget,setReportTarget]=useState(null);
 
   const load=useCallback(async()=>{
     if(!scene?.id)return;
@@ -52,22 +53,23 @@ export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
 
   function reportComment(item){
     if(!item?.id||item.user_id===myId||reportingId)return;
-    const reasons=['Inappropriate content','Harassment or bullying','Spam or scam','Other safety concern'];
-    Alert.alert('Report comment','What concerns you about this comment?',
-      [{text:'Cancel',style:'cancel'},...reasons.map(reason=>({
-        text:reason,onPress:async()=>{
-          setReportingId(item.id);setError('');
-          try{
-            const {data,error}=await supabase.rpc('studenthood_report_content',{
-              p_kind:'comment',p_content_id:item.id,p_reason:reason
-            });
-            if(error)throw error;
-            if(data!==true)throw new Error('Report not confirmed.');
-            setFeedback('Comment reported to StudentHood safety for review.');
-          }catch(e){setError(e?.message||'Could not report comment.');}
-          finally{setReportingId(null)}
-        }
-      }))]);
+    setReportTarget(item);
+  }
+  async function submitReport(reason){
+    const target=reportTarget;
+    setReportTarget(null);
+    if(!target?.id||reportingId)return;
+    setReportingId(target.id);
+    setError('');
+    try{
+      const {data,error}=await supabase.rpc('studenthood_report_content',{
+        p_kind:'comment',p_content_id:target.id,p_reason:reason
+      });
+      if(error)throw error;
+      if(data!==true)throw new Error('Report not confirmed.');
+      setFeedback('Comment reported to StudentHood safety for review.');
+    }catch(e){setError(e?.message||'Could not report comment.');}
+    finally{setReportingId(null)}
   }
 
   return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]} behavior={Platform.OS==='ios'?'padding':'height'}>
@@ -127,6 +129,27 @@ export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
       </Pressable>
     </View>
     <Text style={[styles.hint,{color:theme.muted}]}>Comments appear immediately to permitted viewers. Report unsafe content.</Text>
+    <Modal visible={!!reportTarget} transparent animationType="fade"
+      onRequestClose={()=>setReportTarget(null)}>
+      <View style={styles.reportOverlay}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Cancel report"
+          onPress={()=>setReportTarget(null)} style={StyleSheet.absoluteFillObject}/>
+        <View style={[styles.reportSheet,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+          <Text style={[styles.reportHeading,{color:theme.text}]}>Report this comment</Text>
+          <Text style={[styles.small,{color:theme.muted}]}>Choose what concerns you. Reports are private and reviewed by StudentHood safety.</Text>
+          {['Inappropriate content','Harassment or bullying','Spam or scam','Other safety concern'].map(reason=>
+            <Pressable key={reason} accessibilityRole="button" onPress={()=>submitReport(reason)}
+              style={[styles.reportReason,{borderBottomColor:theme.line}]}>
+              <Feather name="flag" size={16} color={theme.accent}/>
+              <Text style={{flex:1,color:theme.text,fontSize:13}}>{reason}</Text>
+            </Pressable>)}
+          <Pressable accessibilityRole="button" accessibilityLabel="Cancel report"
+            onPress={()=>setReportTarget(null)} style={[styles.reportCancel,{backgroundColor:theme.surface2}]}>
+            <Text style={{fontWeight:'800',color:theme.text}}>Cancel</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
   </KeyboardAvoidingView>;
 }
 const styles=StyleSheet.create({
@@ -150,6 +173,11 @@ const styles=StyleSheet.create({
   time:{fontSize:10,marginLeft:'auto'},
   body:{fontSize:13,lineHeight:20},
   reportAction:{alignSelf:'flex-start',minHeight:34,flexDirection:'row',alignItems:'center',gap:7,paddingVertical:7},
+  reportOverlay:{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(0,0,0,0.56)'},
+  reportSheet:{borderWidth:1,borderTopLeftRadius:22,borderTopRightRadius:22,padding:20,paddingBottom:35,gap:8},
+  reportHeading:{fontSize:18,fontWeight:'900'},
+  reportReason:{height:49,borderBottomWidth:StyleSheet.hairlineWidth,flexDirection:'row',alignItems:'center',gap:10,paddingHorizontal:5},
+  reportCancel:{height:44,borderRadius:14,alignItems:'center',justifyContent:'center',marginTop:10},
   error:{fontSize:12,lineHeight:18},
   feedback:{fontSize:12,lineHeight:18},
   composer:{minHeight:75,padding:12,flexDirection:'row',gap:9,alignItems:'flex-end',borderTopWidth:StyleSheet.hairlineWidth},
