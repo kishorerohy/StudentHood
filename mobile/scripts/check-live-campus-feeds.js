@@ -16,15 +16,16 @@ const hook=read('src/useLiveRefresh.js');
 const sounds=read('src/notificationSounds.js');
 const app=JSON.parse(read('app.json'));
 const pkg=JSON.parse(read('package.json'));
-const sound=fs.readFileSync(path.join(root,'assets/studenthood-notification.wav'));
+const sound=fs.readFileSync(path.join(root,'assets/studenthood_notification.wav'));
 const sql=read('../supabase/migrations/20261017_live_campus_peeps_scene_feeds.sql');
 const presence=read('../supabase/migrations/20261017_private_campus_presence_invalidation.sql');
 
 assert.equal(sound.toString('ascii',0,4),'RIFF','Original StudentHood notification audio must be a WAV');
 assert.equal(sound.toString('ascii',8,12),'WAVE','Notification WAV must be a valid sound file');
+assert(!app.expo.plugins.flatMap(p=>Array.isArray(p)&&p[0]==='expo-notifications'?p[1].sounds:[]).some(x=>/[^a-z0-9_]/.test(x.split('/').pop().replace(/\.wav$/,''))),'Notification Android resource filenames must contain only lowercase letters, numbers and underscores');
 assert(pkg.dependencies['expo-notifications'],'Expo notifications native dependency required');
 assert(app.expo.plugins.some(p=>Array.isArray(p)&&p[0]==='expo-notifications'
-  &&p[1].sounds.includes('./assets/studenthood-notification.wav')),'Bundle native chime with APK');
+  &&p[1].sounds.includes('./assets/studenthood_notification.wav')),'Bundle native chime with APK');
 assert(sounds.includes('studenthood-pings-v1')&&sounds.includes('studenthood-drops-v1'),'Separate Ping/Drops native channels');
 assert(sounds.includes('getPingMessages')&&sounds.includes('newest.sender_id!==profileId'),
   'Only another author should cause an incoming Ping chime');

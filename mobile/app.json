@@ -48,7 +48,7 @@
         "expo-notifications",
         {
           "sounds": [
-            "./assets/studenthood-notification.wav"
+            "./assets/studenthood_notification.wav"
           ],
           "defaultChannel": "studenthood-drops-v1",
           "color": "#5FC5BE"
