@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {ActivityIndicator,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
+import CompactPageBar from '../components/CompactPageBar';
 import {SceneIcon} from '../icons';
 import {getMyStudentSubmissions} from '../creation';
 
@@ -61,19 +62,17 @@ export default function FeatureLandingScreen({kind,theme,profile,onDiscover,onBa
     style={[styles.root,{backgroundColor:theme.bg}]}
     contentContainerStyle={styles.content}
     showsVerticalScrollIndicator={false}>
-    <View style={styles.heading}>
-      {!!onBack&&<Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel="Back" style={[styles.back,{backgroundColor:theme.surface,borderColor:theme.line}]}><Feather name="arrow-left" color={theme.text} size={20}/></Pressable>}
-      <Text style={[styles.eyebrow,{color:theme.accent}]}>{config.eyebrow}</Text>
-      <Text style={[styles.headingText,{color:theme.text}]}>{config.title}</Text>
-      <Text style={[styles.intro,{color:theme.muted}]}>{config.intro}</Text>
-    </View>
+    {!!onBack&&<CompactPageBar theme={theme} onBack={onBack} border={false}
+      backLabel={'Back from '+config.title}/>}
+    <Text style={[styles.intro,{color:theme.muted,marginBottom:12}]}>
+      {config.intro}
+    </Text>
     <View style={[styles.hero,{borderColor:theme.line,backgroundColor:theme.isLight?'#EDEBE9':'#192229'}]}>
       <View style={[styles.heroOrbit,{borderColor:theme.isLight?'#CBC5CE':'#38414B'}]}/>
       <View style={[styles.heroOrbitSmall,{borderColor:theme.isLight?'#C8C6D7':'#43505C'}]}/>
       <View style={[styles.heroIcon,{backgroundColor:theme.isLight?'rgba(255,255,255,0.84)':'rgba(12,18,25,0.80)',borderColor:theme.line}]}>
         {kind==='Pulse'?<SceneIcon color={config.accent} size={35}/>:<Feather name={config.icon} color={config.accent} size={34}/>}
       </View>
-      <Text style={[styles.heroTitle,{color:theme.text}]}>{kind==='Hangs'?'Be part of something':kind==='Gigs'?'Make your next move':kind==='Pulse'?'Life happens between Scenes':'Belong to something'}</Text>
       <Text style={[styles.heroBody,{color:theme.muted}]}>{kind==='Hangs'?'Meetups and events shaped by your campus.':kind==='Gigs'?'Find real opportunities with clear details.':kind==='Pulse'?'Only moments shared with you will appear here.':'Find students who share your interests.'}</Text>
       <View style={[styles.privacyTag,{borderColor:theme.line,backgroundColor:theme.isLight?'rgba(255,255,255,0.68)':'rgba(8,12,18,0.48)'}]}>
         <Feather name="shield" color={theme.muted} size={13}/>
@@ -136,13 +135,13 @@ export default function FeatureLandingScreen({kind,theme,profile,onDiscover,onBa
 }
 const styles=StyleSheet.create({
   root:{flex:1},
-  content:{maxWidth:900,width:'100%',alignSelf:'center',paddingHorizontal:14,paddingTop:20,paddingBottom:120},
+  content:{maxWidth:900,width:'100%',alignSelf:'center',paddingHorizontal:14,paddingTop:8,paddingBottom:120},
   heading:{marginBottom:22},
   back:{borderRadius:14,borderWidth:1,height:43,width:43,alignItems:'center',justifyContent:'center',marginBottom:14},
   eyebrow:{fontSize:10,fontWeight:'900',letterSpacing:1.4,marginBottom:6},
   headingText:{fontSize:36,fontWeight:'900',letterSpacing:-1.2},
   intro:{fontSize:13,lineHeight:20,marginTop:6},
-  hero:{minHeight:265,overflow:'hidden',borderWidth:1,borderRadius:25,padding:23,justifyContent:'center',alignItems:'center',gap:12},
+  hero:{minHeight:176,overflow:'hidden',borderWidth:1,borderRadius:25,padding:19,justifyContent:'center',alignItems:'center',gap:10},
   heroOrbit:{position:'absolute',height:340,width:340,borderRadius:170,borderWidth:1,top:-125,right:-95},
   heroOrbitSmall:{position:'absolute',height:250,width:250,borderRadius:125,borderWidth:1,bottom:-160,left:-90},
   heroIcon:{height:74,width:74,borderRadius:27,alignItems:'center',justifyContent:'center',borderWidth:1},
