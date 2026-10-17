@@ -62,6 +62,9 @@ jobs:
       - name: Verify location-only institution picker and global data preservation
         run: node scripts/check-location-only-institutions.js
 
+      - name: Verify live campus feeds and notification sounds
+        run: node scripts/check-live-campus-feeds.js
+
       - name: Expo Doctor
         run: npx expo-doctor@latest
 
