@@ -25,10 +25,13 @@ import HangDetailsScreen from './screens/HangDetailsScreen';
 import GigDetailsScreen from './screens/GigDetailsScreen';
 import EmployerPortalScreen from './screens/EmployerPortalScreen';
 import MyGigApplicationsScreen from './screens/MyGigApplicationsScreen';
+import PassportScreen from './screens/PassportScreen';
+import PassportSharedScreen from './screens/PassportSharedScreen';
 
 const LOGO_DARK=require('../assets/studenthood-logo.png');
 const LOGO_LIGHT=require('../assets/studenthood-logo-light.png');
 
+const SHARED_PASSPORT_LINK=/^studenthood:\/\/passport\/([0-9a-f]{48})(?:[/?#]|$)/i;
 const SHARED_SCENE_LINK=/^studenthood:\/\/scene\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})(?:[/?#]|$)/i;
 function getSharedSceneFromLink(url){return typeof url==='string'?url.match(SHARED_SCENE_LINK)?.[1]||null:null;}
 
@@ -67,12 +70,14 @@ export default function MainApp({theme}){
   // A shared link only contains a Scene ID; the viewer fetches it through
   // Supabase RLS before opening, so a forwarded private link grants no access.
   const openSharedLink=useCallback(url=>{
+    const passportToken=typeof url==='string'?url.match(SHARED_PASSPORT_LINK)?.[1]||null:null;
+    if(passportToken){setPages([]);pushPage({type:'passport-shared',token:passportToken});return;}
     const sceneId=getSharedSceneFromLink(url);
     if(!sceneId)return;
     setPages([]);
     setTab('Scenes');
     setFocusScene({id:sceneId,token:Date.now()});
-  },[]);
+  },[pushPage]);
   useEffect(()=>{
     let mounted=true;
     Linking.getInitialURL().then(url=>{if(mounted)openSharedLink(url)}).catch(()=>{});
@@ -112,7 +117,10 @@ export default function MainApp({theme}){
           onOpenExperience={kind=>showPage({type:'experience',kind})}
           onOpenScene={sceneId=>openSharedLink('studenthood://scene/'+sceneId)}
         />;
+      case 'passport-shared':
+        return <PassportSharedScreen theme={theme} token={page.token} onBack={goBack}/>;
       case 'experience':
+        if(page.kind==='passport')return <PassportScreen theme={theme} onBack={goBack}/>;
         if(page.kind==='gigs_applications')return <MyGigApplicationsScreen theme={theme} onBack={goBack}
           onOpenGig={gig=>showPage({type:'gig-details',gig})}/>;
         if(page.kind==='gigs_plus')return <EmployerPortalScreen theme={theme} onBack={goBack}
@@ -130,7 +138,7 @@ export default function MainApp({theme}){
       case 'gig-details':
         return <GigDetailsScreen gig={page.gig} theme={theme} onBack={goBack}/>;
       case 'hang-details':
-        return <HangDetailsScreen hang={page.hang} theme={theme} onBack={goBack}/>;
+        return <HangDetailsScreen hang={page.hang} theme={theme} profile={profile} onBack={goBack}/>;
       case 'student-profile':
         return <UserProfileScreen
           userId={page.userId}
@@ -146,7 +154,7 @@ export default function MainApp({theme}){
           profile={profile}
           safety={safety}
           onBack={goBack}
-          onNavigate={section=>showPage(section==='moderation'?{type:'moderation'}:(section==='freshers'||section==='crews_hq'||section==='gigs_plus'||section==='gigs_applications')?{type:'experience',kind:section}:{type:'profile-menu',section})}
+          onNavigate={section=>showPage(section==='moderation'?{type:'moderation'}:(section==='freshers'||section==='crews_hq'||section==='gigs_plus'||section==='gigs_applications'||section==='passport')?{type:'experience',kind:section}:{type:'profile-menu',section})}
           onDrops={()=>showPage({type:'hub',kind:'Drops'})}
         />;
       case 'moderation':

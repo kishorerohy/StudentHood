@@ -2,6 +2,7 @@ import React,{useEffect,useState} from 'react';
 import {ActivityIndicator,View} from 'react-native';
 import {getAvatarDisplayUrl,getMyPeepCount,getMySceneCount,getVisibleProfileScenes,shareOwnSceneWithCurrentCampus} from '../api';
 import StudentProfileView from '../components/StudentProfileView';
+import PassportProfileCards from '../components/PassportProfileCards';
 import useLiveRefresh from '../useLiveRefresh';
 
 // The owner's profile uses the same premium full-screen layout seen by other
@@ -68,6 +69,7 @@ export default function ProfileScreen({theme,profile,onMenu,onEdit,onEditPicture
     onEdit={onEdit}
     onEditPhoto={onEditPicture}
     onEditCover={onEditCover}
+    footer={<PassportProfileCards profileId={profile?.id} theme={theme}/>}
     onMoveScene={moveSceneToCurrentCampus}
   />;
 }

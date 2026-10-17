@@ -3,6 +3,7 @@ import {ActivityIndicator,Modal,Platform,Pressable,StyleSheet,Text,View} from 'r
 import {Feather} from '@expo/vector-icons';
 import {getAvatarDisplayUrl,getPeepConnection,getProfileCard,getVisibleProfileScenes,getVisibleSceneCount,getVisiblePeepCount,sendPeepRequest,respondToPeepRequest} from '../api';
 import StudentProfileView from '../components/StudentProfileView';
+import PassportProfileCards from '../components/PassportProfileCards';
 import {supabase} from '../supabase';
 import useLiveRefresh from '../useLiveRefresh';
 
@@ -153,6 +154,7 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
     peepCount={peepCount}
     onRefresh={()=>setReloadKey(value=>value+1)}
     refreshing={refreshing}
+    footer={<PassportProfileCards profileId={userId} theme={theme}/>}
     onBack={onBack}
     actions={<View style={styles.actionArea}>
       <View style={styles.actions}>

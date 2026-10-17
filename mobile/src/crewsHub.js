@@ -9,14 +9,6 @@ export async function getVisibleCrews({limit=45}={}){
  if(error)throw new Error('Unable to load eligible Crews right now.');
  return data||[];
 }
-export async function getOwnCrewMembership(crewId){
- const {data,error}=await supabase.from('studenthood_crew_memberships')
-   .select('role,status').eq('crew_id',crewId).maybeSingle();
- // Multiple members may be visible to the owner: only use this helper for ordinary
- // member accounts; organizer dashboard deliberately loads the roster separately.
- if(error&&error.code!=='PGRST116')throw new Error('Unable to read Crew membership.');
- return data||null;
-}
 export async function getMyCrewMembership(crewId,userId){
  const {data,error}=await supabase.from('studenthood_crew_memberships')
    .select('role,status').eq('crew_id',crewId).eq('user_id',userId).maybeSingle();
@@ -48,4 +40,12 @@ export async function changeHangRsvp(hangId,join){
  });
  if(error)throw new Error(error.message||'Unable to update your RSVP.');
  return data;
+}
+
+export async function getOrganizerHangRsvps(hangId){
+ const {data,error}=await supabase.from('studenthood_hang_rsvps')
+  .select('user_id,status,created_at').eq('hang_id',hangId).eq('status','going')
+  .order('created_at',{ascending:false}).limit(80);
+ if(error)throw new Error('Hang attendance is restricted to the organiser.');
+ return data||[];
 }

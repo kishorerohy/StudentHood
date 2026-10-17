@@ -74,6 +74,9 @@ jobs:
       - name: Verify verified-employer Gigs Plus protections
         run: node scripts/check-gigs-plus.js
 
+      - name: Verify private StudentHood Passport and share revocation
+        run: node scripts/check-studenthood-passport.js
+
       - name: Expo Doctor
         run: npx expo-doctor@latest
 

@@ -4,9 +4,11 @@ import {Feather} from '@expo/vector-icons';
 import {getExperienceFlags} from '../experiences';
 import {getAccessPolicy} from '../api';
 import {getGigEmployer,getMyGigApplication,changeGigApplication,getMyEmployerOrganizations,getApplicationsForEmployerGig} from '../gigsPlus';
+import {issueEmployerGigConfirmation} from '../passport';
 
 export default function GigDetailsScreen({gig,theme,onBack}){
  const [enabled,setEnabled]=useState(false),[employer,setEmployer]=useState(null);
+ const [passportEnabled,setPassportEnabled]=useState(false),[notice,setNotice]=useState('');
  const [policy,setPolicy]=useState(null),[myApplication,setMyApplication]=useState(null);
  const [canManage,setCanManage]=useState(false),[applicants,setApplicants]=useState([]);
  const [statement,setStatement]=useState(''),[busy,setBusy]=useState(false);
@@ -14,6 +16,7 @@ export default function GigDetailsScreen({gig,theme,onBack}){
  const load=useCallback(async()=>{
   try{
    const flags=await getExperienceFlags();setEnabled(flags.gigs_plus===true);
+   setPassportEnabled(flags.passport===true);
    if(!flags.gigs_plus)return;
    const [org,access,own,orgs]=await Promise.all([
     getGigEmployer(gig),getAccessPolicy(),getMyGigApplication(gig.id),getMyEmployerOrganizations()
@@ -78,6 +81,11 @@ export default function GigDetailsScreen({gig,theme,onBack}){
            <Action theme={theme} label="Accept" disabled={busy} onPress={()=>act('accepted',row.applicant_id)}/>
            <Action theme={theme} label="Decline" disabled={busy} outline onPress={()=>act('declined',row.applicant_id)}/>
           </View>}
+          {passportEnabled&&row.status==='accepted'&&<Action theme={theme}
+            label="Confirm Gig involvement" disabled={busy} outline
+            onPress={async()=>{setBusy(true);setError('');setNotice('');
+             try{await issueEmployerGigConfirmation(row.id);setNotice('Private employer-confirmed involvement recorded.');}
+             catch(e){setError(e.message);}finally{setBusy(false);}}}/>}
          </View>)}
       </View>:
       myApplication?<View style={styles.group}>
@@ -94,6 +102,7 @@ export default function GigDetailsScreen({gig,theme,onBack}){
        <Action theme={theme} label="Submit application" disabled={busy} onPress={()=>act('apply')}/>
       </View>}
      </>}
+   {!!notice&&<Text accessibilityRole="alert" style={{color:theme.accent}}>{notice}</Text>}
    {!!error&&<Text accessibilityRole="alert" style={{color:theme.danger}}>{error}</Text>}
    {busy&&<ActivityIndicator color={theme.accent}/>}
   </ScrollView>
