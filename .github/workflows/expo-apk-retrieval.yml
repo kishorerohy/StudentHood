@@ -83,7 +83,22 @@ jobs:
                   const relevant=errors.slice(-22).map(o=>o.value)
                     .filter(x=>x.length<3000)
                     .map(x=>x.slice(0,800).replace(/Bearer\\s+[^\\s"']+/ig,'Bearer [REDACTED]'));
-                  console.log('Expo log '+index+': '+lines.length+' lines, error excerpts '+relevant.length);
+                  console.log('Expo log '+index+': '+lines.length+' lines, error excerpts '+relevant.length,
+                    'compressed bytes='+buffer.length,'decoded bytes='+decoded.length,'firstbytes='+buffer.subarray(0,12).toString('hex'));
+                  if(lines.length===1){
+                    try{
+                      const obj=JSON.parse(decoded);
+                      console.log('Log JSON type:',Array.isArray(obj)?'array':typeof obj,'entries:',Array.isArray(obj)?obj.length:'n/a');
+                      const entries=Array.isArray(obj)?obj:(Array.isArray(obj.logs)?obj.logs:[obj]);
+                      for(const v of entries.slice(-35)){
+                        const textValue=typeof v==='string'?v:JSON.stringify(v);
+                        const redacted=textValue.slice(0,1000).replace(/Bearer\\s+[^\\s"']+/ig,'Bearer [REDACTED]');
+                        if(/error|fail|prebuild|notification|exception|plugin|cannot|not found|config/i.test(redacted))console.log('EXPO JSON LOG: '+redacted);
+                      }
+                    }catch(e){
+                      console.log('Log was not JSON. First 150 chars:',decoded.slice(0,150).replace(/Bearer\\s+[^\\s"']+/ig,'Bearer [REDACTED]'));
+                    }
+                  }
                   for(const line of relevant)console.log('EXPO LOG: '+line);
                 }catch(e){console.error('Could not fetch Expo log file '+index+': '+e.message);}
               }
