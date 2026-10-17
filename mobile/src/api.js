@@ -365,6 +365,30 @@ export async function getPingSceneInbox({limit=50}={}){
   })));
 }
 
+// Scenes Pulse strip: real unexpired posts by accepted mutual Peeps only.
+// The RPC checks account safety, per-Pulse audience and universal blocks.
+// The Pulse media bucket remains private; no generic public media links.
+export async function getActivePeepsPulses({limit=16}={}){
+  const {data,error}=await supabase.rpc('studenthood_active_peeps_pulses',{
+    p_limit:Math.max(1,Math.min(30,Math.floor(Number(limit)||16)))
+  });
+  if(error)throw error;
+  const rows=Array.isArray(data)?data:[];
+  return Promise.all(rows.map(async pulse=>{
+    const [avatar,media]=await Promise.all([
+      pulse.author_avatar_url?getAvatarDisplayUrl(pulse.author_avatar_url):null,
+      pulse.media_path
+        ?supabase.storage.from('pulse-media').createSignedUrl(pulse.media_path,600)
+        :null
+    ]);
+    return {
+      ...pulse,
+      author_avatar_url:avatar,
+      media_signed_url:media?.error?null:media?.data?.signedUrl||null
+    };
+  }));
+}
+
 export async function getCampusPeeps({limit=100,offset=0}={}){
   const {data,error}=await supabase.rpc('studenthood_campus_peeps',{
     p_limit:limit,
