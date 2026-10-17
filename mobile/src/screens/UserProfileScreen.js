@@ -4,6 +4,7 @@ import {Feather} from '@expo/vector-icons';
 import {getAvatarDisplayUrl,getPeepConnection,getProfileCard,getVisibleProfileScenes,getVisibleSceneCount,getVisiblePeepCount,sendPeepRequest,respondToPeepRequest} from '../api';
 import StudentProfileView from '../components/StudentProfileView';
 import {supabase} from '../supabase';
+import useLiveRefresh from '../useLiveRefresh';
 
 export default function UserProfileScreen({userId,currentUserId,theme,onBack,onPing}){
   const [card,setCard]=useState(null);
@@ -24,6 +25,8 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
   const [profileOptionsOpen,setProfileOptionsOpen]=useState(false);
   const [reportBusy,setReportBusy]=useState(false);
   const [reportNotice,setReportNotice]=useState('');
+  useLiveRefresh({tables:['studenthood_presence_signals','scenes','peep_connections'],intervalMs:12000,
+    refresh:()=>setReloadKey(n=>n+1)});
 
   useEffect(()=>{
     let live=true;
