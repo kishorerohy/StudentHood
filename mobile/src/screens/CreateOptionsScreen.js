@@ -9,16 +9,16 @@ export default function CreateOptionsScreen({theme,onBack,onScene,onPulse,onHang
   {name:'Add to Pulse',icon:'circle',copy:'Share a moment with your campus circle',onPress:onPulse},
   {name:'Start a Hang',icon:'calendar',copy:'Create an event or campus meetup',onPress:onHang},
   {name:'Create a Crew',icon:'users',copy:'Start a community for students',onPress:onCrew},
-  {name:'Post a Gig',icon:'briefcase',copy:'Submit a student opportunity for review',onPress:onGig}
+  {name:'Post a Gig',icon:'briefcase',copy:'Share an opportunity with eligible students',onPress:onGig}
  ];
  return <View style={[styles.root,{backgroundColor:theme.bg}]}>
   <View style={[styles.header,{borderBottomColor:theme.line}]}>
    <Pressable onPress={onBack} accessibilityLabel="Back" style={styles.back}><Feather name="arrow-left" size={22} color={theme.text}/></Pressable>
-   <Text style={[styles.title,{color:theme.text}]}>Create</Text>
+   <View style={{flex:1}} accessibilityLabel="Choose a creation type"/>
    <View style={{width:42}}/>
   </View>
   <ScrollView contentContainerStyle={styles.content}>
-   <Text style={[styles.intro,{color:theme.muted}]}>Choose what you want to create. Every option opens its own editor; nothing is published without a successful save and safety review.</Text>
+   <Text style={[styles.intro,{color:theme.muted}]}>Choose what to share with your permitted audience. Each option opens its own editor.</Text>
    {options.map(option=><Pressable key={option.name} onPress={option.onPress} accessibilityRole="button" style={[styles.row,{backgroundColor:theme.surface,borderColor:theme.line}]}>
     <View style={[styles.icon,{backgroundColor:theme.accentSoft}]}>
      {option.icon==='scene'?<SceneIcon color={theme.accent} size={23}/>:<Feather name={option.icon} size={23} color={theme.accent}/>}
