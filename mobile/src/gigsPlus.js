@@ -50,7 +50,7 @@ export async function getMyEmployerOrganizations(){
 }
 export async function getApplicationsForEmployerGig(gigId){
  const {data,error}=await supabase.from('studenthood_gig_applications')
-  .select('id,applicant_id,status,created_at').eq('gig_id',gigId)
+  .select('id,applicant_id,status,created_at,statement').eq('gig_id',gigId)
   .order('created_at',{ascending:false}).limit(50);
  if(error)throw new Error('Application review is not permitted.');
  return data||[];
