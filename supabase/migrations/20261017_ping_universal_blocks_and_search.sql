@@ -118,6 +118,41 @@ BEGIN
 END;
 $migration$;
 
+-- Both owner and visiting-profile Peeps counts omit currently blocked
+-- connections; no roster or opposite-side block preference is revealed.
+CREATE OR REPLACE FUNCTION public.studenthood_visible_peep_count(p_target uuid)
+RETURNS bigint LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path=public,pg_catalog AS $fn$
+BEGIN
+  IF auth.uid() IS NULL OR p_target IS NULL THEN RETURN NULL; END IF;
+  IF auth.uid()<>p_target
+     AND NOT public.studenthood_are_peeps(auth.uid(),p_target)
+     AND NOT public.studenthood_can_discover_profile(p_target) THEN RETURN NULL; END IF;
+  RETURN (
+    SELECT count(*)::bigint FROM public.peep_connections p
+    WHERE p.status='accepted' AND p_target IN(p.requester_id,p.addressee_id)
+      AND NOT public.studenthood_interaction_blocked(
+        p_target,CASE WHEN p.requester_id=p_target THEN p.addressee_id ELSE p.requester_id END)
+  );
+END;
+$fn$;
+
+-- Hide blocked students from old incoming-request/notification lists as well,
+-- rather than limiting blocking to new Android UI elements.
+DO $migration$
+DECLARE definition text;
+BEGIN
+  SELECT pg_get_functiondef(p.oid) INTO definition FROM pg_proc p
+  JOIN pg_namespace n ON n.oid=p.pronamespace
+  WHERE n.nspname='public' AND p.proname='studenthood_incoming_peep_requests';
+  IF definition IS NULL OR position('pc.status=''pending''' IN definition)=0
+    THEN RAISE EXCEPTION 'Cannot locate incoming Peep request guard'; END IF;
+  EXECUTE replace(definition,
+    'pc.status=''pending''',
+    'pc.status=''pending'' AND NOT public.studenthood_interaction_blocked(auth.uid(),pc.requester_id)');
+END;
+$migration$;
+
 -- Existing Ping send RPC has a consent branch permitting active threads.
 -- A DB trigger is the final universal denial for EVERY message insertion,
 -- including older APK calls, pre-existing threads and future RPCs.
