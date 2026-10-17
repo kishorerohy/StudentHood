@@ -1,6 +1,6 @@
 import React,{useMemo,useState} from 'react';
 import {
-  ActivityIndicator,Image,KeyboardAvoidingView,Platform,Pressable,ScrollView,
+  ActivityIndicator,Image,Keyboard,KeyboardAvoidingView,Platform,Pressable,ScrollView,
   StyleSheet,Text,TextInput,View
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -36,6 +36,8 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
   });
   const [date,setDate]=useState(nextHour);
   const [picker,setPicker]=useState(null);
+  const [dateChosen,setDateChosen]=useState(false);
+  const [timeChosen,setTimeChosen]=useState(false);
   const [media,setMedia]=useState(null);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
@@ -44,7 +46,12 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
   const set=(field,value)=>setValues(current=>({...current,[field]:value}));
   const isPulse=kind==='Pulse';
   const canUseMedia=isPulse;
-  const futureTime=date.toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'});
+  const dateLabel=dateChosen
+    ?date.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})
+    :'Choose date';
+  const timeLabel=timeChosen
+    ?date.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})
+    :'Choose time';
   const sections=OPTIONS[kind]||[];
   const info=kind==='Gigs'
     ?'Gigs appear immediately to eligible adults. Employers are not automatically verified; payments and applications are not yet available.'
@@ -77,15 +84,25 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
       setBusy(false);
     }
   }
-  function updateDate(_,selected){
+  function updateDate(event,selected){
+    const choosing=picker;
     if(Platform.OS==='android')setPicker(null);
-    if(selected){
-      const updated=new Date(date);
-      if(picker==='date')updated.setFullYear(selected.getFullYear(),selected.getMonth(),selected.getDate());
-      else updated.setHours(selected.getHours(),selected.getMinutes(),0,0);
-      setDate(updated);
-      set('startsAt',updated.toISOString());
+    // Dismissing Android's picker must not mark the date/time as chosen.
+    if(event?.type==='dismissed'||!selected||!choosing)return;
+    const updated=new Date(date);
+    if(choosing==='date'){
+      updated.setFullYear(selected.getFullYear(),selected.getMonth(),selected.getDate());
+      setDateChosen(true);
+    }else{
+      updated.setHours(selected.getHours(),selected.getMinutes(),0,0);
+      setTimeChosen(true);
     }
+    setDate(updated);
+    set('startsAt',updated.toISOString());
+  }
+  function showDateTimePicker(mode){
+    Keyboard.dismiss();
+    setPicker(mode);
   }
 
   return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]} behavior={Platform.OS==='ios'?'padding':'height'}>
@@ -134,10 +151,23 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
           <Choices theme={theme} label="Type of Hang" options={sections.map(x=>[x,x])} value={values.category} onChange={v=>set('category',v)}/>
           <Field theme={theme} onFocus={onFieldFocus} label="What's the plan?" value={values.description} onChangeText={text=>set('description',text)} multiline maxLength={2000} placeholder="Tell students what they'll do and who can join…"/>
           <View style={styles.dual}>
-            <Pressable accessibilityRole="button" onPress={()=>setPicker('date')} style={[styles.dateButton,{backgroundColor:theme.surface,borderColor:theme.line}]}><Feather name="calendar" color={theme.accent} size={18}/><Text style={{color:theme.text,fontWeight:'700'}}>Choose date</Text></Pressable>
-            <Pressable accessibilityRole="button" onPress={()=>setPicker('time')} style={[styles.dateButton,{backgroundColor:theme.surface,borderColor:theme.line}]}><Feather name="clock" color={theme.accent} size={18}/><Text style={{color:theme.text,fontWeight:'700'}}>Choose time</Text></Pressable>
+            <Pressable accessibilityRole="button"
+              accessibilityLabel={dateChosen?'Selected date '+dateLabel+'. Change date':'Choose date'}
+              onPress={()=>showDateTimePicker('date')}
+              style={[styles.dateButton,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+              <Feather name="calendar" color={theme.accent} size={18}/>
+              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}
+                style={[styles.dateButtonLabel,{color:theme.text}]}>{dateLabel}</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button"
+              accessibilityLabel={timeChosen?'Selected time '+timeLabel+'. Change time':'Choose time'}
+              onPress={()=>showDateTimePicker('time')}
+              style={[styles.dateButton,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+              <Feather name="clock" color={theme.accent} size={18}/>
+              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}
+                style={[styles.dateButtonLabel,{color:theme.text}]}>{timeLabel}</Text>
+            </Pressable>
           </View>
-          <Text style={[styles.dateNote,{color:theme.muted}]}>{futureTime}</Text>
           {!!picker&&<DateTimePicker value={date} mode={picker} minimumDate={picker==='date'?new Date():undefined} display={Platform.OS==='ios'?'spinner':'default'} onChange={updateDate}/>}
           {Platform.OS==='ios'&&!!picker&&<Pressable onPress={()=>setPicker(null)}><Text style={[styles.done,{color:theme.accent}]}>Done</Text></Pressable>}
           <Field theme={theme} onFocus={onFieldFocus} label="Meeting point" value={values.locationHint} onChangeText={text=>set('locationHint',text)} maxLength={120} placeholder="Library lobby or a public campus location"/>
@@ -218,8 +248,8 @@ const styles=StyleSheet.create({
   previewImage:{height:225,width:'100%',borderRadius:8},
   removeMedia:{position:'absolute',top:14,right:14,backgroundColor:'rgba(0,0,0,0.65)',borderRadius:20,padding:8},
   dual:{flexDirection:'row',gap:10,marginTop:18},
-  dateButton:{flex:1,minHeight:51,borderRadius:14,borderWidth:1,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:8},
-  dateNote:{fontSize:13,marginTop:12},
+  dateButton:{flex:1,minWidth:0,minHeight:51,borderRadius:14,borderWidth:1,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:8,paddingHorizontal:8},
+  dateButtonLabel:{fontSize:13,fontWeight:'700',flexShrink:1,textAlign:'center'},
   done:{fontWeight:'800',textAlign:'right',padding:14},
   note:{flexDirection:'row',borderWidth:1,borderRadius:16,padding:14,gap:11,marginTop:20},
   info:{fontSize:11,lineHeight:18},
