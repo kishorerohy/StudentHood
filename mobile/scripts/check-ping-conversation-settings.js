@@ -12,7 +12,7 @@ for(const literal of [
   'Conversation history','Search in chat','View profile',
   'Block student','Unblock student',
   'getPingHistoryPage','searchPingHistory','setPingBlock',
-  'blockedByMe===false&&<View',
+  'interactionAvailable===true&&<View',
   "mode==='settings'&&selected",
   "mode==='history'&&selected",
   "mode==='search'&&selected"
@@ -36,6 +36,10 @@ for(const guard of ['studenthood_guard_blocked_ping_message',
  assert(sql.includes(guard),'Missing global security guard: '+guard);
 }
 assert(sql.includes('private.studenthood_ping_blocks'),'Block storage must be private.');
+assert(ping.includes('interactionAvailable===false'), 'Blocked conversation must show a generic unavailable state.');
+assert(api.includes('interaction_available'), 'API must surface generic two-way interaction availability.');
+const statusSQL=read('../supabase/migrations/20261017_ping_generic_block_ux_status.sql');
+assert(statusSQL.includes("'interaction_available'"), 'Backend must provide generic deny-state without disclosing block origin.');
 assert(!sql.includes(' RENAME TO studenthood_'),'RLS policy function OIDs must be preserved for blocks.');
 assert(sql.includes('REVOKE ALL ON private.studenthood_ping_blocks'),
   'Private block records must not be client readable.');
