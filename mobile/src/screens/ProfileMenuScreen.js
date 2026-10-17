@@ -85,6 +85,13 @@ export default function ProfileMenuScreen({page='menu',theme,profile,safety,onBa
         <Text style={[styles.rowCopy,{color:theme.muted}]}>Your private campus introduction and preferences</Text></View>
         <Feather name="chevron-right" size={19} color={theme.muted}/>
       </Pressable>}
+      {page==='menu'&&experienceFlags.crews_hq&&<Pressable accessibilityRole="button" accessibilityLabel="Open Crews HQ"
+        onPress={()=>onNavigate('crews_hq')} style={[styles.row,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+        <View style={[styles.rowIcon,{backgroundColor:theme.accentSoft}]}><Feather name="users" color={theme.accent} size={19}/></View>
+        <View style={{flex:1}}><Text style={[styles.rowTitle,{color:theme.text}]}>Crews HQ</Text>
+        <Text style={[styles.rowCopy,{color:theme.muted}]}>Manage your permitted Crew memberships and requests</Text></View>
+        <Feather name="chevron-right" size={19} color={theme.muted}/>
+      </Pressable>}
       {page==='menu'&&canSeeModeration&&<Pressable onPress={()=>onNavigate('moderation')} accessibilityRole="button" accessibilityLabel="Scene moderation queue" style={[styles.row,{backgroundColor:theme.surface,borderColor:theme.line}]}>
         <View style={[styles.rowIcon,{backgroundColor:theme.accentSoft}]}><Feather name="shield" size={19} color={theme.accent}/></View>
         <View style={{flex:1}}><Text style={[styles.rowTitle,{color:theme.text}]}>Scene review</Text><Text style={[styles.rowCopy,{color:theme.muted}]}>Review pending Scenes with verified adult moderator access</Text></View>

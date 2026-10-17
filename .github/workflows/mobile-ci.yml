@@ -2,13 +2,13 @@ name: StudentHood Mobile CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, 'feat/**']
     paths:
       - 'mobile/**'
       - 'assets/**'
       - '.github/workflows/mobile-ci.yml'
   push:
-    branches: [main]
+    branches: [main, 'feat/**']
     paths:
       - 'mobile/**'
       - 'assets/**'
@@ -67,6 +67,9 @@ jobs:
 
       - name: Verify staged campus experiences and Freshers privacy
         run: node scripts/check-experience-foundation.js
+
+      - name: Verify Crews HQ and capacity-safe Hang RSVP
+        run: node scripts/check-crews-hq-rsvp.js
 
       - name: Expo Doctor
         run: npx expo-doctor@latest

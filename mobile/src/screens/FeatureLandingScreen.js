@@ -42,7 +42,7 @@ const CONFIG={
   }
 };
 
-export default function FeatureLandingScreen({kind,theme,profile,onDiscover,onBack,onCreate,reloadKey=0}){
+export default function FeatureLandingScreen({kind,theme,profile,onDiscover,onBack,onCreate,onOpenItem,reloadKey=0}){
   const config=CONFIG[kind]||CONFIG.Hangs;
   const isBrowse=kind==='Hangs'||kind==='Gigs';
   const [filter,setFilter]=useState(config.filters[0]);
@@ -115,6 +115,9 @@ export default function FeatureLandingScreen({kind,theme,profile,onDiscover,onBa
           <Text style={[styles.savedMeta,{color:theme.muted}]}>{item.category?item.category+' · ':''}{new Date(item.created_at).toLocaleDateString()}</Text>
           {!!item.description&&<Text numberOfLines={3} style={[styles.savedMeta,{color:theme.text}]}>{item.description}</Text>}
           {kind==='Hangs'&&!!item.starts_at&&<Text style={[styles.savedMeta,{color:theme.muted}]}>Starts: {new Date(item.starts_at).toLocaleString()}</Text>}
+          {kind==='Hangs'&&onOpenItem&&<Pressable onPress={()=>onOpenItem(kind,item)} accessibilityRole="button" accessibilityLabel="View Hang and RSVP" style={{paddingVertical:9}}>
+            <Text style={{color:theme.accent,fontWeight:'800'}}>View Hang · RSVP</Text>
+          </Pressable>}
           {!!item.location_hint&&<Text style={[styles.savedMeta,{color:theme.muted}]}>{item.location_hint}</Text>}
           {kind==='Gigs'&&item.pay_amount!=null&&<Text style={[styles.savedMeta,{color:theme.text}]}>{item.pay_currency||''} {item.pay_amount} {item.pay_unit?'/ '+item.pay_unit:''}</Text>}
         </View>
