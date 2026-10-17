@@ -65,6 +65,9 @@ jobs:
       - name: Verify live campus feeds and notification sounds
         run: node scripts/check-live-campus-feeds.js
 
+      - name: Verify staged campus experiences and Freshers privacy
+        run: node scripts/check-experience-foundation.js
+
       - name: Expo Doctor
         run: npx expo-doctor@latest
 
