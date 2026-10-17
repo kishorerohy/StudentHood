@@ -28,13 +28,15 @@ for(const fn of ['studenthood_ping_set_block','studenthood_ping_block_status',
 }
 for(const guard of ['studenthood_guard_blocked_ping_message',
    'studenthood_guard_blocked_ping_accept','studenthood_guard_blocked_peeps',
-   'studenthood_are_peeps_unblocked',
-   'studenthood_can_discover_profile_unblocked',
-   'studenthood_can_ping_unblocked',
-   'studenthood_can_view_scene_unblocked']){
+   'CREATE OR REPLACE FUNCTION public.studenthood_are_peeps',
+   'studenthood_can_discover_profile',
+   'studenthood_can_ping',
+   'studenthood_can_view_scene',
+   'regexp_replace(definition',]){
  assert(sql.includes(guard),'Missing global security guard: '+guard);
 }
 assert(sql.includes('private.studenthood_ping_blocks'),'Block storage must be private.');
+assert(!sql.includes(' RENAME TO studenthood_'),'RLS policy function OIDs must be preserved for blocks.');
 assert(sql.includes('REVOKE ALL ON private.studenthood_ping_blocks'),
   'Private block records must not be client readable.');
 assert(sql.includes('blocked_by_me') && !sql.includes("'blocked_by_other'"),
