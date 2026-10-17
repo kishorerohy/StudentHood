@@ -50,6 +50,9 @@ jobs:
       - name: Verify heading-free live Peeps Pulse strip
         run: node scripts/check-peeps-pulse-row.js
 
+      - name: Verify universal heading-free primary screens
+        run: node scripts/check-headerless-primary-pages.js
+
       - name: Expo Doctor
         run: npx expo-doctor@latest
 
