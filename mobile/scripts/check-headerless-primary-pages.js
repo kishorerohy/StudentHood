@@ -65,7 +65,7 @@ absent(createOptions,'<Text style={[styles.title,{color:theme.text}]}>Create</Te
 
 for(const [source,need,context] of [
   [scenes,'profile?.campus_name','Scenes campus context'],
-  [scenes,'>Pulse soon</Text>','Pulse create shortcut'],
+  [scenes,'peepsPulses.filter','real Peeps Pulse strip'],
   [scenes,'peepsPulses.filter','real Peep Pulses'],
   [ping,"mode==='thread'&&selected",'Ping recipient header'],
   [ping,'onPress={openSettings}','tappable conversation header'],
@@ -75,7 +75,8 @@ for(const [source,need,context] of [
   [hub,'accessibilityLabel="Accept Peep request"','Peep request actions'],
   [features,'accessibilityLabel="Back to StudentHood"','Hangs/Gigs back action'],
   [features,'{config.filters.map','Hangs/Gigs filters'],
-  [features,'accessibilityLabel={config.action}','creation entry point'],
+  [createOptions,"name:'Start a Hang'",'central Hang creation entry'],
+  [createOptions,"name:'Post a Gig'",'central Gig creation entry'],
   [features,"Crews:{",'Crew landing config'],
   [createFeature,'accessibilityLabel="Back to Create"','Crew editor back action'],
   [createFeature,'label="Crew name"','Crew name form field'],
