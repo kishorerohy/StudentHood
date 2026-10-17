@@ -105,6 +105,9 @@ begin
    if not public.studenthood_can_view_creation('crew',c.creator_id,c.campus_name,c.visibility,c.moderation_status)
      then raise exception 'Crew not eligible for this account';end if;
    if c.visibility='invite_only' then raise exception 'Private Crew requires an invitation';end if;
+   if exists(select 1 from public.studenthood_crew_memberships
+     where crew_id=c.id and user_id=me and status in ('removed','declined'))
+     then raise exception 'Membership is not currently available';end if;
    insert into public.studenthood_crew_memberships(crew_id,user_id,role,status,updated_at)
     values(c.id,me,'member',case when p_action='request' then 'requested' else 'active' end,now())
     on conflict (crew_id,user_id) do update
