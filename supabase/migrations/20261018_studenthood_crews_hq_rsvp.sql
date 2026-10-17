@@ -212,3 +212,29 @@ end;
 $function$;
 revoke all on function public.studenthood_crew_link_hang(uuid,uuid) from public,anon;
 grant execute on function public.studenthood_crew_link_hang(uuid,uuid) to authenticated;
+
+-- Capacity and membership counts never expose the identities of other attendees.
+create or replace function public.studenthood_hang_rsvp_status(p_hang_id uuid)
+returns jsonb language plpgsql stable security definer
+set search_path to pg_catalog,public,private
+as $function$
+declare me uuid:=auth.uid();h public.hangs%rowtype;own_status text; attendees integer;
+begin
+ if me is null then raise exception 'Authentication required';end if;
+ if not exists(select 1 from public.studenthood_experience_flags
+   where feature_key='crews_hq' and enabled) then return jsonb_build_object('enabled',false);end if;
+ if not coalesce((public.studenthood_access_policy()->>'app_access')::boolean,false)
+   then return jsonb_build_object('enabled',false);end if;
+ select * into h from public.hangs where id=p_hang_id;
+ if h.id is null or not public.studenthood_can_view_creation('hang',h.creator_id,h.campus_name,h.visibility,h.moderation_status)
+   then raise exception 'Hang not available';end if;
+ select status into own_status from public.studenthood_hang_rsvps
+   where hang_id=p_hang_id and user_id=me;
+ select count(*) into attendees from public.studenthood_hang_rsvps
+   where hang_id=p_hang_id and status='going';
+ return jsonb_build_object('enabled',true,'own_status',coalesce(own_status,'none'),
+    'attendees',attendees,'capacity',h.capacity,'has_started',h.starts_at<=now());
+end;
+$function$;
+revoke all on function public.studenthood_hang_rsvp_status(uuid) from public,anon;
+grant execute on function public.studenthood_hang_rsvp_status(uuid) to authenticated;
