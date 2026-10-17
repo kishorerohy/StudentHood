@@ -1,8 +1,9 @@
-import React,{useEffect,useState} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import {ActivityIndicator,Alert,Image,Keyboard,KeyboardAvoidingView,Modal,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,ToastAndroid,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import {findInstitutionsByCity,getAvatarDisplayUrl,saveMyProfileChanges,uploadMyAvatar,uploadMyCover} from '../api';
 import useKeyboardAwareForm from '../hooks/useKeyboardAwareForm';
 
@@ -22,6 +23,9 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
   const [institutionLoading,setInstitutionLoading]=useState(false);
   const [institutionError,setInstitutionError]=useState('');
   const [institutionQuery,setInstitutionQuery]=useState('');
+  const [directoryCity,setDirectoryCity]=useState(profile?.city||'');
+  const [directoryCountry,setDirectoryCountry]=useState(profile?.country_code||'');
+  const directoryRequest=useRef(0);
   const {scrollRef,onFieldFocus,onScrollLayout,onScroll,keyboardPadding}=useKeyboardAwareForm();
 
   useEffect(()=>{
@@ -112,30 +116,64 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
     }finally{setBusy(false)}
   }
 
-  async function searchInstitutions(){
-    const cityName=String(city||'').trim();
-    const region=String(profile?.country_code||'').trim().toUpperCase();
+  async function searchInstitutions(cityName=directoryCity,countryName=directoryCountry){
+    const request=++directoryRequest.current;
+    const place=String(cityName||'').trim();
+    const region=String(countryName||'').trim().toUpperCase();
     setInstitutionError('');
     setInstitutionLoading(true);
     try{
-      const rows=await findInstitutionsByCity({city:cityName,countryCode:region});
+      const rows=await findInstitutionsByCity({city:place,countryCode:region});
+      if(request!==directoryRequest.current)return;
       setInstitutionRows(rows);
-      if(!rows.length)setInstitutionError('No mapped schools, colleges or universities found in this city. Check the city name and try again.');
+      if(!rows.length)setInstitutionError('No mapped schools, colleges or universities were found near this city. Try again.');
     }catch(e){
+      if(request!==directoryRequest.current)return;
       setInstitutionRows([]);
-      setInstitutionError(e?.message||'Could not load the city institution directory.');
-    }finally{setInstitutionLoading(false)}
+      setInstitutionError(e?.message||'Could not load institutions for this city.');
+    }finally{
+      if(request===directoryRequest.current)setInstitutionLoading(false);
+    }
   }
 
-  function openInstitutions(){
+  async function openInstitutions(){
     setError('');
     setInstitutionQuery('');
     setInstitutionOpen(true);
     Keyboard.dismiss();
-    if(String(city||'').trim())searchInstitutions();
-    else{
+
+    // Use the saved city immediately. A permitted GPS lookup can supersede
+    // it; stale city responses cannot overwrite the newer location search.
+    const savedCity=String(city||'').trim();
+    const savedCountry=String(profile?.country_code||'').trim().toUpperCase();
+    setDirectoryCity(savedCity);
+    setDirectoryCountry(savedCountry);
+    if(savedCity&&/^[A-Z]{2}$/.test(savedCountry)){
+      searchInstitutions(savedCity,savedCountry);
+    }else{
       setInstitutionRows([]);
-      setInstitutionError('Enter your city to find nearby schools, colleges and universities.');
+      setInstitutionError('Detect your location to find schools, colleges and universities nearby.');
+    }
+    try{
+      const permission=await Location.requestForegroundPermissionsAsync();
+      if(permission.status!=='granted')return;
+      const position=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});
+      const coords={
+        latitude:Math.round(position.coords.latitude*1000)/1000,
+        longitude:Math.round(position.coords.longitude*1000)/1000
+      };
+      const locations=await Location.reverseGeocodeAsync(coords);
+      const place=locations?.[0];
+      const detectedCity=String(place?.city||place?.district||place?.subregion||'').trim();
+      const detectedCountry=String(place?.isoCountryCode||'').toUpperCase();
+      if(detectedCity&&/^[A-Z]{2}$/.test(detectedCountry)){
+        setDirectoryCity(detectedCity);
+        setDirectoryCountry(detectedCountry);
+        await searchInstitutions(detectedCity,detectedCountry);
+      }
+    }catch{
+      // Offline/denied GPS leaves the explicit city and country results in
+      // place. It never changes the account's private age/safety region.
     }
   }
   const filteredInstitutions=institutionRows.filter(item=>
@@ -206,8 +244,8 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
             accessibilityLabel="Close institution directory" style={styles.headerAction}>
             <Feather name="arrow-left" size={22} color={theme.text}/>
           </Pressable>
-          <View style={{flex:1}} accessibilityLabel={'Institutions near '+(city||'your city')}/>
-          <Pressable onPress={searchInstitutions} disabled={institutionLoading}
+          <View style={{flex:1}} accessibilityLabel={'Institutions near '+(directoryCity||'your city')}/>
+          <Pressable onPress={()=>searchInstitutions(directoryCity,directoryCountry)} disabled={institutionLoading}
             accessibilityRole="button" accessibilityLabel="Refresh nearby institutions" style={styles.headerAction}>
             {institutionLoading?<ActivityIndicator color={theme.accent}/>:
               <Feather name="refresh-cw" size={19} color={theme.accent}/>}
@@ -215,7 +253,7 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
         </View>
         <View style={styles.pickerControls}>
           <Text style={{color:theme.muted,fontSize:12,lineHeight:18}}>
-            Schools, colleges and universities around {city.trim()||'your city'}.
+            Schools, colleges and universities around {directoryCity.trim()||'your city'}.
             Available records are matched to your location; coverage may be incomplete.
           </Text>
           <TextInput accessibilityLabel="Filter institutions in selected city"
@@ -234,7 +272,7 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
             keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.pickerResultsContent}>
             {filteredInstitutions.map(item=><Pressable key={item.id}
-              onPress={()=>{setCampus(String(item.name||''));setInstitutionOpen(false);Keyboard.dismiss();}}
+              onPress={()=>{setCampus(String(item.name||''));setCity(directoryCity);setInstitutionOpen(false);Keyboard.dismiss();}}
               accessibilityRole="button" accessibilityLabel={'Choose '+item.name}
               style={{minHeight:62,paddingVertical:12,flexDirection:'row',alignItems:'center',
                 gap:12,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:theme.line}}>
@@ -253,7 +291,7 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
               <Text style={{color:theme.muted,textAlign:'center',fontSize:12}}>
                 {institutionError||'No matching institutions in this city. Try another spelling or refresh.'}
               </Text>
-              <Pressable onPress={searchInstitutions} style={[styles.save,{backgroundColor:theme.accent}]}>
+              <Pressable onPress={()=>searchInstitutions(directoryCity,directoryCountry)} style={[styles.save,{backgroundColor:theme.accent}]}>
                 <Text style={styles.saveText}>Retry city search</Text>
               </Pressable>
             </View>}
