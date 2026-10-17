@@ -4,8 +4,8 @@ import {Feather} from '@expo/vector-icons';
 import {addSceneComment,fetchSceneComments} from '../scenes';
 import {supabase} from '../supabase';
 
-// Shown as a full-height in-app conversation panel. Reads/writes are subject to
-// Supabase RLS; pending comments are visible only to their own authors.
+// Comments appear immediately to people permitted to see their Scene.
+// Reports can trigger human action; Supabase RLS remains authoritative.
 export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
   const [rows,setRows]=useState([]);
   const [text,setText]=useState('');
@@ -40,10 +40,9 @@ export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
       const saved=await addSceneComment(scene.id,body);
       if(!saved?.id)throw new Error('Unable to confirm the saved comment.');
       setText('');
-      // A newly submitted comment may need moderation before everyone sees it.
       setFeedback(saved.moderation_status==='approved'
         ?'Comment posted.'
-        :'Comment saved. It will be visible to others after moderation.');
+        :'Comment saved, but not available to other students.');
       await load();
       onSent?.(scene.id,saved);
     }catch(e){setError(e?.message||'Could not add your comment.');}
@@ -72,7 +71,7 @@ export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
         </View>:
         rows.map(item=>{
           const mine=item.user_id===myId;
-          const pending=!['approved','limited'].includes(item.moderation_status);
+          const pending=item.moderation_status==='pending';
           return <View key={item.id} style={[styles.comment,{borderColor:theme.line,backgroundColor:theme.surface}]}>
             <View style={[styles.initial,{backgroundColor:theme.surface2}]}><Feather name="user" size={17} color={theme.muted}/></View>
             <View style={{flex:1,gap:5}}>
@@ -100,7 +99,7 @@ export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
         {sending?<ActivityIndicator color="#fff" size="small"/>:<Feather name="arrow-up" color="#fff" size={22}/>}
       </Pressable>
     </View>
-    <Text style={[styles.hint,{color:theme.muted}]}>Comments follow StudentHood moderation and age restrictions.</Text>
+    <Text style={[styles.hint,{color:theme.muted}]}>Comments appear immediately to permitted viewers. Report unsafe content.</Text>
   </KeyboardAvoidingView>;
 }
 const styles=StyleSheet.create({
