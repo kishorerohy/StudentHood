@@ -89,8 +89,12 @@ WHERE moderation_status='pending'
     WHERE support.category='report' AND support.message LIKE '%'||public.scenes.id::text||'%'
   );
 ALTER TABLE public.scenes ENABLE TRIGGER scenes_apply_safety_defaults;
+-- Existing comments are backfilled before the new author-proof status rule
+-- is reactivated; disable only this one trigger inside the transaction.
+ALTER TABLE public.scene_comments DISABLE TRIGGER studenthood_comment_publish;
 UPDATE public.scene_comments SET moderation_status='approved'
 WHERE moderation_status='pending';
+ALTER TABLE public.scene_comments ENABLE TRIGGER studenthood_comment_publish;
 UPDATE public.pulse_entries SET moderation_status='approved'
 WHERE moderation_status='pending';
 UPDATE public.hangs SET moderation_status='approved'
@@ -151,6 +155,34 @@ END;
 $fn$;
 REVOKE ALL ON FUNCTION public.studenthood_can_view_creation(text,uuid,text,text,text) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.studenthood_can_view_creation(text,uuid,text,text,text) TO authenticated;
+
+-- Existing installed v0.1.9 APKs explicitly send 'pending' when
+-- creating Pulse/Hangs/Crews/Gigs. Rewrite it BEFORE RLS WITH CHECK so older
+-- signed-in clients can still publish rather than unexpectedly failing.
+CREATE OR REPLACE FUNCTION public.studenthood_publish_creation_defaults()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=public,pg_catalog AS $fn$
+BEGIN
+  NEW.moderation_status:='approved';
+  RETURN NEW;
+END;
+$fn$;
+DROP TRIGGER IF EXISTS studenthood_publish_pulse ON public.pulse_entries;
+CREATE TRIGGER studenthood_publish_pulse
+BEFORE INSERT ON public.pulse_entries FOR EACH ROW
+EXECUTE FUNCTION public.studenthood_publish_creation_defaults();
+DROP TRIGGER IF EXISTS studenthood_publish_hangs ON public.hangs;
+CREATE TRIGGER studenthood_publish_hangs
+BEFORE INSERT ON public.hangs FOR EACH ROW
+EXECUTE FUNCTION public.studenthood_publish_creation_defaults();
+DROP TRIGGER IF EXISTS studenthood_publish_crews ON public.crews;
+CREATE TRIGGER studenthood_publish_crews
+BEFORE INSERT ON public.crews FOR EACH ROW
+EXECUTE FUNCTION public.studenthood_publish_creation_defaults();
+DROP TRIGGER IF EXISTS studenthood_publish_gigs ON public.gigs;
+CREATE TRIGGER studenthood_publish_gigs
+BEFORE INSERT ON public.gigs FOR EACH ROW
+EXECUTE FUNCTION public.studenthood_publish_creation_defaults();
 
 -- Replace stale "submit pending" policies with immediate publishing. Keep
 -- all prior app-access, eligibility, future-date and age restrictions.
