@@ -61,19 +61,20 @@ export default function FeatureLandingScreen({kind,theme,profile,onDiscover,onBa
     style={[styles.root,{backgroundColor:theme.bg}]}
     contentContainerStyle={styles.content}
     showsVerticalScrollIndicator={false}>
-    <View style={styles.heading}>
-      {!!onBack&&<Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel="Back" style={[styles.back,{backgroundColor:theme.surface,borderColor:theme.line}]}><Feather name="arrow-left" color={theme.text} size={20}/></Pressable>}
-      <Text style={[styles.eyebrow,{color:theme.accent}]}>{config.eyebrow}</Text>
-      <Text style={[styles.headingText,{color:theme.text}]}>{config.title}</Text>
-      <Text style={[styles.intro,{color:theme.muted}]}>{config.intro}</Text>
-    </View>
+    {/* Hangs/Gigs/Pulse/Crews share a heading-free top row. */}
+    {!!onBack&&<View style={styles.navigationRow}>
+      <Pressable onPress={onBack} accessibilityRole="button"
+        accessibilityLabel="Back to StudentHood" style={[styles.back,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+        <Feather name="arrow-left" color={theme.text} size={20}/>
+      </Pressable>
+    </View>}
     <View style={[styles.hero,{borderColor:theme.line,backgroundColor:theme.isLight?'#EDEBE9':'#192229'}]}>
       <View style={[styles.heroOrbit,{borderColor:theme.isLight?'#CBC5CE':'#38414B'}]}/>
       <View style={[styles.heroOrbitSmall,{borderColor:theme.isLight?'#C8C6D7':'#43505C'}]}/>
       <View style={[styles.heroIcon,{backgroundColor:theme.isLight?'rgba(255,255,255,0.84)':'rgba(12,18,25,0.80)',borderColor:theme.line}]}>
         {kind==='Pulse'?<SceneIcon color={config.accent} size={35}/>:<Feather name={config.icon} color={config.accent} size={34}/>}
       </View>
-      <Text style={[styles.heroTitle,{color:theme.text}]}>{kind==='Hangs'?'Be part of something':kind==='Gigs'?'Make your next move':kind==='Pulse'?'Life happens between Scenes':'Belong to something'}</Text>
+
       <Text style={[styles.heroBody,{color:theme.muted}]}>{kind==='Hangs'?'Meetups and events shaped by your campus.':kind==='Gigs'?'Find real opportunities with clear details.':kind==='Pulse'?'Only moments shared with you will appear here.':'Find students who share your interests.'}</Text>
       <View style={[styles.privacyTag,{borderColor:theme.line,backgroundColor:theme.isLight?'rgba(255,255,255,0.68)':'rgba(8,12,18,0.48)'}]}>
         <Feather name="shield" color={theme.muted} size={13}/>
@@ -94,10 +95,7 @@ export default function FeatureLandingScreen({kind,theme,profile,onDiscover,onBa
       <Feather name="plus" color="#fff" size={19}/>
       <Text style={styles.createText}>{config.action}</Text>
     </Pressable>}
-    <View style={styles.submissionsHeader}>
-      <Text style={[styles.submissionHeading,{color:theme.text}]}>My submissions</Text>
-      <Text style={[styles.submissionHint,{color:theme.muted}]}>Only you can view pending submissions.</Text>
-    </View>
+    {/* Author's own submissions, already displayed as individual labeled cards. */}
     {submissionLoading?<ActivityIndicator style={{marginVertical:15}} color={theme.accent}/>:
       submissionError?<Text accessibilityRole="alert" style={[styles.submissionError,{color:theme.muted}]}>Submissions unavailable: {submissionError}</Text>:
       submissions.length===0?<Text style={[styles.submissionError,{color:theme.muted}]}>Nothing submitted yet.</Text>:
@@ -136,9 +134,9 @@ export default function FeatureLandingScreen({kind,theme,profile,onDiscover,onBa
 }
 const styles=StyleSheet.create({
   root:{flex:1},
-  content:{maxWidth:900,width:'100%',alignSelf:'center',paddingHorizontal:14,paddingTop:20,paddingBottom:120},
-  heading:{marginBottom:22},
-  back:{borderRadius:14,borderWidth:1,height:43,width:43,alignItems:'center',justifyContent:'center',marginBottom:14},
+  content:{maxWidth:900,width:'100%',alignSelf:'center',paddingHorizontal:14,paddingTop:10,paddingBottom:120},
+  navigationRow:{minHeight:47,flexDirection:'row',alignItems:'center',marginBottom:10},
+  back:{borderRadius:14,borderWidth:1,height:43,width:43,alignItems:'center',justifyContent:'center'},
   eyebrow:{fontSize:10,fontWeight:'900',letterSpacing:1.4,marginBottom:6},
   headingText:{fontSize:36,fontWeight:'900',letterSpacing:-1.2},
   intro:{fontSize:13,lineHeight:20,marginTop:6},
