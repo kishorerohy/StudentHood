@@ -5,6 +5,7 @@ import * as Linking from 'expo-linking';
 import {DiscoverIcon,DropsIcon,PingIcon,SceneIcon} from './icons';
 import {useSession} from './session';
 import ScenesScreen from './screens/ScenesScreen';
+import useForegroundNotificationSounds from './notificationSounds';
 import ProfileScreen from './screens/ProfileScreen';
 import TopHubScreen from './screens/TopHubScreen';
 import PingScreen from './screens/PingScreen';
@@ -27,6 +28,7 @@ function getSharedSceneFromLink(url){return typeof url==='string'?url.match(SHAR
 
 export default function MainApp({theme}){
   const {profile,safety,refreshAccount}=useSession();
+  useForegroundNotificationSounds(profile?.id);
   const {width}=useWindowDimensions();
   const isTablet=width>=768;
   const [tab,setTab]=useState('Scenes');
@@ -104,7 +106,7 @@ export default function MainApp({theme}){
           onOpenScene={sceneId=>openSharedLink('studenthood://scene/'+sceneId)}
         />;
       case 'feature':
-        return <FeatureLandingScreen kind={page.kind} theme={theme} profile={profile} reloadKey={reloadKey} onBack={goBack} onDiscover={()=>showPage({type:'hub',kind:'Discover'})} onCreate={()=>showPage({type:'create-feature',kind:page.kind})}/>;
+        return <FeatureLandingScreen kind={page.kind} theme={theme} profile={profile} reloadKey={reloadKey} onBack={goBack} onDiscover={()=>showPage({type:'hub',kind:'Discover'})} />;
       case 'student-profile':
         return <UserProfileScreen
           userId={page.userId}
@@ -130,6 +132,7 @@ export default function MainApp({theme}){
           theme={theme}
           profile={profile}
           photoOnly={page.photoOnly}
+          coverOnly={page.coverOnly}
           onBack={goBack}
           onSaved={afterProfileSaved}
         />;
@@ -167,7 +170,7 @@ export default function MainApp({theme}){
       focusScene={focusScene}
       onOpenProfile={userId=>showPage({type:'student-profile',userId})}
       onOpenCreate={()=>showPage({type:'create-options'})}
-      onOpenPulse={()=>showPage({type:'feature',kind:'Pulse'})}
+      onOpenPulse={()=>showPage({type:'create-options'})}
       onOpenDiscover={()=>showPage({type:'hub',kind:'Discover'})}
     />}
     {tab==='Profile'&&<ProfileScreen
@@ -177,10 +180,11 @@ export default function MainApp({theme}){
       onMenu={()=>showPage({type:'profile-menu',section:'menu'})}
       onEdit={()=>showPage({type:'edit-profile'})}
       onEditPicture={()=>showPage({type:'edit-profile',photoOnly:true})}
+      onEditCover={()=>showPage({type:'edit-profile',coverOnly:true})}
     />}
 
-    {tab==='Hangs'&&<FeatureLandingScreen kind="Hangs" theme={theme} profile={profile} reloadKey={reloadKey} onDiscover={()=>showPage({type:'hub',kind:'Discover'})} onCreate={()=>showPage({type:'create-feature',kind:'Hangs'})}/>}
-    {tab==='Gigs'&&<FeatureLandingScreen kind="Gigs" theme={theme} profile={profile} reloadKey={reloadKey} onDiscover={()=>showPage({type:'hub',kind:'Discover'})} onCreate={()=>showPage({type:'create-feature',kind:'Gigs'})}/>}
+    {tab==='Hangs'&&<FeatureLandingScreen kind="Hangs" theme={theme} profile={profile} reloadKey={reloadKey} onDiscover={()=>showPage({type:'hub',kind:'Discover'})} />}
+    {tab==='Gigs'&&<FeatureLandingScreen kind="Gigs" theme={theme} profile={profile} reloadKey={reloadKey} onDiscover={()=>showPage({type:'hub',kind:'Discover'})} />}
     <BottomDial theme={theme} tab={tab} onTab={selectTab} onCreate={()=>showPage({type:'create-options'})} isTablet={isTablet} screenWidth={width}/>
     {tab==='Scenes'&&<CampusStatusSlider theme={theme} profile={profile} onSaved={afterProfileSaved}/>}
 

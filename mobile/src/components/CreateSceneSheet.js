@@ -99,7 +99,7 @@ export default function CreateSceneSheet({visible,onClose,onCreated,theme}){
 
         <View style={[styles.safety,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
           <Feather name="shield" size={18} color={theme.accent}/>
-          <Text style={[styles.safetyText,{color:theme.muted}]}>New and edited Scenes go through StudentHood moderation before broader distribution. Teen safety rules are enforced by the server.</Text>
+          <Text style={[styles.safetyText,{color:theme.muted}]}>Your Scene is shared immediately with your chosen audience. Others can report concerns, and StudentHood may remove unsafe content. Teen safety and privacy rules still apply.</Text>
         </View>
 
         {!!error&&<Text style={[styles.error,{color:theme.danger}]}>{error}</Text>}

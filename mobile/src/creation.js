@@ -104,19 +104,19 @@ export async function submitStudentCreation(kind,values={},asset=null){
       input.media_path=uploadedPath;
       input.media_type=mime==='video/mp4'?'video':'image';
     }
-    const payload={...input,[type.owner]:user.id,moderation_status:'pending'};
+    const payload={...input,[type.owner]:user.id,moderation_status:'approved'};
     // Campus is assigned by the server from the user's existing profile.
     attemptedInsert=true;
     const {data,error}=await supabase.from(type.table)
       .insert(payload)
       .select('id,moderation_status,created_at').single();
     if(error)throw error;
-    if(!data?.id||data.moderation_status!=='pending')
+    if(!data?.id||data.moderation_status!=='approved')
       throw new Error('Submission could not be verified.');
     const {data:confirmed,error:confirmError}=await supabase.from(type.table)
       .select('id,moderation_status,created_at')
       .eq('id',data.id).eq(type.owner,user.id).maybeSingle();
-    if(confirmError||!confirmed?.id||confirmed.moderation_status!=='pending')
+    if(confirmError||!confirmed?.id||confirmed.moderation_status!=='approved')
       throw new Error('Submission was received but could not be verified; please check My submissions before retrying.');
     return confirmed;
   }catch(e){
@@ -139,6 +139,24 @@ export async function getMyStudentSubmissions(kind,{limit=20}={}){
   const {data,error}=await supabase.from(type.table)
     .select('*').eq(type.owner,user.id)
     .order('created_at',{ascending:false}).limit(Math.min(Math.max(limit,1),40));
+  if(error)throw error;
+  return data||[];
+}
+
+
+// Browse other students' live Hangs/Gigs, never the owner's submission queue.
+// Existing SELECT RLS enforces campus, age, block and moderation eligibility.
+export async function getVisibleCampusCreations(kind,{limit=40}={}){
+  if(kind!=='Hangs'&&kind!=='Gigs')return [];
+  const {data:{user},error:authError}=await supabase.auth.getUser();
+  if(authError)throw authError;
+  if(!user)return [];
+  const {data,error}=await supabase.from(TYPES[kind].table)
+    .select('*')
+    .eq('moderation_status','approved')
+    .neq('creator_id',user.id)
+    .order('created_at',{ascending:false})
+    .limit(Math.min(Math.max(Number(limit)||40,1),60));
   if(error)throw error;
   return data||[];
 }

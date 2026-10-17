@@ -1,6 +1,6 @@
 import React,{useMemo,useState} from 'react';
 import {
-  ActivityIndicator,Image,KeyboardAvoidingView,Platform,Pressable,ScrollView,
+  ActivityIndicator,Image,Keyboard,KeyboardAvoidingView,Platform,Pressable,ScrollView,
   StyleSheet,Text,TextInput,View
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -10,10 +10,10 @@ import {submitStudentCreation} from '../creation';
 import useKeyboardAwareForm from '../hooks/useKeyboardAwareForm';
 
 const SETTINGS={
-  Pulse:{heading:'Add to Pulse',subheading:'A quick moment with your campus circle.',cta:'Submit Pulse'},
-  Hangs:{heading:'Start a Hang',subheading:'Bring your campus together, safely.',cta:'Submit Hang'},
-  Crews:{heading:'Create a Crew',subheading:'Build a community around what you love.',cta:'Submit Crew'},
-  Gigs:{heading:'Post a Gig',subheading:'Share a genuine opportunity with students.',cta:'Submit Gig'}
+  Pulse:{heading:'Add to Pulse',subheading:'A quick moment with your campus circle.',cta:'Share Pulse'},
+  Hangs:{heading:'Start a Hang',subheading:'Bring your campus together, safely.',cta:'Create Hang'},
+  Crews:{heading:'Create a Crew',subheading:'Build a community around what you love.',cta:'Create Crew'},
+  Gigs:{heading:'Post a Gig',subheading:'Share a genuine opportunity with students.',cta:'Post Gig'}
 };
 const OPTIONS={
   Hangs:['Social','Study','Sports','Culture','Other'],
@@ -36,6 +36,8 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
   });
   const [date,setDate]=useState(nextHour);
   const [picker,setPicker]=useState(null);
+  const [dateChosen,setDateChosen]=useState(false);
+  const [timeChosen,setTimeChosen]=useState(false);
   const [media,setMedia]=useState(null);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
@@ -44,13 +46,18 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
   const set=(field,value)=>setValues(current=>({...current,[field]:value}));
   const isPulse=kind==='Pulse';
   const canUseMedia=isPulse;
-  const futureTime=date.toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'});
+  const dateLabel=dateChosen
+    ?date.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})
+    :'Choose date';
+  const timeLabel=timeChosen
+    ?date.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})
+    :'Choose time';
   const sections=OPTIONS[kind]||[];
   const info=kind==='Gigs'
-    ?'Gig applications and payments will be enabled only after employer review and eligibility checks.'
-    :kind==='Crews'?'A Crew will become visible only after community safety review.'
-    :kind==='Pulse'?'Pulse is submitted privately for moderation before reaching your selected audience.'
-    :'Attendees and RSVPs will be available after event safety review.';
+    ?'Gigs appear immediately to eligible adults. Employers are not automatically verified; payments and applications are not yet available.'
+    :kind==='Crews'?'Your Crew is created immediately for the chosen audience.'
+    :kind==='Pulse'?'Your Pulse appears immediately to its selected audience.'
+    :'Your Hang appears immediately to eligible students; RSVPs are not yet available.';
 
   async function chooseMedia(){
     setError('');
@@ -77,15 +84,25 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
       setBusy(false);
     }
   }
-  function updateDate(_,selected){
+  function updateDate(event,selected){
+    const choosing=picker;
     if(Platform.OS==='android')setPicker(null);
-    if(selected){
-      const updated=new Date(date);
-      if(picker==='date')updated.setFullYear(selected.getFullYear(),selected.getMonth(),selected.getDate());
-      else updated.setHours(selected.getHours(),selected.getMinutes(),0,0);
-      setDate(updated);
-      set('startsAt',updated.toISOString());
+    // Dismissing Android's picker must not mark the date/time as chosen.
+    if(event?.type==='dismissed'||!selected||!choosing)return;
+    const updated=new Date(date);
+    if(choosing==='date'){
+      updated.setFullYear(selected.getFullYear(),selected.getMonth(),selected.getDate());
+      setDateChosen(true);
+    }else{
+      updated.setHours(selected.getHours(),selected.getMinutes(),0,0);
+      setTimeChosen(true);
     }
+    setDate(updated);
+    set('startsAt',updated.toISOString());
+  }
+  function showDateTimePicker(mode){
+    Keyboard.dismiss();
+    setPicker(mode);
   }
 
   return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]} behavior={Platform.OS==='ios'?'padding':'height'}>
@@ -93,21 +110,19 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
       <Pressable accessibilityRole="button" accessibilityLabel="Back to Create" onPress={onBack} style={styles.back}>
         <Feather name="arrow-left" size={21} color={theme.text}/>
       </Pressable>
-      <Text style={[styles.headerTitle,{color:theme.text}]}>{config.heading}</Text>
+      <View style={{flex:1}} accessibilityLabel={config.heading}/>
       <View style={{width:43}}/>
     </View>
     <ScrollView ref={scrollRef} onLayout={onScrollLayout} onScroll={onScroll} scrollEventThrottle={16} automaticallyAdjustKeyboardInsets={Platform.OS==='ios'} contentContainerStyle={[styles.content,{paddingBottom:200+keyboardPadding}]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'} showsVerticalScrollIndicator={false}>
       {!!submitted?<View style={[styles.confirm,{backgroundColor:theme.surface,borderColor:theme.line}]}>
         <View style={[styles.confirmIcon,{backgroundColor:theme.accentSoft}]}><Feather name="check-circle" color={theme.success} size={34}/></View>
-        <Text style={[styles.confirmTitle,{color:theme.text}]}>Saved for review</Text>
-        <Text style={[styles.info,{color:theme.muted}]}>Your {kind==='Pulse'?'Pulse':kind==='Hangs'?'Hang':kind==='Crews'?'Crew':'Gig'} was saved successfully. It isn't public yet. You can find it under My submissions.</Text>
+        <Text style={[styles.confirmTitle,{color:theme.text}]}>Published</Text>
+        <Text style={[styles.info,{color:theme.muted}]}>Your {kind==='Pulse'?'Pulse':kind==='Hangs'?'Hang':kind==='Crews'?'Crew':'Gig'} was created successfully for its selected audience. You can find it under My submissions.</Text>
         <Pressable onPress={onBack} style={[styles.submit,{backgroundColor:theme.accent}]} accessibilityRole="button">
           <Text style={styles.submitText}>Back to Create</Text>
         </Pressable>
       </View>:
       <>
-        <Text style={[styles.eyebrow,{color:theme.accent}]}>STUDENTHOOD · CREATE</Text>
-        <Text style={[styles.intro,{color:theme.muted}]}>{config.subheading}</Text>
         {!!profile?.campus_name&&<View style={[styles.campus,{backgroundColor:theme.surface,borderColor:theme.line}]}>
           <Feather name="book-open" color={theme.accent} size={16}/>
           <View style={{flex:1}}>
@@ -136,10 +151,23 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
           <Choices theme={theme} label="Type of Hang" options={sections.map(x=>[x,x])} value={values.category} onChange={v=>set('category',v)}/>
           <Field theme={theme} onFocus={onFieldFocus} label="What's the plan?" value={values.description} onChangeText={text=>set('description',text)} multiline maxLength={2000} placeholder="Tell students what they'll do and who can join…"/>
           <View style={styles.dual}>
-            <Pressable accessibilityRole="button" onPress={()=>setPicker('date')} style={[styles.dateButton,{backgroundColor:theme.surface,borderColor:theme.line}]}><Feather name="calendar" color={theme.accent} size={18}/><Text style={{color:theme.text,fontWeight:'700'}}>Choose date</Text></Pressable>
-            <Pressable accessibilityRole="button" onPress={()=>setPicker('time')} style={[styles.dateButton,{backgroundColor:theme.surface,borderColor:theme.line}]}><Feather name="clock" color={theme.accent} size={18}/><Text style={{color:theme.text,fontWeight:'700'}}>Choose time</Text></Pressable>
+            <Pressable accessibilityRole="button"
+              accessibilityLabel={dateChosen?'Selected date '+dateLabel+'. Change date':'Choose date'}
+              onPress={()=>showDateTimePicker('date')}
+              style={[styles.dateButton,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+              <Feather name="calendar" color={theme.accent} size={18}/>
+              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}
+                style={[styles.dateButtonLabel,{color:theme.text}]}>{dateLabel}</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button"
+              accessibilityLabel={timeChosen?'Selected time '+timeLabel+'. Change time':'Choose time'}
+              onPress={()=>showDateTimePicker('time')}
+              style={[styles.dateButton,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+              <Feather name="clock" color={theme.accent} size={18}/>
+              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}
+                style={[styles.dateButtonLabel,{color:theme.text}]}>{timeLabel}</Text>
+            </Pressable>
           </View>
-          <Text style={[styles.dateNote,{color:theme.muted}]}>{futureTime}</Text>
           {!!picker&&<DateTimePicker value={date} mode={picker} minimumDate={picker==='date'?new Date():undefined} display={Platform.OS==='ios'?'spinner':'default'} onChange={updateDate}/>}
           {Platform.OS==='ios'&&!!picker&&<Pressable onPress={()=>setPicker(null)}><Text style={[styles.done,{color:theme.accent}]}>Done</Text></Pressable>}
           <Field theme={theme} onFocus={onFieldFocus} label="Meeting point" value={values.locationHint} onChangeText={text=>set('locationHint',text)} maxLength={120} placeholder="Library lobby or a public campus location"/>
@@ -155,7 +183,7 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
         </>}
 
         {kind==='Gigs'&&<>
-          <View style={[styles.note,{borderColor:theme.line,backgroundColor:theme.surface2}]}><Feather name="shield" color={theme.accent} size={17}/><Text style={[styles.info,{color:theme.muted,flex:1}]}>Gig submission is restricted to adults, with review before publishing. No employer is labeled verified without verification.</Text></View>
+          <View style={[styles.note,{borderColor:theme.line,backgroundColor:theme.surface2}]}><Feather name="shield" color={theme.accent} size={17}/><Text style={[styles.info,{color:theme.muted,flex:1}]}>Only eligible adults can publish Gigs. Employers are not automatically verified. Report misleading or unsafe opportunities.</Text></View>
           <Field theme={theme} onFocus={onFieldFocus} label="Role / Gig title" value={values.title} onChangeText={text=>set('title',text)} maxLength={100} placeholder="Weekend research assistant"/>
           <Field theme={theme} onFocus={onFieldFocus} label="Employer or organisation" value={values.employerName} onChangeText={text=>set('employerName',text)} maxLength={120} placeholder="Official business name"/>
           <Choices theme={theme} label="Opportunity type" options={sections.map(x=>[x,x])} value={values.category} onChange={v=>set('category',v)}/>
@@ -168,7 +196,7 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
 
         <View style={[styles.note,{borderColor:theme.line,backgroundColor:theme.surface2}]}>
           <Feather name="shield" size={18} color={theme.accent}/>
-          <Text style={[styles.info,{color:theme.muted,flex:1}]}>{info} Submissions are private while pending. StudentHood safety restrictions remain active.</Text>
+          <Text style={[styles.info,{color:theme.muted,flex:1}]}>{info} Others can report unsafe content. StudentHood safety and privacy restrictions remain active.</Text>
         </View>
         {!!error&&<Text accessibilityRole="alert" style={[styles.error,{color:theme.danger}]}>{error}</Text>}
         <Pressable onPress={submit} disabled={busy} accessibilityRole="button" accessibilityState={{disabled:busy}} style={[styles.submit,{backgroundColor:theme.accent,opacity:busy?0.6:1}]}>
@@ -220,8 +248,8 @@ const styles=StyleSheet.create({
   previewImage:{height:225,width:'100%',borderRadius:8},
   removeMedia:{position:'absolute',top:14,right:14,backgroundColor:'rgba(0,0,0,0.65)',borderRadius:20,padding:8},
   dual:{flexDirection:'row',gap:10,marginTop:18},
-  dateButton:{flex:1,minHeight:51,borderRadius:14,borderWidth:1,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:8},
-  dateNote:{fontSize:13,marginTop:12},
+  dateButton:{flex:1,minWidth:0,minHeight:51,borderRadius:14,borderWidth:1,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:8,paddingHorizontal:8},
+  dateButtonLabel:{fontSize:13,fontWeight:'700',flexShrink:1,textAlign:'center'},
   done:{fontWeight:'800',textAlign:'right',padding:14},
   note:{flexDirection:'row',borderWidth:1,borderRadius:16,padding:14,gap:11,marginTop:20},
   info:{fontSize:11,lineHeight:18},

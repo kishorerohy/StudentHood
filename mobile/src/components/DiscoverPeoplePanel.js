@@ -2,20 +2,19 @@ import React,{useEffect,useState} from 'react';
 import {ActivityIndicator,Image,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {getPeepConnection,getProfileCard,sendPeepRequest,respondToPeepRequest} from '../api';
+import CampusPresenceBadge from './CampusPresenceBadge';
 
 // Campus candidates are supplied by the privacy-aware studenthood_campus_peeps RPC.
 // Interests are only read via the existing permission-checked profile-card RPC.
-export default function DiscoverPeoplePanel({people=[],viewer,theme,onOpenProfile}){
+export default function DiscoverPeoplePanel({people=[],viewer,theme,onOpenProfile,refreshKey=0}){
   if(!people.length)return null;
   return <View style={styles.section}>
-    <Text style={[styles.heading,{color:theme.text}]}>Find your people</Text>
-    <Text style={[styles.subheading,{color:theme.muted}]}>Students you can discover from your campus</Text>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cards} accessibilityLabel="Discover campus students">
-      {people.slice(0,16).map(person=><PersonCard key={person.id} person={person} viewer={viewer} theme={theme} onOpenProfile={onOpenProfile}/>)}
+      {people.slice(0,16).map(person=><PersonCard key={person.id} person={person} viewer={viewer} theme={theme} onOpenProfile={onOpenProfile} refreshKey={refreshKey}/>)}
     </ScrollView>
   </View>;
 }
-function PersonCard({person,viewer,theme,onOpenProfile}){
+function PersonCard({person,viewer,theme,onOpenProfile,refreshKey}){
   const [details,setDetails]=useState(null);
   const [relationship,setRelationship]=useState(null);
   const [ready,setReady]=useState(false);
@@ -28,7 +27,7 @@ function PersonCard({person,viewer,theme,onOpenProfile}){
       .then(([card,connection])=>{if(live){setDetails(card);setRelationship(connection);setReady(true);}})
       .catch(()=>{if(live){setReady(false);setNotice('Peep status unavailable');}});
     return()=>{live=false};
-  },[person.id]);
+  },[person.id,refreshKey]);
   const mine=new Set((Array.isArray(viewer?.interests)?viewer.interests:[]).map(v=>String(v).trim().toLowerCase()).filter(Boolean));
   const shared=(Array.isArray(details?.interests)?details.interests:[]).filter(v=>mine.has(String(v).trim().toLowerCase())).slice(0,3);
   const isPeep=details?.is_peep||relationship?.status==='accepted';
@@ -66,6 +65,7 @@ function PersonCard({person,viewer,theme,onOpenProfile}){
       <Text numberOfLines={1} style={[styles.name,{color:theme.text}]}>{person.full_name||person.username||'Student'}</Text>
       <Text numberOfLines={1} style={[styles.username,{color:theme.muted}]}>{person.username?'@'+person.username:'StudentHood'}</Text>
       <View style={styles.campus}><Feather name="book-open" size={12} color={theme.accent}/><Text numberOfLines={1} style={[styles.campusText,{color:theme.muted}]}>{person.campus_name||'Same campus'}</Text></View>
+      <CampusPresenceBadge status={details?.campus_presence} theme={theme}/>
       <Text numberOfLines={2} style={[styles.common,{color:theme.muted}]}>{shared.length?shared.join(' · ')+' in common':'Explore their profile'}</Text>
     </Pressable>
     <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled:!active}}
@@ -83,7 +83,7 @@ function PersonCard({person,viewer,theme,onOpenProfile}){
   </View>;
 }
 const styles=StyleSheet.create({
-  section:{marginBottom:17},
+  section:{marginBottom:17,paddingTop:1},
   heading:{fontSize:19,fontWeight:'900',marginBottom:3},
   subheading:{fontSize:11,marginBottom:13},
   cards:{gap:11,paddingRight:16,paddingBottom:10},

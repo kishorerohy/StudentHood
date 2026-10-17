@@ -1,8 +1,8 @@
 import React from 'react';
 import {ActivityIndicator,Image,StatusBar,StyleSheet,Text,View} from 'react-native';
 
-// This is the user's approved white startup screen. The matching native Expo
-// splash uses the same logo/background, so there is no black-to-white flash.
+// This is the ONE approved branded startup page. The mandatory native Android
+// launch surface is blank white and carries no second StudentHood logo.
 const STARTUP_LOGO=require('../../assets/studenthood-logo-light.png');
 
 export default function StartupScreen({theme,error,onRetry}){
@@ -26,8 +26,8 @@ export default function StartupScreen({theme,error,onRetry}){
 
 const styles=StyleSheet.create({
   root:{flex:1,alignItems:'center',justifyContent:'center',padding:24,backgroundColor:'#FFFFFF'},
-  // Keep the logo vertically centered exactly as in the native Expo splash.
-  // Adding the tagline/loading text must not shift the logo at handoff.
+  // Keep the approved StudentHood logo stable in the single React startup page.
+  // Loading/tagline positions should not jump as account checks run.
   center:{width:'100%',maxWidth:390,height:76,alignItems:'center'},
   logo:{width:250,height:76},
   tagline:{position:'absolute',top:88,fontSize:10,fontWeight:'800',letterSpacing:2.3,color:'#706E6B'},

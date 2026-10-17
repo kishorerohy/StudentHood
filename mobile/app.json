@@ -3,7 +3,7 @@
     "name": "StudentHood",
     "slug": "studenthood",
     "scheme": "studenthood",
-    "version": "0.1.9",
+    "version": "0.2.0",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -27,7 +27,7 @@
         "backgroundColor": "#0B0D0F",
         "foregroundImage": "assets/studenthood-app-icon-foreground.png"
       },
-      "versionCode": 10,
+      "versionCode": 11,
       "softwareKeyboardLayoutMode": "resize"
     },
     "plugins": [
@@ -44,17 +44,27 @@
           "locationWhenInUsePermission": "StudentHood uses your location during profile setup to find your city and nearby schools, colleges and universities. Your precise location is not stored."
         }
       ],
+      [
+        "expo-notifications",
+        {
+          "sounds": [
+            "./assets/studenthood-notification.wav"
+          ],
+          "defaultChannel": "studenthood-drops-v1",
+          "color": "#5FC5BE"
+        }
+      ],
       "./plugins/withSocialShareQueries",
       [
         "expo-splash-screen",
         {
           "backgroundColor": "#FFFFFF",
-          "image": "./assets/studenthood-logo-light.png",
-          "imageWidth": 250,
+          "image": "./assets/studenthood-native-blank.png",
+          "imageWidth": 1,
           "resizeMode": "contain",
           "dark": {
             "backgroundColor": "#FFFFFF",
-            "image": "./assets/studenthood-logo-light.png"
+            "image": "./assets/studenthood-native-blank.png"
           }
         }
       ]

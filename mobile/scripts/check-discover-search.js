@@ -1,0 +1,31 @@
+// Protect Discover search usability and viewer-specific privacy on every APK build.
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const root=path.resolve(__dirname,'..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const ui=read('src/screens/TopHubScreen.js');
+const api=read('src/api.js');
+const db=read('../supabase/migrations/20261017_discover_permission_checked_student_search.sql');
+
+assert(ui.includes("searchActive=peopleQuery.trim().length>0"),'Search mode must react to text');
+assert(ui.includes('!searchActive&&<>'),'Hide category tiles when querying');
+assert(ui.includes("visiblePeople=searchActive?searchResults:peeps"),'Do not filter first 100 campus profiles');
+assert(ui.includes('searchDiscoverableStudents(term,{limit:30})'),'Search must run on the server');
+assert(ui.includes('setTimeout(()=>{')&&ui.includes('},350)'),'Debounce search');
+assert(ui.includes('if(active)setSearchResults(rows)'),'Do not display stale responses');
+assert(ui.includes('keyboardShouldPersistTaps="handled"'),'Result must remain tappable with keyboard open');
+assert(ui.includes('keyboardDismissMode="on-drag"'),'List must scroll with keyboard open');
+assert(ui.includes('onOpenProfile?.(peep.id)'),'Search results open permitted full profile');
+assert(ui.includes('Matching student profiles'),'Result panel must be under search');
+assert(ui.includes("peopleError=searchActive?searchError:peepsError"),'Search errors must be shown');
+assert(!ui.includes('Real people and opportunities around your campus'),'No extra Discover title/intro');
+assert(api.includes("supabase.rpc('studenthood_search_discoverable_students'"),'Server-backed search missing');
+assert(db.includes("public.studenthood_can_discover_profile(p.id)"),'Respect youth, guardian, visibility and blocks');
+assert(db.includes("studenthood_access_policy()"),'Check current account access');
+assert(db.includes("p.onboarding_completed IS TRUE"),'Never include unfinished accounts');
+assert(db.includes("p.id<>auth.uid()"),'Do not suggest the viewer');
+assert(db.includes("length(needle)<2"),'Enforce a minimum query');
+assert(db.includes('REVOKE ALL ON FUNCTION public.studenthood_search_discoverable_students'),'Reject anon');
+assert(db.includes('GRANT EXECUTE ON FUNCTION public.studenthood_search_discoverable_students'),'Allow authenticated');
+console.log('PASS: Discover search shows permitted people above keyboard; no unrelated tiles or privacy bypass.');

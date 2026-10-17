@@ -12,23 +12,41 @@ function validateEditableProfile({full_name,bio,city,campus_name}){
 // restricts this query to relationships involving the current user.
 export async function getMyPeepCount(){
   const {data:{user},error:authError}=await supabase.auth.getUser();
-  if(authError) throw authError;
-  if(!user) return 0;
-  const {count,error}=await supabase.from('peep_connections')
-    .select('id',{count:'exact',head:true})
-    .eq('status','accepted')
-    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
-  if(error) throw error;
-  return Number(count)||0;
+  if(authError)throw authError;
+  if(!user)return 0;
+  // Same permission-scoped and block-aware count used for other profiles.
+  return (await getVisiblePeepCount(user.id))??0;
 }
 
 // Count only the target's Scenes visible to the signed-in viewer. Never
 // return an unrestricted creator total or bypass the Scene RLS policy.
+// Only authorized viewers can retrieve an aggregate accepted-Peeps count.
+// No connection roster, private requester info or private profile is exposed.
+// Explicit, owner-controlled re-share of ONE old campus Scene.
+// Never silently expand the audience when a student updates institution.
+export async function shareOwnSceneWithCurrentCampus(sceneId){
+  const id=String(sceneId||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id))throw new Error('Invalid Scene.');
+  const {data,error}=await supabase.rpc('studenthood_move_my_scene_to_current_campus',{p_scene_id:id});
+  if(error)throw error;
+  if(data!==true)throw new Error('Could not confirm updated Scene audience.');
+  return true;
+}
+
+export async function getVisiblePeepCount(userId){
+  const target=String(userId||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(target))return null;
+  const {data,error}=await supabase.rpc('studenthood_visible_peep_count',{p_target:target});
+  if(error)throw error;
+  return data===null||data===undefined?null:Number(data);
+}
+
 export async function getVisibleSceneCount(userId){
   if(!userId) return 0;
   const {count,error}=await supabase.from('scenes')
     .select('id',{count:'exact',head:true})
-    .eq('author_id',userId);
+    .eq('author_id',userId)
+    .neq('moderation_status','removed');
   if(error) throw error;
   return Number(count)||0;
 }
@@ -282,6 +300,42 @@ export async function getPingMessages(threadId,{limit=100}={}){
   return Array.isArray(data)?data:[];
 }
 
+// Per-account, per-recipient Ping controls. No test-account special cases.
+export async function getPingBlockStatus(targetId){
+  const target=String(targetId||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(target))throw new Error('Invalid Ping participant.');
+  const {data,error}=await supabase.rpc('studenthood_ping_block_status',{p_target:target});
+  if(error)throw error;
+  return {blocked_by_me:data?.blocked_by_me===true,interaction_available:data?.interaction_available===true};
+}
+export async function setPingBlock(targetId,blocked){
+  const target=String(targetId||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(target))throw new Error('Invalid Ping participant.');
+  const {data,error}=await supabase.rpc('studenthood_ping_set_block',{
+    p_target:target,p_block:!!blocked
+  });
+  if(error)throw error;
+  return {blocked_by_me:data?.blocked_by_me===true,interaction_available:data?.interaction_available===true};
+}
+export async function searchPingHistory(threadId,query,{limit=40,offset=0}={}){
+  const text=String(query||'').trim();
+  if(text.length<2)return [];
+  const {data,error}=await supabase.rpc('studenthood_ping_search_messages',{
+    p_thread:threadId,p_query:text,p_limit:Math.max(1,Math.min(Number(limit)||40,100)),
+    p_offset:Math.max(0,Math.min(Number(offset)||0,5000))
+  });
+  if(error)throw error;
+  return Array.isArray(data)?data:[];
+}
+export async function getPingHistoryPage(threadId,{limit=50,before=null}={}){
+  const {data,error}=await supabase.rpc('studenthood_ping_history_page',{
+    p_thread:threadId,p_limit:Math.max(1,Math.min(Number(limit)||50,100)),
+    p_before_at:before?.created_at||null,p_before_id:before?.id||null
+  });
+  if(error)throw error;
+  return Array.isArray(data)?data:[];
+}
+
 export async function decidePingRequest(threadId,decision){
   const id=String(threadId||'').trim();
   if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id)||!['accept','decline'].includes(decision))
@@ -308,6 +362,63 @@ export async function getPingSceneInbox({limit=50}={}){
   if(error)throw error;
   return Promise.all((data||[]).map(async row=>({
     ...row,sender_avatar_url:await getAvatarDisplayUrl(row.sender_avatar_url)
+  })));
+}
+
+// Reports on Pulses go to authorized moderators; the report doesn't
+// automatically remove another student's creation.
+export async function reportPulse(pulseId,reason){
+  const id=String(pulseId||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id))throw new Error('Invalid Pulse.');
+  if(!['Inappropriate content','Harassment or bullying','Spam or scam','Other safety concern'].includes(reason))
+    throw new Error('Select a report reason.');
+  const {data,error}=await supabase.rpc('studenthood_report_content',{
+    p_kind:'pulse',p_content_id:id,p_reason:reason
+  });
+  if(error)throw error;
+  if(data!==true)throw new Error('Pulse report could not be confirmed.');
+  return true;
+}
+
+// Scenes Pulse strip: real unexpired posts by accepted mutual Peeps only.
+// The RPC checks account safety, per-Pulse audience and universal blocks.
+// The Pulse media bucket remains private; no generic public media links.
+export async function getActivePeepsPulses({limit=16}={}){
+  const {data,error}=await supabase.rpc('studenthood_active_peeps_pulses',{
+    p_limit:Math.max(1,Math.min(30,Math.floor(Number(limit)||16)))
+  });
+  if(error)throw error;
+  const rows=Array.isArray(data)?data:[];
+  return Promise.all(rows.map(async pulse=>{
+    const [avatar,media]=await Promise.all([
+      pulse.author_avatar_url?getAvatarDisplayUrl(pulse.author_avatar_url):null,
+      pulse.media_path
+        ?supabase.storage.from('pulse-media').createSignedUrl(pulse.media_path,600)
+        :null
+    ]);
+    return {
+      ...pulse,
+      author_avatar_url:avatar,
+      media_signed_url:media?.error?null:media?.data?.signedUrl||null
+    };
+  }));
+}
+
+// Discover search is server-side, per-viewer permission checked, and does not
+// depend on a truncated campus list. Only permitted student data is returned.
+export async function searchDiscoverableStudents(query,{limit=30,offset=0}={}){
+  const needle=String(query||'').trim().slice(0,64);
+  if(needle.length<2)return [];
+  const {data,error}=await supabase.rpc('studenthood_search_discoverable_students',{
+    p_query:needle,
+    p_limit:Math.max(1,Math.min(50,Math.floor(Number(limit)||30))),
+    p_offset:Math.max(0,Math.min(500,Math.floor(Number(offset)||0)))
+  });
+  if(error)throw error;
+  const rows=Array.isArray(data)?data:[];
+  return Promise.all(rows.map(async item=>({
+    ...item,
+    avatar_url:await getAvatarDisplayUrl(item.avatar_url)
   })));
 }
 
@@ -530,8 +641,9 @@ export async function getIncomingPeepRequests({limit=25}={}){
 export async function getVisibleProfileScenes(targetUserId,{limit=12}={}){
   const target=String(targetUserId||'').trim();
   const {data,error}=await supabase.from('scenes')
-    .select('id,body,media_url,media_type,created_at')
+    .select('id,body,media_url,media_type,visibility,campus_name,created_at')
     .eq('author_id',target)
+    .neq('moderation_status','removed')
     .order('created_at',{ascending:false})
     .limit(Math.min(18,Math.max(1,Number(limit)||12)));
   if(error) throw error;

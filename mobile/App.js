@@ -1,8 +1,10 @@
 import React,{useCallback,useRef} from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 
-// Native Android splash uses the SAME white logo treatment as StartupScreen.
+// Android's mandatory native launch surface is intentionally plain white.
+// Only StartupScreen renders the approved StudentHood logo and tagline.
 SplashScreen.preventAutoHideAsync().catch(()=>{});
+SplashScreen.setOptions({fade:false,duration:0});
 import {StatusBar,StyleSheet,useColorScheme,View} from 'react-native';
 import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
 import {SessionProvider,useSession} from './src/session';
@@ -18,8 +20,8 @@ function StudentHood(){
   const theme=themeForScheme(scheme);
   const {session,profile,policy,loading,error,isSignedIn,resolvedUserId,refreshAccount}=useSession();
 
-  // The native splash and this startup screen share the same white branding.
-  // The startup route keeps showing while the correct account safety checks run.
+  // The platform's plain-white launch surface hands off once to this ONLY
+  // branded startup view while account and guardian checks finish.
   // No premature onboarding or unsafe account switching.
   if(loading||(isSignedIn&&resolvedUserId!==session?.user?.id)){
     return <SafeAreaView style={[styles.safe,{backgroundColor:'#FFFFFF'}]}>
@@ -64,9 +66,11 @@ export default function App(){
   const onFirstLayout=useCallback(()=>{
     if(splashDismissed.current)return;
     splashDismissed.current=true;
-    // Hand off as soon as React Native renders the matching white startup.
-    // The loading UI remains visible until auth/profile/guardian checks finish.
-    SplashScreen.hideAsync().catch(()=>{});
+    // Wait for a paint frame after React lays out the branded startup or
+    // the resolved route; never reveal a second native logo page.
+    requestAnimationFrame(()=>{
+      SplashScreen.hideAsync().catch(()=>{});
+    });
   },[]);
   return <SafeAreaProvider>
     <View style={styles.safe} onLayout={onFirstLayout}>
