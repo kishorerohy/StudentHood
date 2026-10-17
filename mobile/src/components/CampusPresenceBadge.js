@@ -1,5 +1,5 @@
 import React from 'react';
-import {StyleSheet,Text,View} from 'react-native';
+import {Platform,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 
 // Public-facing badge is deliberately absent for a hidden status.
@@ -15,5 +15,5 @@ export default function CampusPresenceBadge({status,theme}){
 
 const styles=StyleSheet.create({
   badge:{flexDirection:'row',gap:7,alignItems:'center',alignSelf:'center',borderWidth:1,borderRadius:99,paddingHorizontal:11,paddingVertical:7},
-  label:{fontWeight:'800',fontSize:11}
+  label:{fontFamily:Platform.OS==='android'?'sans-serif':undefined,fontWeight:'800',fontSize:11}
 });

@@ -1,5 +1,5 @@
 import React,{useRef,useState} from 'react';
-import {Image,Modal,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
+import {Alert,Image,Modal,Platform,Pressable,RefreshControl,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import Svg,{Defs,LinearGradient,Stop,Rect} from 'react-native-svg';
 import CampusPresenceBadge from './CampusPresenceBadge';
@@ -8,7 +8,8 @@ import CampusPresenceBadge from './CampusPresenceBadge';
 // student profiles. No fake verification badges or invented social counts.
 export default function StudentProfileView({
   theme,student,avatarUrl,scenes=[],sceneCount=null,peepCount=null,
-  onBack,onMenu,onEdit,onEditPhoto,actions=null,footer=null,own=false
+  onBack,onMenu,onEdit,onEditPhoto,actions=null,footer=null,own=false,
+  onRefresh=null,refreshing=false,onMoveScene=null
 }){
   const scroll=useRef(null);
   const [openScene,setOpenScene]=useState(null);
@@ -22,11 +23,29 @@ export default function StudentProfileView({
   const status=student?.campus_presence;
   const peeps=peepCount===null?'—':formatCount(peepCount);
   const posted=sceneCount===null?'—':formatCount(sceneCount);
+  const originalCampusScenes=own&&onMoveScene?scenes.filter(scene=>
+    scene.visibility==='campus'
+    &&String(scene.campus_name||'').trim()
+    &&String(student?.campus_name||'').trim()
+    &&String(scene.campus_name).trim().toLowerCase()!==String(student.campus_name).trim().toLowerCase()
+  ):[];
+  function offerMoveScene(scene){
+    Alert.alert('Share Scene with your current campus?',
+      'This Scene was posted for '+scene.campus_name+'. Choosing Share changes its audience to '+
+      student.campus_name+'. Students at the previous campus may lose access. This will not happen automatically.',
+      [{text:'Cancel',style:'cancel'},{text:'Share Scene',onPress:async()=>{
+        try{await onMoveScene(scene.id);}
+        catch(e){Alert.alert('Could not share Scene',e?.message||'Please retry later.');}
+      }}]
+    );
+  }
   return <><ScrollView
     ref={scroll}
     style={[styles.scroll,{backgroundColor:theme.bg}]}
     contentContainerStyle={styles.content}
     showsVerticalScrollIndicator={false}
+    refreshControl={onRefresh?<RefreshControl refreshing={refreshing}
+      onRefresh={onRefresh} tintColor={theme.accent}/> : undefined}
   >
     <View style={[styles.cover,{backgroundColor:theme.isLight?'#2E383E':'#121C24'}]}>
       {!!coverUrl&&<Image source={{uri:coverUrl}} style={styles.coverImage} resizeMode="cover"/>}
@@ -116,6 +135,16 @@ export default function StudentProfileView({
 
     <View style={styles.sceneSection}>
       <Text style={[styles.sceneTitle,{color:theme.text}]}>Scenes</Text>
+      {originalCampusScenes.map(scene=><Pressable key={'reshare:'+scene.id}
+        accessibilityRole="button" accessibilityLabel="Share older Scene with current campus"
+        onPress={()=>offerMoveScene(scene)}
+        style={[styles.oldCampusNotice,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
+        <Feather name="repeat" color={theme.accent} size={17}/>
+        <Text style={[styles.oldCampusText,{color:theme.text}]}>
+          Scene from {scene.campus_name}. Share with {student.campus_name}?
+        </Text>
+        <Feather name="chevron-right" color={theme.muted} size={16}/>
+      </Pressable>)}
       {scenes.length===0?
         <Text style={[styles.empty,{color:theme.muted}]}>No visible Scenes yet.</Text>:
         <View style={styles.grid}>
@@ -163,6 +192,9 @@ function formatCount(value){
   return String(n);
 }
 
+// Use a stable Android typeface instead of OEM or user-selected decorative
+// system fonts; keep profile names, usernames and stats legible in both themes.
+const profileFont=Platform.OS==='android'?'sans-serif':undefined;
 const styles=StyleSheet.create({
   scroll:{flex:1},
   content:{paddingBottom:125,maxWidth:790,width:'100%',alignSelf:'center'},
@@ -176,40 +208,42 @@ const styles=StyleSheet.create({
   identity:{alignItems:'center',paddingHorizontal:15,marginTop:-59,gap:7,zIndex:2,elevation:2}, 
   avatarRing:{height:130,width:130,borderRadius:65,borderWidth:4,alignItems:'center',justifyContent:'center',overflow:'visible',elevation:10,shadowColor:'#000',shadowOpacity:0.23,shadowOffset:{width:0,height:8},shadowRadius:15}, 
   avatarPhoto:{width:'100%',height:'100%',borderRadius:63},
-  initial:{fontSize:48,fontWeight:'800'},
+  initial:{fontFamily:profileFont,fontSize:48,fontWeight:'800'},
   camera:{position:'absolute',bottom:2,right:1,width:29,height:29,borderRadius:15,borderWidth:2,alignItems:'center',justifyContent:'center'},
-  name:{fontSize:27,fontWeight:'800',letterSpacing:-.6,textAlign:'center',marginTop:8},
-  handle:{fontSize:14,textAlign:'center',marginBottom:7},
+  name:{fontFamily:profileFont,fontSize:27,fontWeight:'800',letterSpacing:-.6,textAlign:'center',marginTop:8},
+  handle:{fontFamily:profileFont,fontSize:14,textAlign:'center',marginBottom:7},
   stats:{flexDirection:'row',paddingHorizontal:22,paddingTop:20,paddingBottom:20,borderBottomWidth:StyleSheet.hairlineWidth,alignItems:'center',justifyContent:'center'},
   stat:{flex:1,alignItems:'center',gap:5},
-  statNumber:{fontSize:20,fontWeight:'800'},
-  statText:{fontSize:12},
+  statNumber:{fontFamily:profileFont,fontSize:20,fontWeight:'800'},
+  statText:{fontFamily:profileFont,fontSize:12},
   statDivider:{width:1,height:35},
   info:{paddingHorizontal:25,paddingTop:23,gap:14},
-  bio:{fontSize:14,lineHeight:21},
-  interests:{fontSize:13,lineHeight:20},
+  bio:{fontFamily:profileFont,fontSize:14,lineHeight:21},
+  interests:{fontFamily:profileFont,fontSize:13,lineHeight:20},
   infoRow:{flexDirection:'row',alignItems:'center',gap:12},
-  infoValue:{fontSize:13,flex:1},
-  website:{fontSize:12,textDecorationLine:'underline'},
+  infoValue:{fontFamily:profileFont,fontSize:13,flex:1},
+  website:{fontFamily:profileFont,fontSize:12,textDecorationLine:'underline'},
   actions:{paddingHorizontal:20,paddingTop:22,flexDirection:'row',gap:12,alignItems:'center'},
   primary:{flex:1,height:50,borderWidth:1,borderRadius:26,alignItems:'center',justifyContent:'center'},
-  actionText:{fontSize:14,fontWeight:'800'},
+  actionText:{fontFamily:profileFont,fontSize:14,fontWeight:'800'},
   actionIcon:{height:50,width:55,borderRadius:25,borderWidth:1,alignItems:'center',justifyContent:'center'},
   moments:{flexDirection:'row',justifyContent:'flex-start',gap:16,paddingHorizontal:25,paddingTop:24,flexWrap:'wrap'},
   moment:{width:65,alignItems:'center',gap:6},
   momentRing:{height:64,width:64,borderWidth:2,borderRadius:32,padding:3},
   momentImage:{height:'100%',width:'100%',borderRadius:29},
-  momentLabel:{fontSize:11},
+  momentLabel:{fontFamily:profileFont,fontSize:11},
   sceneSection:{paddingHorizontal:20,marginTop:25},
-  sceneTitle:{fontSize:19,fontWeight:'800',marginBottom:13},
-  empty:{fontSize:12,paddingVertical:16},
+  sceneTitle:{fontFamily:profileFont,fontSize:19,fontWeight:'800',marginBottom:13},
+  oldCampusNotice:{borderWidth:1,borderRadius:13,padding:12,flexDirection:'row',alignItems:'center',gap:9,marginBottom:11},
+  oldCampusText:{fontFamily:profileFont,flex:1,fontSize:12,lineHeight:18},
+  empty:{fontFamily:profileFont,fontSize:12,paddingVertical:16},
   grid:{flexDirection:'row',flexWrap:'wrap',gap:10},
   tile:{width:'48%',borderWidth:1,borderRadius:14,overflow:'hidden',minHeight:115},
   scenePhoto:{width:'100%',height:148},
   fallback:{height:110,alignItems:'center',justifyContent:'center'},
-  sceneCaption:{padding:8,fontSize:12,lineHeight:17},
+  sceneCaption:{fontFamily:profileFont,padding:8,fontSize:12,lineHeight:17},
   sceneOverlay:{flex:1,backgroundColor:'#090B0D',alignItems:'center',justifyContent:'center',padding:24},
   closeScene:{position:'absolute',top:55,right:19,zIndex:2,padding:10},
   openSceneImage:{height:'74%',width:'100%'},
-  openSceneText:{color:'#fff',fontSize:14,lineHeight:21,marginTop:15,textAlign:'center'}
+  openSceneText:{fontFamily:profileFont,color:'#fff',fontSize:14,lineHeight:21,marginTop:15,textAlign:'center'}
 });

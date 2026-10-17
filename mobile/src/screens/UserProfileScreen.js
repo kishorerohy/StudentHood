@@ -1,7 +1,7 @@
-import React,{useEffect,useState} from 'react';
-import {ActivityIndicator,Modal,Pressable,StyleSheet,Text,View} from 'react-native';
+import React,{useEffect,useRef,useState} from 'react';
+import {ActivityIndicator,Modal,Platform,Pressable,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
-import {getAvatarDisplayUrl,getPeepConnection,getProfileCard,getVisibleProfileScenes,getVisibleSceneCount,sendPeepRequest,respondToPeepRequest} from '../api';
+import {getAvatarDisplayUrl,getPeepConnection,getProfileCard,getVisibleProfileScenes,getVisibleSceneCount,getVisiblePeepCount,sendPeepRequest,respondToPeepRequest} from '../api';
 import StudentProfileView from '../components/StudentProfileView';
 import {supabase} from '../supabase';
 
@@ -17,22 +17,33 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
   const [requestBusy,setRequestBusy]=useState(false);
   const [scenes,setScenes]=useState([]);
   const [sceneCount,setSceneCount]=useState(null);
+  const [peepCount,setPeepCount]=useState(null);
+  const [reloadKey,setReloadKey]=useState(0);
+  const [refreshing,setRefreshing]=useState(false);
+  const lastProfileId=useRef(null);
   const [profileOptionsOpen,setProfileOptionsOpen]=useState(false);
   const [reportBusy,setReportBusy]=useState(false);
   const [reportNotice,setReportNotice]=useState('');
 
   useEffect(()=>{
     let live=true;
-    setLoading(true);
-    setCard(null);
+    const sameStudent=lastProfileId.current===userId;
+    lastProfileId.current=userId;
+    if(sameStudent){
+      setRefreshing(true);
+    }else{
+      setLoading(true);
+      setCard(null);
+      setAvatar(null);
+      setConnection(null);
+      setPeepReady(false);
+      setPeepError('');
+      setPeepNotice('');
+      setScenes([]);
+      setSceneCount(null);
+      setPeepCount(null);
+    }
     setError('');
-    setAvatar(null);
-    setConnection(null);
-    setPeepReady(false);
-    setPeepError('');
-    setPeepNotice('');
-    setScenes([]);
-    setSceneCount(null);
 
     (async()=>{
       try{
@@ -40,12 +51,13 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
         if(!live)return;
         setCard(result);
         if(!result)return;
-        const [photo,relationship,recent,count,cover]=await Promise.allSettled([
+        const [photo,relationship,recent,count,cover,peeps]=await Promise.allSettled([
           getAvatarDisplayUrl(result.avatar_url),
           getPeepConnection(userId),
           getVisibleProfileScenes(userId,{limit:12}),
           getVisibleSceneCount(userId),
-          getAvatarDisplayUrl(result.cover_url)
+          getAvatarDisplayUrl(result.cover_url),
+          getVisiblePeepCount(userId)
         ]);
         if(!live)return;
         if(photo.status==='fulfilled')setAvatar(photo.value);
@@ -58,14 +70,15 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
         }
         if(recent.status==='fulfilled')setScenes(recent.value);
         if(count.status==='fulfilled')setSceneCount(count.value);
+        if(peeps.status==='fulfilled')setPeepCount(peeps.value);
       }catch(e){
         if(live)setError(e?.message||'Unable to load this student profile.');
       }finally{
-        if(live)setLoading(false);
+        if(live){setLoading(false);setRefreshing(false);}
       }
     })();
     return()=>{live=false};
-  },[userId]);
+  },[userId,reloadKey]);
 
   const isPeep=!!card?.is_peep||connection?.status==='accepted';
   const outgoing=connection?.status==='pending'&&connection?.requester_id!==userId;
@@ -134,6 +147,9 @@ export default function UserProfileScreen({userId,currentUserId,theme,onBack,onP
     avatarUrl={avatar}
     scenes={scenes}
     sceneCount={sceneCount}
+    peepCount={peepCount}
+    onRefresh={()=>setReloadKey(value=>value+1)}
+    refreshing={refreshing}
     onBack={onBack}
     actions={<View style={styles.actionArea}>
       <View style={styles.actions}>
@@ -212,7 +228,7 @@ const styles=StyleSheet.create({
   actionArea:{paddingHorizontal:20,paddingTop:23},
   actions:{flexDirection:'row',gap:12},
   action:{flex:1,minHeight:50,borderWidth:1,borderRadius:25,paddingHorizontal:8,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8},
-  actionText:{fontWeight:'800',fontSize:12,textAlign:'center'},
+  actionText:{fontFamily:Platform.OS==='android'?'sans-serif':undefined,fontWeight:'800',fontSize:12,textAlign:'center'},
   more:{height:50,width:48,borderWidth:1,borderRadius:25,alignItems:'center',justifyContent:'center'},
   optionsOverlay:{flex:1,backgroundColor:'rgba(0,0,0,.6)',justifyContent:'flex-end'},
   optionsCard:{borderWidth:1,borderTopLeftRadius:24,borderTopRightRadius:24,paddingHorizontal:20,paddingTop:25,paddingBottom:38},
@@ -220,6 +236,6 @@ const styles=StyleSheet.create({
   optionsCopy:{fontSize:12,lineHeight:18,marginTop:7,marginBottom:13},
   reportOption:{height:49,flexDirection:'row',alignItems:'center',gap:12,borderBottomWidth:StyleSheet.hairlineWidth},
   cancel:{height:45,borderRadius:13,alignItems:'center',justifyContent:'center',marginTop:16},
-  note:{marginTop:10,textAlign:'center',fontSize:11,lineHeight:16},
+  note:{fontFamily:Platform.OS==='android'?'sans-serif':undefined,marginTop:10,textAlign:'center',fontSize:11,lineHeight:16},
   decline:{height:43,borderWidth:1,borderRadius:22,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:7,marginTop:10}
 });

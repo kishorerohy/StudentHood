@@ -6,6 +6,7 @@ import {Feather} from '@expo/vector-icons';
 import {DiscoverIcon,DropsIcon,PingIcon} from '../icons';
 import {getCampusPeeps,getDropsFeed,getPeepConnection,getProfileCard,getPingSceneInbox,getIncomingPeepRequests,respondToPeepRequest} from '../api';
 import CampusPresenceBadge from '../components/CampusPresenceBadge';
+import CompactPageBar from '../components/CompactPageBar';
 import DiscoverPeoplePanel from '../components/DiscoverPeoplePanel';
 
 const PING_TABS=['All','Peeps','Requests','Hang Chats','Crew Chats'];
@@ -127,33 +128,17 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
       :<PingIcon color={theme.accent} size={22}/>;
 
   return <View style={[styles.root,{backgroundColor:theme.bg}]}>
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.pageHeader}>
-        <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel="Back to StudentHood" style={[styles.back,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-          <Feather name="arrow-left" color={theme.text} size={20}/>
-        </Pressable>
-        <View style={styles.pageHeading}>
-          <Text style={[styles.eyebrow,{color:theme.accent}]}>STUDENTHOOD</Text>
-          <Text style={[styles.title,{color:theme.text}]}>{kind}</Text>
-        </View>
-        <View style={[styles.titleIcon,{backgroundColor:theme.accentSoft}]}>{icon}</View>
-      </View>
-
+    <CompactPageBar theme={theme} onBack={onBack} backLabel="Back to StudentHood">
+      {kind==='Drops'&&<Pressable accessibilityRole="button" accessibilityLabel="Refresh Drops"
+        disabled={dropsLoading} onPress={()=>setDropsRefresh(x=>x+1)}
+        style={[styles.refresh,{backgroundColor:theme.surface,borderRadius:13}]}>
+        {dropsLoading?<ActivityIndicator color={theme.accent}/>:<Feather name="refresh-cw" size={19} color={theme.accent}/>}
+      </Pressable>}
+      <View accessible accessibilityLabel={kind} style={[styles.titleIcon,{backgroundColor:theme.accentSoft}]}>{icon}</View>
+    </CompactPageBar>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}>
       {kind==='Drops'&&<>
-        <View style={[styles.intro,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-          <Text style={[styles.introText,{color:theme.muted}]}>Your latest StudentHood activity, all in one place.</Text>
-          <Pressable
-            onPress={()=>setDropsRefresh(x=>x+1)}
-            disabled={dropsLoading}
-            accessibilityRole="button"
-            accessibilityLabel="Refresh Drops"
-            style={styles.refresh}
-          >{dropsLoading?<ActivityIndicator size="small" color={theme.accent}/>:<Feather name="refresh-cw" size={19} color={theme.accent}/>}</Pressable>
-        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dropFilters}>
           {DROP_FILTERS.map(label=><Pressable key={label} onPress={()=>setDropFilter(label)} accessibilityRole="button" accessibilityState={{selected:dropFilter===label}} style={[styles.filterPill,{backgroundColor:dropFilter===label?theme.accent:theme.surface,borderColor:dropFilter===label?theme.accent:theme.line}]}>
             <Text style={[styles.filterLabel,{color:dropFilter===label?'#fff':theme.text}]}>{label}</Text>
@@ -231,11 +216,7 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
             <Text style={[styles.discoverCardCopy,{color:theme.muted}]}>{item.copy}</Text>
           </Pressable>)}
         </View>
-        <View style={styles.sectionHeading}>
-          <View style={{flex:1}}>
-            <Text style={[styles.sectionTitle,{color:theme.text}]}>People from your campus</Text>
-            <Text style={[styles.sectionCaption,{color:theme.muted}]} numberOfLines={1}>{profile?.campus_name||'Your campus'}</Text>
-          </View>
+        <View style={[styles.sectionHeading,{justifyContent:'flex-end'}]}>
           <Pressable accessibilityRole="button" accessibilityLabel="Refresh campus people and profile photos"
             disabled={peepsLoading} onPress={()=>setDiscoverRefresh(x=>x+1)}
             style={[styles.refresh,{backgroundColor:theme.surface,borderRadius:13}]}>
@@ -356,7 +337,7 @@ function DropRow({activity,theme,last}){
 const styles=StyleSheet.create({
   root:{flex:1},
   scroll:{flex:1},
-  content:{width:'100%',maxWidth:980,alignSelf:'center',paddingHorizontal:16,paddingTop:16,paddingBottom:36},
+  content:{width:'100%',maxWidth:980,alignSelf:'center',paddingHorizontal:16,paddingTop:9,paddingBottom:36},
   pageHeader:{flexDirection:'row',alignItems:'center',gap:13,marginBottom:18},
   back:{width:44,height:44,borderRadius:14,borderWidth:1,alignItems:'center',justifyContent:'center'},
   pageHeading:{flex:1},

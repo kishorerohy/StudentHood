@@ -1,11 +1,11 @@
 import React,{useCallback,useEffect,useState} from 'react';
-import {ActivityIndicator,KeyboardAvoidingView,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from 'react-native';
+import {ActivityIndicator,KeyboardAvoidingView,Modal,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {addSceneComment,fetchSceneComments} from '../scenes';
 import {supabase} from '../supabase';
 
-// Shown as a full-height in-app conversation panel. Reads/writes are subject to
-// Supabase RLS; pending comments are visible only to their own authors.
+// Comments appear immediately to people permitted to see their Scene.
+// Reports can trigger human action; Supabase RLS remains authoritative.
 export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
   const [rows,setRows]=useState([]);
   const [text,setText]=useState('');
@@ -14,6 +14,8 @@ export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
   const [sending,setSending]=useState(false);
   const [error,setError]=useState('');
   const [feedback,setFeedback]=useState('');
+  const [reportingId,setReportingId]=useState(null);
+  const [reportTarget,setReportTarget]=useState(null);
 
   const load=useCallback(async()=>{
     if(!scene?.id)return;
@@ -40,14 +42,34 @@ export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
       const saved=await addSceneComment(scene.id,body);
       if(!saved?.id)throw new Error('Unable to confirm the saved comment.');
       setText('');
-      // A newly submitted comment may need moderation before everyone sees it.
       setFeedback(saved.moderation_status==='approved'
         ?'Comment posted.'
-        :'Comment saved. It will be visible to others after moderation.');
+        :'Comment saved, but not available to other students.');
       await load();
       onSent?.(scene.id,saved);
     }catch(e){setError(e?.message||'Could not add your comment.');}
     finally{setSending(false);}
+  }
+
+  function reportComment(item){
+    if(!item?.id||item.user_id===myId||reportingId)return;
+    setReportTarget(item);
+  }
+  async function submitReport(reason){
+    const target=reportTarget;
+    setReportTarget(null);
+    if(!target?.id||reportingId)return;
+    setReportingId(target.id);
+    setError('');
+    try{
+      const {data,error}=await supabase.rpc('studenthood_report_content',{
+        p_kind:'comment',p_content_id:target.id,p_reason:reason
+      });
+      if(error)throw error;
+      if(data!==true)throw new Error('Report not confirmed.');
+      setFeedback('Comment reported to StudentHood safety for review.');
+    }catch(e){setError(e?.message||'Could not report comment.');}
+    finally{setReportingId(null)}
   }
 
   return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]} behavior={Platform.OS==='ios'?'padding':'height'}>
@@ -72,7 +94,7 @@ export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
         </View>:
         rows.map(item=>{
           const mine=item.user_id===myId;
-          const pending=!['approved','limited'].includes(item.moderation_status);
+          const pending=item.moderation_status==='pending';
           return <View key={item.id} style={[styles.comment,{borderColor:theme.line,backgroundColor:theme.surface}]}>
             <View style={[styles.initial,{backgroundColor:theme.surface2}]}><Feather name="user" size={17} color={theme.muted}/></View>
             <View style={{flex:1,gap:5}}>
@@ -82,6 +104,12 @@ export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
                 <Text style={[styles.time,{color:theme.muted}]}>{new Date(item.created_at).toLocaleDateString()}</Text>
               </View>
               <Text style={[styles.body,{color:theme.text}]}>{item.body}</Text>
+              {!mine&&!pending&&<Pressable accessibilityRole="button" accessibilityLabel="Report comment"
+                disabled={!!reportingId} onPress={()=>reportComment(item)}
+                style={styles.reportAction}>
+                <Feather name="flag" size={13} color={theme.muted}/>
+                <Text style={{color:theme.muted,fontSize:11}}>Report</Text>
+              </Pressable>}
             </View>
           </View>;
         })}
@@ -100,7 +128,28 @@ export default function SceneCommentsPanel({scene,theme,onClose,onSent}){
         {sending?<ActivityIndicator color="#fff" size="small"/>:<Feather name="arrow-up" color="#fff" size={22}/>}
       </Pressable>
     </View>
-    <Text style={[styles.hint,{color:theme.muted}]}>Comments follow StudentHood moderation and age restrictions.</Text>
+    <Text style={[styles.hint,{color:theme.muted}]}>Comments appear immediately to permitted viewers. Report unsafe content.</Text>
+    <Modal visible={!!reportTarget} transparent animationType="fade"
+      onRequestClose={()=>setReportTarget(null)}>
+      <View style={styles.reportOverlay}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Cancel report"
+          onPress={()=>setReportTarget(null)} style={StyleSheet.absoluteFillObject}/>
+        <View style={[styles.reportSheet,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+          <Text style={[styles.reportHeading,{color:theme.text}]}>Report this comment</Text>
+          <Text style={[styles.small,{color:theme.muted}]}>Choose what concerns you. Reports are private and reviewed by StudentHood safety.</Text>
+          {['Inappropriate content','Harassment or bullying','Spam or scam','Other safety concern'].map(reason=>
+            <Pressable key={reason} accessibilityRole="button" onPress={()=>submitReport(reason)}
+              style={[styles.reportReason,{borderBottomColor:theme.line}]}>
+              <Feather name="flag" size={16} color={theme.accent}/>
+              <Text style={{flex:1,color:theme.text,fontSize:13}}>{reason}</Text>
+            </Pressable>)}
+          <Pressable accessibilityRole="button" accessibilityLabel="Cancel report"
+            onPress={()=>setReportTarget(null)} style={[styles.reportCancel,{backgroundColor:theme.surface2}]}>
+            <Text style={{fontWeight:'800',color:theme.text}}>Cancel</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
   </KeyboardAvoidingView>;
 }
 const styles=StyleSheet.create({
@@ -123,6 +172,12 @@ const styles=StyleSheet.create({
   pending:{fontSize:10,fontWeight:'700'},
   time:{fontSize:10,marginLeft:'auto'},
   body:{fontSize:13,lineHeight:20},
+  reportAction:{alignSelf:'flex-start',minHeight:34,flexDirection:'row',alignItems:'center',gap:7,paddingVertical:7},
+  reportOverlay:{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(0,0,0,0.56)'},
+  reportSheet:{borderWidth:1,borderTopLeftRadius:22,borderTopRightRadius:22,padding:20,paddingBottom:35,gap:8},
+  reportHeading:{fontSize:18,fontWeight:'900'},
+  reportReason:{height:49,borderBottomWidth:StyleSheet.hairlineWidth,flexDirection:'row',alignItems:'center',gap:10,paddingHorizontal:5},
+  reportCancel:{height:44,borderRadius:14,alignItems:'center',justifyContent:'center',marginTop:10},
   error:{fontSize:12,lineHeight:18},
   feedback:{fontSize:12,lineHeight:18},
   composer:{minHeight:75,padding:12,flexDirection:'row',gap:9,alignItems:'flex-end',borderTopWidth:StyleSheet.hairlineWidth},

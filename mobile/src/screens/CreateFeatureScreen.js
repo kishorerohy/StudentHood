@@ -6,14 +6,15 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import {Feather} from '@expo/vector-icons';
+import CompactPageBar from '../components/CompactPageBar';
 import {submitStudentCreation} from '../creation';
 import useKeyboardAwareForm from '../hooks/useKeyboardAwareForm';
 
 const SETTINGS={
-  Pulse:{heading:'Add to Pulse',subheading:'A quick moment with your campus circle.',cta:'Submit Pulse'},
-  Hangs:{heading:'Start a Hang',subheading:'Bring your campus together, safely.',cta:'Submit Hang'},
-  Crews:{heading:'Create a Crew',subheading:'Build a community around what you love.',cta:'Submit Crew'},
-  Gigs:{heading:'Post a Gig',subheading:'Share a genuine opportunity with students.',cta:'Submit Gig'}
+  Pulse:{heading:'Add to Pulse',subheading:'A quick moment with your campus circle.',cta:'Share Pulse'},
+  Hangs:{heading:'Start a Hang',subheading:'Bring your campus together, safely.',cta:'Create Hang'},
+  Crews:{heading:'Create a Crew',subheading:'Build a community around what you love.',cta:'Create Crew'},
+  Gigs:{heading:'Post a Gig',subheading:'Share a genuine opportunity with students.',cta:'Post Gig'}
 };
 const OPTIONS={
   Hangs:['Social','Study','Sports','Culture','Other'],
@@ -47,10 +48,10 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
   const futureTime=date.toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'});
   const sections=OPTIONS[kind]||[];
   const info=kind==='Gigs'
-    ?'Gig applications and payments will be enabled only after employer review and eligibility checks.'
-    :kind==='Crews'?'A Crew will become visible only after community safety review.'
-    :kind==='Pulse'?'Pulse is submitted privately for moderation before reaching your selected audience.'
-    :'Attendees and RSVPs will be available after event safety review.';
+    ?'Gigs appear immediately to eligible adults. Employers are not automatically verified; payments and applications are not yet available.'
+    :kind==='Crews'?'Your Crew is created immediately for the chosen audience.'
+    :kind==='Pulse'?'Your Pulse appears immediately to its selected audience.'
+    :'Your Hang appears immediately to eligible students; RSVPs are not yet available.';
 
   async function chooseMedia(){
     setError('');
@@ -89,24 +90,17 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
   }
 
   return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]} behavior={Platform.OS==='ios'?'padding':'height'}>
-    <View style={[styles.header,{borderBottomColor:theme.line}]}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Back to Create" onPress={onBack} style={styles.back}>
-        <Feather name="arrow-left" size={21} color={theme.text}/>
-      </Pressable>
-      <Text style={[styles.headerTitle,{color:theme.text}]}>{config.heading}</Text>
-      <View style={{width:43}}/>
-    </View>
+    <CompactPageBar theme={theme} onBack={onBack} backLabel={'Back from '+config.heading}/>
     <ScrollView ref={scrollRef} onLayout={onScrollLayout} onScroll={onScroll} scrollEventThrottle={16} automaticallyAdjustKeyboardInsets={Platform.OS==='ios'} contentContainerStyle={[styles.content,{paddingBottom:200+keyboardPadding}]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'} showsVerticalScrollIndicator={false}>
       {!!submitted?<View style={[styles.confirm,{backgroundColor:theme.surface,borderColor:theme.line}]}>
         <View style={[styles.confirmIcon,{backgroundColor:theme.accentSoft}]}><Feather name="check-circle" color={theme.success} size={34}/></View>
-        <Text style={[styles.confirmTitle,{color:theme.text}]}>Saved for review</Text>
-        <Text style={[styles.info,{color:theme.muted}]}>Your {kind==='Pulse'?'Pulse':kind==='Hangs'?'Hang':kind==='Crews'?'Crew':'Gig'} was saved successfully. It isn't public yet. You can find it under My submissions.</Text>
+        <Text style={[styles.confirmTitle,{color:theme.text}]}>Published</Text>
+        <Text style={[styles.info,{color:theme.muted}]}>Your {kind==='Pulse'?'Pulse':kind==='Hangs'?'Hang':kind==='Crews'?'Crew':'Gig'} was created successfully for its selected audience. You can find it under My submissions.</Text>
         <Pressable onPress={onBack} style={[styles.submit,{backgroundColor:theme.accent}]} accessibilityRole="button">
           <Text style={styles.submitText}>Back to Create</Text>
         </Pressable>
       </View>:
       <>
-        <Text style={[styles.eyebrow,{color:theme.accent}]}>STUDENTHOOD · CREATE</Text>
         <Text style={[styles.intro,{color:theme.muted}]}>{config.subheading}</Text>
         {!!profile?.campus_name&&<View style={[styles.campus,{backgroundColor:theme.surface,borderColor:theme.line}]}>
           <Feather name="book-open" color={theme.accent} size={16}/>
@@ -155,7 +149,7 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
         </>}
 
         {kind==='Gigs'&&<>
-          <View style={[styles.note,{borderColor:theme.line,backgroundColor:theme.surface2}]}><Feather name="shield" color={theme.accent} size={17}/><Text style={[styles.info,{color:theme.muted,flex:1}]}>Gig submission is restricted to adults, with review before publishing. No employer is labeled verified without verification.</Text></View>
+          <View style={[styles.note,{borderColor:theme.line,backgroundColor:theme.surface2}]}><Feather name="shield" color={theme.accent} size={17}/><Text style={[styles.info,{color:theme.muted,flex:1}]}>Only eligible adults can publish Gigs. Employers are not automatically verified. Report misleading or unsafe opportunities.</Text></View>
           <Field theme={theme} onFocus={onFieldFocus} label="Role / Gig title" value={values.title} onChangeText={text=>set('title',text)} maxLength={100} placeholder="Weekend research assistant"/>
           <Field theme={theme} onFocus={onFieldFocus} label="Employer or organisation" value={values.employerName} onChangeText={text=>set('employerName',text)} maxLength={120} placeholder="Official business name"/>
           <Choices theme={theme} label="Opportunity type" options={sections.map(x=>[x,x])} value={values.category} onChange={v=>set('category',v)}/>
@@ -168,7 +162,7 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
 
         <View style={[styles.note,{borderColor:theme.line,backgroundColor:theme.surface2}]}>
           <Feather name="shield" size={18} color={theme.accent}/>
-          <Text style={[styles.info,{color:theme.muted,flex:1}]}>{info} Submissions are private while pending. StudentHood safety restrictions remain active.</Text>
+          <Text style={[styles.info,{color:theme.muted,flex:1}]}>{info} Others can report unsafe content. StudentHood safety and privacy restrictions remain active.</Text>
         </View>
         {!!error&&<Text accessibilityRole="alert" style={[styles.error,{color:theme.danger}]}>{error}</Text>}
         <Pressable onPress={submit} disabled={busy} accessibilityRole="button" accessibilityState={{disabled:busy}} style={[styles.submit,{backgroundColor:theme.accent,opacity:busy?0.6:1}]}>

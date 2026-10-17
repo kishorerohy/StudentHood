@@ -1,6 +1,7 @@
 import React from 'react';
 import {Alert,Linking,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
+import CompactPageBar from '../components/CompactPageBar';
 import {signOut} from '../auth';
 import {LEGAL_URLS} from '../config';
 import {useSession} from '../session';
@@ -46,13 +47,7 @@ export default function ProfileMenuScreen({page='menu',theme,profile,safety,onBa
   }
 
   return <View style={[styles.root,{backgroundColor:theme.bg}]}>
-    <View style={[styles.header,{borderBottomColor:theme.line}]}>
-      <Pressable onPress={onBack} accessibilityLabel="Back to profile" style={styles.back}>
-        <Feather name="arrow-left" size={22} color={theme.text}/>
-      </Pressable>
-      <Text style={[styles.headerTitle,{color:theme.text}]}>{label}</Text>
-      <View style={{width:42}}/>
-    </View>
+    <CompactPageBar theme={theme} onBack={onBack} backLabel={'Back from '+label}/>
     <ScrollView contentContainerStyle={styles.content}>
       <Text style={[styles.intro,{color:theme.muted}]}>{intro[page]}</Text>
       {(NAV[page]||[]).map(([name,icon,copy,destination])=><Pressable

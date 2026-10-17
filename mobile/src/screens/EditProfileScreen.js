@@ -1,6 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {ActivityIndicator,Alert,Image,Keyboard,KeyboardAvoidingView,Modal,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,ToastAndroid,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
+import CompactPageBar from '../components/CompactPageBar';
 import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import {findInstitutionsByCity,searchInstitutionsByName,getAvatarDisplayUrl,saveMyProfileChanges,uploadMyAvatar,uploadMyCover} from '../api';
@@ -193,15 +194,14 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
 
   const imageUri=newPhoto?.uri||avatar;
   return <KeyboardAvoidingView style={[styles.root,{backgroundColor:theme.bg}]} behavior={Platform.OS==='ios'?'padding':'height'}>
-    <View style={[styles.header,{borderBottomColor:theme.line}]}>
-      <Pressable onPress={onBack} disabled={busy} accessibilityLabel="Back" style={styles.headerAction}>
-        <Feather name="arrow-left" size={22} color={theme.text}/>
-      </Pressable>
-      <Text style={[styles.headerText,{color:theme.text}]}>{photoOnly?'Profile picture':'Edit profile'}</Text>
-      <Pressable onPress={save} disabled={busy} accessibilityRole="button" accessibilityLabel="Save profile changes" accessibilityState={{disabled:busy}} style={[styles.save,{backgroundColor:theme.accent}]}>
+    <CompactPageBar theme={theme} onBack={busy?undefined:onBack}
+      backLabel={photoOnly?'Back from profile picture':'Back from edit profile'}>
+      <Pressable onPress={save} disabled={busy} accessibilityRole="button"
+        accessibilityLabel="Save profile changes" accessibilityState={{disabled:busy}}
+        style={[styles.save,{backgroundColor:theme.accent}]}>
         {busy?<ActivityIndicator size="small" color="#fff"/>:<Text style={styles.saveText}>Save</Text>}
       </Pressable>
-    </View>
+    </CompactPageBar>
     <ScrollView ref={scrollRef} style={{flex:1}} contentContainerStyle={[styles.content,{paddingBottom:140+keyboardPadding}]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'} onLayout={onScrollLayout} onScroll={onScroll} scrollEventThrottle={16} automaticallyAdjustKeyboardInsets={Platform.OS==='ios'} showsVerticalScrollIndicator={false}>
       <Pressable onPress={choosePhoto} accessibilityLabel="Choose profile photo" style={styles.photoControl}>
         <View style={[styles.avatar,{backgroundColor:theme.surface2}]}>
@@ -254,10 +254,10 @@ export default function EditProfileScreen({theme,profile,onBack,onSaved,photoOnl
           <Pressable onPress={()=>setInstitutionOpen(false)} accessibilityRole="button" accessibilityLabel="Close institution directory" style={styles.headerAction}>
             <Feather name="arrow-left" size={22} color={theme.text}/>
           </Pressable>
-          <Text numberOfLines={1} ellipsizeMode="tail"
-            style={[styles.pickerHeaderTitle,{color:theme.text}]}>
-            {institutionMode==='nearby'?'Institutions near '+(city||'you'):institutionMode==='country'?'Country institutions':'Worldwide institutions'}
-          </Text>
+          <View accessible accessibilityLabel={
+            institutionMode==='nearby'?'Institutions near '+(city||'you'):
+            institutionMode==='country'?'Country institutions':'Worldwide institutions'
+          } style={{flex:1}}/>
           {institutionMode==='nearby'?<Pressable onPress={searchInstitutions} disabled={institutionLoading}
             accessibilityRole="button" accessibilityLabel="Refresh nearby institutions" style={styles.headerAction}>
             {institutionLoading?<ActivityIndicator color={theme.accent}/>:<Feather name="refresh-cw" size={19} color={theme.accent}/>}
