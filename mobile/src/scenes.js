@@ -173,20 +173,12 @@ export {REPORT_REASONS};
 export async function reportScene(sceneId,reason){
   if(!UUID.test(String(sceneId||'')))throw new Error('Invalid Scene.');
   if(!REPORT_REASONS.includes(reason))throw new Error('Choose a report reason.');
-  const {data:{user},error:authError}=await supabase.auth.getUser();
-  if(authError)throw authError;
-  if(!user?.email)throw new Error('Sign in with a verified email to report a Scene.');
-  const name=String(user.user_metadata?.full_name||user.user_metadata?.name||'StudentHood student').slice(0,100);
-  const {error}=await supabase.from('support_requests').insert({
-    name,
-    email:user.email,
-    category:'report',
-    subject:'StudentHood Scene safety report',
-    message:'Scene ID: '+sceneId+'\nReport reason: '+reason+'\nSubmitted by account: '+user.id,
-    status:'new'
+  // Reports are private to authorized reviewers. A report triggers review
+  // without automatically deleting another student's content.
+  const {data,error}=await supabase.rpc('studenthood_report_content',{
+    p_kind:'scene',p_content_id:sceneId,p_reason:reason
   });
   if(error)throw error;
-  // support_requests intentionally has INSERT-only access: successful insert
-  // response is the confirmation. No client can list/report other people.
+  if(data!==true)throw new Error('Unable to confirm the report was submitted.');
   return true;
 }
