@@ -38,11 +38,11 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           CI: '1'
         run: |
-          npx --yes eas-cli@latest build:list --platform android --limit 10 --json --non-interactive > "$RUNNER_TEMP/studenthood-eas-status.json"
+          npx --yes eas-cli@latest build:view 3a360f32-132c-4b15-be73-ddd8bebb3e9a --json > "$RUNNER_TEMP/studenthood-eas-status.json"
           node -e '
             const fs=require("fs");
             const all=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/studenthood-eas-status.json","utf8"));
-            const p=(Array.isArray(all)?all:(Array.isArray(all.builds)?all.builds:[])).find(b=>b.id==="3a360f32-132c-4b15-be73-ddd8bebb3e9a")||{};
+            const p=all?.data?.build||all?.data||all||{};
             const status=String(p.status||"NOT_RETURNED_BY_EAS");
             const url="https://expo.dev/accounts/studenthood-0920/projects/studenthood/builds/3a360f32-132c-4b15-be73-ddd8bebb3e9a";
             const artifact=p.artifacts?.buildUrl||p.artifacts?.applicationArchiveUrl||p.artifacts?.androidBuildUrl||"";
@@ -55,7 +55,7 @@ jobs:
               "",
               "**APK artifact:** "+(artifact||"Not yet available"),
               "",
-              "Read-only build:list check; no new APK was requested."
+              "Read-only build:view check; no new APK was requested."
             ];
             fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join("\n")+"\n");
             console.log("Existing v0.2.0 EAS status: "+status);
