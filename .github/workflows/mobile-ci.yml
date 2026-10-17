@@ -56,6 +56,9 @@ jobs:
       - name: Verify Discover search visibility and privacy
         run: node scripts/check-discover-search.js
 
+      - name: Verify Hang date/time button labels
+        run: node scripts/check-hang-date-time-buttons.js
+
       - name: Expo Doctor
         run: npx expo-doctor@latest
 
