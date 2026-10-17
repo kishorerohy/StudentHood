@@ -1,15 +1,29 @@
-import React from 'react';
+import React,{useEffect,useState} from 'react';
 import {Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {SceneIcon} from '../icons';
+import {getExperienceFlags} from '../experiences';
+import {getActivePilotDestinations} from '../collaborations';
 
-export default function CreateOptionsScreen({theme,onBack,onScene,onPulse,onHang,onCrew,onGig}){
+export default function CreateOptionsScreen({theme,onBack,onScene,onPulse,onHang,onCrew,onGig,onCollaboration}){
+ const [collaborationsEnabled,setCollaborationsEnabled]=useState(false);
+ useEffect(()=>{
+   let mounted=true;
+   (async()=>{
+     const flags=await getExperienceFlags();
+     if(!flags.collaborations)return;
+     const pairs=await getActivePilotDestinations();
+     if(mounted)setCollaborationsEnabled(pairs.length>0);
+   })().catch(()=>{if(mounted)setCollaborationsEnabled(false)});
+   return()=>{mounted=false};
+ },[]);
  const options=[
   {name:'Post a Scene',icon:'scene',copy:'Share a photo, video or post',onPress:onScene},
   {name:'Add to Pulse',icon:'circle',copy:'Share a moment with your campus circle',onPress:onPulse},
   {name:'Start a Hang',icon:'calendar',copy:'Create an event or campus meetup',onPress:onHang},
   {name:'Create a Crew',icon:'users',copy:'Start a community for students',onPress:onCrew},
-  {name:'Post a Gig',icon:'briefcase',copy:'Share an opportunity with eligible students',onPress:onGig}
+  {name:'Post a Gig',icon:'briefcase',copy:'Share an opportunity with eligible students',onPress:onGig},
+  ...(collaborationsEnabled&&onCollaboration?[{name:'Start a Collaboration',icon:'git-merge',copy:'A verified adult campus partnership',onPress:onCollaboration}]:[])
  ];
  return <View style={[styles.root,{backgroundColor:theme.bg}]}>
   <View style={[styles.header,{borderBottomColor:theme.line}]}>
