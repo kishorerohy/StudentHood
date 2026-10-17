@@ -217,6 +217,9 @@ begin
  if p_action='request' then
   if who<>me or p.state<>'open' or me=p.organizer_id
    then raise exception 'Cannot request this project';end if;
+  if exists(select 1 from public.studenthood_cross_campus_memberships
+    where project_id=p.id and user_id=me and status in ('removed','declined'))
+    then raise exception 'Project membership unavailable';end if;
   insert into public.studenthood_cross_campus_memberships(project_id,user_id,role,status)
    values(p.id,me,'member','requested')
    on conflict(project_id,user_id) do update set status='requested',updated_at=now()
