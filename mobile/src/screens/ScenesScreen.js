@@ -11,6 +11,7 @@ import {fetchScenes,fetchSharedScene,toggleSceneLike} from '../scenes';
 import SceneShareSheet from '../components/SceneShareSheet';
 import SceneCommentsPanel from '../components/SceneCommentsPanel';
 import SceneOptionsMenu from '../components/SceneOptionsMenu';
+import useLiveRefresh from '../useLiveRefresh';
 
 const FILTERS=['Campus','Viral','Nearby','Live now'];
 
@@ -42,14 +43,15 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
     }
   },[profile?.id]);
 
-  const load=useCallback(async(nextFilter=filter,{refresh=false}={})=>{
-    refresh?setRefreshing(true):setLoading(true);
-    setError('');
+  const load=useCallback(async(nextFilter=filter,{refresh=false,silent=false}={})=>{
+    if(refresh)setRefreshing(true);
+    else if(!silent)setLoading(true);
+    if(!silent)setError('');
     try{
       const data=await fetchScenes(nextFilter,30,0);
       setItems(data);
     }catch(e){
-      setError(e?.message||'Could not load Scenes.');
+      if(!silent)setError(e?.message||'Could not load Scenes.');
     }finally{
       setLoading(false);
       setRefreshing(false);
@@ -57,6 +59,8 @@ export default function ScenesScreen({theme,profile,safety,onOpenProfile,onOpenC
   },[filter]);
 
   useEffect(()=>{load(filter)},[filter,reloadKey]);
+  useLiveRefresh({tables:['scenes','peep_connections'],intervalMs:20000,
+    refresh:()=>Promise.all([load(filter,{silent:true}),loadPulse()])});
   useEffect(()=>{
     let live=true;
     setHiddenIds([]);
