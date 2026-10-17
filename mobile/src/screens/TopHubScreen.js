@@ -9,6 +9,7 @@ import CampusPresenceBadge from '../components/CampusPresenceBadge';
 import useLiveRefresh from '../useLiveRefresh';
 import DiscoverPeoplePanel from '../components/DiscoverPeoplePanel';
 import {getExperienceFlags} from '../experiences';
+import {getActivePilotDestinations} from '../collaborations';
 
 const PING_TABS=['All','Peeps','Requests','Hang Chats','Crew Chats'];
 const DISCOVER_SECTIONS=[{name:'People',icon:'users',copy:'Meet students from your campus'},{name:'Hangs',icon:'calendar',copy:'Find campus plans'},{name:'Crews',icon:'users',copy:'Discover communities'},{name:'Gigs',icon:'briefcase',copy:'Explore student opportunities'}];
@@ -20,10 +21,18 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
   const [peepsError,setPeepsError]=useState('');
   const [discoverSection,setDiscoverSection]=useState('People');
   const [experienceFlags,setExperienceFlags]=useState({});
+  const [collaborationAvailable,setCollaborationAvailable]=useState(false);
   useEffect(()=>{
     if(kind!=='Discover')return;
     let live=true;
-    getExperienceFlags().then(flags=>{if(live)setExperienceFlags(flags)}).catch(()=>{if(live)setExperienceFlags({})});
+    (async()=>{
+      const flags=await getExperienceFlags();
+      if(!live)return;
+      setExperienceFlags(flags);
+      if(!flags.collaborations){setCollaborationAvailable(false);return;}
+      const pairs=await getActivePilotDestinations();
+      if(live)setCollaborationAvailable(pairs.length>0);
+    })().catch(()=>{if(live){setExperienceFlags({});setCollaborationAvailable(false)}});
     return()=>{live=false};
   },[kind]);
   const [peopleQuery,setPeopleQuery]=useState('');
@@ -285,7 +294,15 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
               <Text style={[styles.discoverCardName,{color:theme.text}]}>Freshers Journey</Text>
               <Text style={[styles.discoverCardCopy,{color:theme.muted}]}>Your optional first 30 days</Text>
             </Pressable>}
-            {DISCOVER_SECTIONS.map(item=><Pressable
+            {experienceFlags.collaborations&&collaborationAvailable&&<Pressable
+              accessibilityRole="button" accessibilityLabel="Open Cross-Campus Collaborations"
+              onPress={()=>onOpenExperience?.('collaborations')}
+              style={[styles.discoverCard,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+              <Feather name="git-merge" size={22} color={theme.accent}/>
+              <Text style={[styles.discoverCardName,{color:theme.text}]}>Collaborations</Text>
+              <Text style={[styles.discoverCardCopy,{color:theme.muted}]}>Verified adult campus projects</Text>
+            </Pressable>}
+                        {DISCOVER_SECTIONS.map(item=><Pressable
               key={item.name}
               accessibilityRole="button"
               accessibilityState={{selected:discoverSection===item.name}}
