@@ -425,7 +425,8 @@ Deno.serve(async(req:Request)=>{
       // An old cached one-provider result must not suppress the new merged
       // city directory. Refresh it once, while keeping stale-cache fallback
       // if map/registry providers are temporarily unavailable.
-      const mergedCache=cached?.response?.source==="mapped-and-registered-city-directory";
+      const mergedCache=typeof cached?.response?.source==="string"
+        &&cached.response.source.includes("mapped-and-registered-city-directory");
       if(mergedCache&&age<CACHE_MS)return json({
         ...cached.response,
         institutions:combineCityResponse(cached.response.institutions,verifiedCatalog,countryCode),
