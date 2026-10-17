@@ -1,5 +1,5 @@
 # StudentHood — Per-conversation Ping settings / universal account blocking
-Status: code staged in stacked PR #19 (dependent on PR #18). APK device testing required.
+Status: production Supabase migrations applied; draft PR #19 includes Android UI and depends on PR #18. No APK submitted; two-device QA required.
 
 ## Behaviour
 - In any one-to-one Ping thread, **tap the contact name/avatar in the HEADER** to open that conversation's Ping settings. The old separate profile-shortcut row directly under the header is removed.
@@ -26,3 +26,10 @@ Status: code staged in stacked PR #19 (dependent on PR #18). APK device testing 
 
 ## Release
 No official APK has been built or submitted. Stacked draft PR #19 depends on draft PR #18; retain one-build-per-Asia/Kolkata-day rule and request approval before merging/building. Automated CI is not real 2-device runtime verification.
+
+## Live deployment confirmation (17 Oct 2026)
+- Migrations `ping_universal_blocks_and_conversation_search` and `ping_generic_block_ux_status` applied to Supabase production successfully. Existing RLS eligibility functions updated in place (no OID-renaming loophole). The block checks were confirmed in Peep, profile discovery, can-Ping, Scene visibility, Drops and incoming Peep request functions.
+- The private block table denies direct anonymous and authenticated reads; message insert/Peep request/Ping acceptance block triggers are enabled.
+- The status RPC also returns a non-specific `interaction_available` flag, letting **both** phones disable blocked reply controls without exposing which person initiated the block. The caller only sees their own `blocked_by_me` flag.
+- At verification: **zero account blocks created**, one existing thread and two existing messages retained; no user was blocked or deleted by engineering.
+- CI validates these contracts and Android build export, but cannot prove user-facing behavior until installation.
