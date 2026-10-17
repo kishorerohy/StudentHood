@@ -198,7 +198,7 @@ export default function OnboardingScreen({theme}){
     setGlobalSearched(false);
     globalRequest.current++;
     if(city.trim().length>=2){
-      loadCityInstitutions(city,country);
+      loadCityInstitutions(city,detectedCityLocation.current?.country||country);
     }else if(currentCoords){
       loadInstitutions(currentCoords);
     }else{
@@ -234,10 +234,14 @@ export default function OnboardingScreen({theme}){
       const detectedCity=String(address?.city||address?.district||address?.subregion||'').trim();
       if(detectedCity){
         updateCity(detectedCity);
-        detectedCityLocation.current={city:detectedCity,country:String(country||'').toUpperCase(),coords};
+        // Use the device's confirmed country for campus lookup even when
+        // the safety-region field has a different value.
+        const detectedCountry=String(address?.isoCountryCode||'').toUpperCase();
+        const lookupCountry=/^[A-Z]{2}$/.test(detectedCountry)?detectedCountry:country;
+        detectedCityLocation.current={city:detectedCity,country:lookupCountry,coords};
         setCurrentCoords(coords);
         setLocationNote('City detected. Select your institution to load the city directory.');
-        await loadCityInstitutions(detectedCity,country);
+        await loadCityInstitutions(detectedCity,lookupCountry);
       }else{
         setCurrentCoords(coords);
         setLocationNote('Location found. Choose your institution below.');
@@ -538,31 +542,19 @@ export default function OnboardingScreen({theme}){
         :<View style={[styles.pickerFull,{backgroundColor:theme.bg}]}>
           <View style={[styles.pickerFullHeader,{borderBottomColor:theme.line}]}>
             <Pressable onPress={closeSelector} accessibilityLabel="Back" style={styles.pickerBack}><Feather name="arrow-left" size={23} color={theme.text}/></Pressable>
-            <Text style={[styles.pickerTitle,{color:theme.text}]}>Choose your institution</Text>
+            <View style={{flex:1}} accessibilityLabel={'Institutions near '+(city||'your city')}/>
             <View style={{width:42}}/>
-          </View>
-          <View style={styles.scopeRow}>
-            {[
-              {id:'nearby',label:'Nearby'},
-              {id:'country',label:'Country'},
-              {id:'worldwide',label:'Worldwide'}
-            ].map(mode=><Pressable key={mode.id} accessibilityRole="button"
-              accessibilityState={{selected:campusMode===mode.id}}
-              onPress={()=>changeCampusMode(mode.id)}
-              style={[styles.scopeTab,{borderColor:theme.line,backgroundColor:campusMode===mode.id?theme.accentSoft:theme.surface2}]}>
-              <Text style={{fontSize:12,fontWeight:'700',color:campusMode===mode.id?theme.accent:theme.muted}}>{mode.label}</Text>
-            </Pressable>)}
           </View>
           <Text style={[styles.pickerCopy,{color:theme.muted}]}>
             {campusMode==='nearby'
-              ?'Institutions around '+(city.trim()||'your city')+'. Results may extend across the metro area and may be incomplete.'
+              ?'Schools, colleges and universities near '+(city.trim()||'your city')+'. Global registry matches are included automatically where available.'
               :'Search higher-education organizations by name '+(campusMode==='country'?'in your selected country':'worldwide')+'. School and individual campus coverage is incomplete.'}
           </Text>
           <View style={[styles.pickerSearch,{backgroundColor:theme.surface2,borderColor:theme.line}]}>
             <Feather name="search" size={17} color={theme.muted}/>
             <TextInput value={campusQuery}
               onChangeText={value=>{setCampusQuery(value);if(campusMode!=='nearby'){setGlobalRows([]);setGlobalSearched(false);setGlobalError('');setGlobalHasMore(false);globalRequest.current++;}}}
-              placeholder={campusMode==='nearby'?'Filter nearby institutions':'Institution name, at least 3 letters'}
+              placeholder={'Search institutions in your city'}
               autoCapitalize="words"
               placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text}]}/>
           </View>
@@ -584,7 +576,7 @@ export default function OnboardingScreen({theme}){
                 {campus===item.name&&<Feather name="check" size={18} color={theme.accent}/>}
               </Pressable>)}
               {campusMode==='nearby'&&!filteredInstitutions.length&&<View style={styles.pickerLoading}>
-                <Text style={[styles.pickerCopy,{color:theme.muted}]}>{institutionError||'No matching nearby institutions. Try Country or Worldwide search.'}</Text>
+                <Text style={[styles.pickerCopy,{color:theme.muted}]}>{institutionError||'No matching institutions in this city. Try a different spelling or refresh.'}</Text>
                 <Pressable onPress={()=>loadCityInstitutions(city,country)} style={[styles.safetyButton,{backgroundColor:theme.accent}]}>
                   <Text style={styles.primaryText}>Search city again</Text>
                 </Pressable>
