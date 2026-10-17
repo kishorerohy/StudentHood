@@ -6,6 +6,7 @@ import {Feather} from '@expo/vector-icons';
 import {DiscoverIcon,DropsIcon,PingIcon} from '../icons';
 import {getCampusPeeps,searchDiscoverableStudents,getDropsFeed,getPeepConnection,getProfileCard,getPingSceneInbox,getIncomingPeepRequests,respondToPeepRequest} from '../api';
 import CampusPresenceBadge from '../components/CampusPresenceBadge';
+import useLiveRefresh from '../useLiveRefresh';
 import DiscoverPeoplePanel from '../components/DiscoverPeoplePanel';
 
 const PING_TABS=['All','Peeps','Requests','Hang Chats','Crew Chats'];
@@ -22,6 +23,10 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
   const [searchLoading,setSearchLoading]=useState(false);
   const [searchError,setSearchError]=useState('');
   const [discoverRefresh,setDiscoverRefresh]=useState(0);
+  useLiveRefresh({tables:['studenthood_presence_signals','peep_connections'],intervalMs:12000,
+    enabled:kind==='Discover',refresh:()=>setDiscoverRefresh(x=>x+1)});
+  useLiveRefresh({tables:['peep_connections','scenes','hangs','gigs'],intervalMs:16000,
+    enabled:kind==='Drops',refresh:()=>setDropsRefresh(x=>x+1)});
   const [pingTab,setPingTab]=useState('All');
   const [pingCampusPresence,setPingCampusPresence]=useState(null);
   const [drops,setDrops]=useState([]);
