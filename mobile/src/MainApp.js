@@ -5,6 +5,7 @@ import * as Linking from 'expo-linking';
 import {DiscoverIcon,DropsIcon,PingIcon,SceneIcon} from './icons';
 import {useSession} from './session';
 import ScenesScreen from './screens/ScenesScreen';
+import useForegroundNotificationSounds from './notificationSounds';
 import ProfileScreen from './screens/ProfileScreen';
 import TopHubScreen from './screens/TopHubScreen';
 import PingScreen from './screens/PingScreen';
@@ -27,6 +28,7 @@ function getSharedSceneFromLink(url){return typeof url==='string'?url.match(SHAR
 
 export default function MainApp({theme}){
   const {profile,safety,refreshAccount}=useSession();
+  useForegroundNotificationSounds(profile?.id);
   const {width}=useWindowDimensions();
   const isTablet=width>=768;
   const [tab,setTab]=useState('Scenes');
