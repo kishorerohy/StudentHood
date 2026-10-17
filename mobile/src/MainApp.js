@@ -167,7 +167,7 @@ export default function MainApp({theme}){
       focusScene={focusScene}
       onOpenProfile={userId=>showPage({type:'student-profile',userId})}
       onOpenCreate={()=>showPage({type:'create-options'})}
-      onOpenPulse={()=>showPage({type:'feature',kind:'Pulse'})}
+      onOpenPulse={()=>showPage({type:'create-feature',kind:'Pulse'})}
       onOpenDiscover={()=>showPage({type:'hub',kind:'Discover'})}
     />}
     {tab==='Profile'&&<ProfileScreen
