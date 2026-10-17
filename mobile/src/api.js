@@ -304,6 +304,42 @@ export async function getPingMessages(threadId,{limit=100}={}){
   return Array.isArray(data)?data:[];
 }
 
+// Per-account, per-recipient Ping controls. No test-account special cases.
+export async function getPingBlockStatus(targetId){
+  const target=String(targetId||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(target))throw new Error('Invalid Ping participant.');
+  const {data,error}=await supabase.rpc('studenthood_ping_block_status',{p_target:target});
+  if(error)throw error;
+  return {blocked_by_me:data?.blocked_by_me===true};
+}
+export async function setPingBlock(targetId,blocked){
+  const target=String(targetId||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(target))throw new Error('Invalid Ping participant.');
+  const {data,error}=await supabase.rpc('studenthood_ping_set_block',{
+    p_target:target,p_block:!!blocked
+  });
+  if(error)throw error;
+  return {blocked_by_me:data?.blocked_by_me===true};
+}
+export async function searchPingHistory(threadId,query,{limit=40,offset=0}={}){
+  const text=String(query||'').trim();
+  if(text.length<2)return [];
+  const {data,error}=await supabase.rpc('studenthood_ping_search_messages',{
+    p_thread:threadId,p_query:text,p_limit:Math.max(1,Math.min(Number(limit)||40,100)),
+    p_offset:Math.max(0,Math.min(Number(offset)||0,5000))
+  });
+  if(error)throw error;
+  return Array.isArray(data)?data:[];
+}
+export async function getPingHistoryPage(threadId,{limit=50,before=null}={}){
+  const {data,error}=await supabase.rpc('studenthood_ping_history_page',{
+    p_thread:threadId,p_limit:Math.max(1,Math.min(Number(limit)||50,100)),
+    p_before_at:before?.created_at||null,p_before_id:before?.id||null
+  });
+  if(error)throw error;
+  return Array.isArray(data)?data:[];
+}
+
 export async function decidePingRequest(threadId,decision){
   const id=String(threadId||'').trim();
   if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id)||!['accept','decline'].includes(decision))
