@@ -173,10 +173,15 @@ CREATE FUNCTION private.studenthood_guard_blocked_peeps()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
 SET search_path=public,private,pg_catalog AS $fn$
 BEGIN
-  IF (TG_OP='INSERT' OR (NEW.status='accepted'
-       AND OLD.status IS DISTINCT FROM 'accepted'))
-    AND public.studenthood_interaction_blocked(NEW.requester_id,NEW.addressee_id)
-  THEN RAISE EXCEPTION 'Peep request is not available'; END IF;
+  IF TG_OP='INSERT' THEN
+    IF public.studenthood_interaction_blocked(NEW.requester_id,NEW.addressee_id) THEN
+      RAISE EXCEPTION 'Peep request is not available';
+    END IF;
+  ELSIF NEW.status='accepted' AND OLD.status IS DISTINCT FROM 'accepted' THEN
+    IF public.studenthood_interaction_blocked(NEW.requester_id,NEW.addressee_id) THEN
+      RAISE EXCEPTION 'Peep request is not available';
+    END IF;
+  END IF;
   RETURN NEW;
 END;
 $fn$;
