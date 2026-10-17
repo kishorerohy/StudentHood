@@ -2,22 +2,36 @@ import React,{useCallback,useEffect,useState} from 'react';
 import {ActivityIndicator,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {getExperienceFlags} from '../experiences';
-import {getHangRsvpStatus,changeHangRsvp} from '../crewsHub';
+import {getHangRsvpStatus,changeHangRsvp,getOrganizerHangRsvps} from '../crewsHub';
+import {issueOrganizerHangConfirmation} from '../passport';
+import {getProfileCard} from '../api';
 import useLiveRefresh from '../useLiveRefresh';
 
 // Only eligible Hangs supplied by the existing RLS-visible browse feed are accepted.
 // The server repeats all visibility, capacity, campus and youth checks.
-export default function HangDetailsScreen({hang,theme,onBack}){
+export default function HangDetailsScreen({hang,theme,profile,onBack}){
  const [data,setData]=useState(null),[error,setError]=useState('');
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false);
+ const [canConfirm,setCanConfirm]=useState(false),[attendees,setAttendees]=useState([]),[notice,setNotice]=useState('');
  const load=useCallback(async()=>{
    try{
     const flags=await getExperienceFlags();
     if(!flags.crews_hq){setData({enabled:false});return;}
     setData(await getHangRsvpStatus(hang.id));setError('');
+    const confirm=flags.passport&&hang.creator_id===profile?.id&&
+      new Date(hang.starts_at).getTime()<=Date.now();
+    setCanConfirm(!!confirm);
+    if(confirm){
+      const roster=await getOrganizerHangRsvps(hang.id);
+      const permitted=await Promise.all(roster.map(async attendee=>{
+        try{const person=await getProfileCard(attendee.user_id);
+          return {...attendee,label:person?.full_name||person?.username||'Private participant'};}
+        catch{return {...attendee,label:'Private participant'};}
+      }));setAttendees(permitted);
+    }
    }catch(e){setError(e.message);}
    finally{setLoading(false);}
- },[hang?.id]);
+ },[hang?.id,hang?.creator_id,hang?.starts_at,profile?.id]);
  useEffect(()=>{load()},[load]);
  useLiveRefresh({tables:['studenthood_hang_rsvps'],enabled:data?.enabled===true,intervalMs:15000,refresh:load});
  async function rsvp(join){
@@ -62,7 +76,21 @@ export default function HangDetailsScreen({hang,theme,onBack}){
         </Pressable>}
        {started&&<Text style={[styles.detail,{color:theme.muted}]}>RSVPs have closed for this Hang.</Text>}
       </>}
-    {!!error&&<Text accessibilityRole="alert" style={{color:theme.danger}}>{error}</Text>}
+    {canConfirm&&<View style={[styles.card,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+     <Text style={[styles.title,{color:theme.text,fontSize:15}]}>Organizer attendance confirmation</Text>
+     <Text style={[styles.detail,{color:theme.muted}]}>Confirm only participants who actually attended. This is an organizer-confirmed Passport record, not a university-issued qualification.</Text>
+     {!attendees.length?<Text style={[styles.detail,{color:theme.muted}]}>No going RSVPs are available to confirm.</Text>:
+       attendees.map(person=><Pressable key={person.user_id} disabled={busy} accessibilityRole="button"
+         onPress={async()=>{setBusy(true);setError('');setNotice('');
+           try{await issueOrganizerHangConfirmation(hang.id,person.user_id);
+             setNotice('Organizer attendance confirmation issued privately.');}
+           catch(e){setError(e.message);}finally{setBusy(false);}}}
+         style={[styles.action,{borderColor:theme.line,backgroundColor:theme.surface}]}>
+         <Text style={{color:theme.text,fontWeight:'800'}}>{person.label} · Confirm attendance</Text>
+       </Pressable>)}
+    </View>}
+   {!!notice&&<Text accessibilityRole="alert" style={{color:theme.accent}}>{notice}</Text>}
+   {!!error&&<Text accessibilityRole="alert" style={{color:theme.danger}}>{error}</Text>}
     {busy&&<ActivityIndicator color={theme.accent}/>}
    </ScrollView>
  </View>;
