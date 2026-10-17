@@ -22,7 +22,7 @@ const presence=read('../supabase/migrations/20261017_private_campus_presence_inv
 
 assert.equal(sound.toString('ascii',0,4),'RIFF','Original StudentHood notification audio must be a WAV');
 assert.equal(sound.toString('ascii',8,12),'WAVE','Notification WAV must be a valid sound file');
-assert(!app.expo.plugins.flatMap(p=>Array.isArray(p)&&p[0]==='expo-notifications'?p[1].sounds:[]).some(x=>/[^a-z0-9_]/.test(x.split('/').pop().replace(/\\.wav$/,''))),'Notification Android resource filenames must contain only lowercase letters, numbers and underscores');
+assert(!app.expo.plugins.flatMap(p=>Array.isArray(p)&&p[0]==='expo-notifications'?p[1].sounds:[]).some(x=>/[^a-z0-9_]/.test(x.split('/').pop().replace(/\.wav$/,''))),'Notification Android resource filenames must contain only lowercase letters, numbers and underscores');
 assert(pkg.dependencies['expo-notifications'],'Expo notifications native dependency required');
 assert(app.expo.plugins.some(p=>Array.isArray(p)&&p[0]==='expo-notifications'
   &&p[1].sounds.includes('./assets/studenthood_notification.wav')),'Bundle native chime with APK');
