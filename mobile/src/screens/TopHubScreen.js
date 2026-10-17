@@ -132,14 +132,12 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.pageHeader}>
+      {/* Universal Discover/Drops header: navigation and icon without a redundant page title. */}
+      <View style={styles.pageHeader} accessibilityLabel={kind+' navigation'}>
         <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel="Back to StudentHood" style={[styles.back,{backgroundColor:theme.surface,borderColor:theme.line}]}>
           <Feather name="arrow-left" color={theme.text} size={20}/>
         </Pressable>
-        <View style={styles.pageHeading}>
-          <Text style={[styles.eyebrow,{color:theme.accent}]}>STUDENTHOOD</Text>
-          <Text style={[styles.title,{color:theme.text}]}>{kind}</Text>
-        </View>
+        <View style={{flex:1}}/>
         <View style={[styles.titleIcon,{backgroundColor:theme.accentSoft}]}>{icon}</View>
       </View>
 
@@ -160,7 +158,7 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
           </Pressable>)}
         </ScrollView>
         {(dropFilter==='All'||dropFilter==='Peeps')&&<View style={{marginBottom:18,gap:10}}>
-          <Text style={[styles.sectionTitle,{color:theme.text}]}>Peep requests</Text>
+          {/* Peep request actions remain functional without a redundant heading. */}
           {incomingLoading&&incomingRequests.length===0&&<Loading theme={theme} label="Loading incoming Peep requests…"/>}
           {!!incomingError&&<Text accessibilityRole="alert" style={{color:theme.danger,fontSize:12}}>{incomingError}</Text>}
           {!!incomingNotice&&<Text accessibilityRole="alert" style={{color:theme.accent,fontSize:12}}>{incomingNotice}</Text>}
@@ -231,11 +229,10 @@ export default function TopHubScreen({kind,theme,profile,onBack,onTab,onOpenProf
             <Text style={[styles.discoverCardCopy,{color:theme.muted}]}>{item.copy}</Text>
           </Pressable>)}
         </View>
-        <View style={styles.sectionHeading}>
-          <View style={{flex:1}}>
-            <Text style={[styles.sectionTitle,{color:theme.text}]}>People from your campus</Text>
-            <Text style={[styles.sectionCaption,{color:theme.muted}]} numberOfLines={1}>{profile?.campus_name||'Your campus'}</Text>
-          </View>
+        <View style={styles.sectionHeading} accessibilityLabel="Campus discovery controls">
+          <Text style={[styles.sectionCaption,{color:theme.muted,flex:1}]} numberOfLines={1}>
+            {profile?.campus_name||'Your campus'}
+          </Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Refresh campus people and profile photos"
             disabled={peepsLoading} onPress={()=>setDiscoverRefresh(x=>x+1)}
             style={[styles.refresh,{backgroundColor:theme.surface,borderRadius:13}]}>
@@ -356,8 +353,8 @@ function DropRow({activity,theme,last}){
 const styles=StyleSheet.create({
   root:{flex:1},
   scroll:{flex:1},
-  content:{width:'100%',maxWidth:980,alignSelf:'center',paddingHorizontal:16,paddingTop:16,paddingBottom:36},
-  pageHeader:{flexDirection:'row',alignItems:'center',gap:13,marginBottom:18},
+  content:{width:'100%',maxWidth:980,alignSelf:'center',paddingHorizontal:16,paddingTop:10,paddingBottom:36},
+  pageHeader:{flexDirection:'row',alignItems:'center',gap:13,marginBottom:10},
   back:{width:44,height:44,borderRadius:14,borderWidth:1,alignItems:'center',justifyContent:'center'},
   pageHeading:{flex:1},
   eyebrow:{fontSize:9,fontWeight:'900',letterSpacing:1.4,marginBottom:2},
