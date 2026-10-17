@@ -1,8 +1,9 @@
-import React,{useEffect,useState} from 'react';
+import React,{useCallback,useEffect,useMemo,useState} from 'react';
 import {ActivityIndicator,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {SceneIcon} from '../icons';
-import {getMyStudentSubmissions} from '../creation';
+import {getMyStudentSubmissions,getVisibleCampusCreations} from '../creation';
+import useLiveRefresh from '../useLiveRefresh';
 
 // UI shells with honest empty states. Hangs, Gigs, Crews and authored Pulse
 // do not yet have a released data service; never fabricate entries or RSVPs.
@@ -43,19 +44,29 @@ const CONFIG={
 
 export default function FeatureLandingScreen({kind,theme,profile,onDiscover,onBack,onCreate,reloadKey=0}){
   const config=CONFIG[kind]||CONFIG.Hangs;
+  const isBrowse=kind==='Hangs'||kind==='Gigs';
   const [filter,setFilter]=useState(config.filters[0]);
   const [submissions,setSubmissions]=useState([]);
   const [submissionLoading,setSubmissionLoading]=useState(false);
   const [submissionError,setSubmissionError]=useState('');
-  useEffect(()=>{
-    let active=true;
-    setSubmissionLoading(true);
-    setSubmissionError('');
-    getMyStudentSubmissions(kind).then(rows=>{if(active)setSubmissions(rows)})
-      .catch(error=>{if(active){setSubmissions([]);setSubmissionError(error?.message||'Could not load your submissions.')}})
-      .finally(()=>{if(active)setSubmissionLoading(false)});
-    return()=>{active=false};
-  },[kind,reloadKey]);
+  const reload=useCallback(async({silent=false}={})=>{
+    if(!silent)setSubmissionLoading(true);
+    try{
+      const rows=isBrowse?await getVisibleCampusCreations(kind):await getMyStudentSubmissions(kind);
+      setSubmissions(rows);
+      setSubmissionError('');
+    }catch(error){
+      if(!silent)setSubmissionError(error?.message||'Unable to load this campus feed.');
+    }finally{
+      if(!silent)setSubmissionLoading(false);
+    }
+  },[kind,isBrowse]);
+  useEffect(()=>{reload()},[reload,reloadKey]);
+  useLiveRefresh({tables:isBrowse?[kind==='Hangs'?'hangs':'gigs']:[],
+    enabled:isBrowse,intervalMs:16000,refresh:()=>reload({silent:true})});
+  const displayed=useMemo(()=>isBrowse&&filter!=='All'
+    ?submissions.filter(row=>String(row.category||'').toLowerCase().replace(/s$/,'')===filter.toLowerCase().replace(/s$/,''))
+    :submissions,[isBrowse,filter,submissions]);
   const canDiscover=typeof onDiscover==='function';
   return <ScrollView
     style={[styles.root,{backgroundColor:theme.bg}]}
@@ -91,33 +102,34 @@ export default function FeatureLandingScreen({kind,theme,profile,onDiscover,onBa
         <Text style={[styles.filterText,{color:filter===name?'#fff':theme.text}]}>{name}</Text>
       </Pressable>)}
     </ScrollView>
-    {!!onCreate&&<Pressable onPress={onCreate} accessibilityRole="button" accessibilityLabel={config.action} style={[styles.createAction,{backgroundColor:theme.accent}]}>
-      <Feather name="plus" color="#fff" size={19}/>
-      <Text style={styles.createText}>{config.action}</Text>
-    </Pressable>}
-    {/* Author's own submissions, already displayed as individual labeled cards. */}
+
+
+    {/* Browsing always shows eligible new content from OTHER students, not My submissions. */}
     {submissionLoading?<ActivityIndicator style={{marginVertical:15}} color={theme.accent}/>:
-      submissionError?<Text accessibilityRole="alert" style={[styles.submissionError,{color:theme.muted}]}>Submissions unavailable: {submissionError}</Text>:
-      submissions.length===0?<Text style={[styles.submissionError,{color:theme.muted}]}>Nothing submitted yet.</Text>:
-      <View style={styles.savedList}>{submissions.map(item=><View key={item.id} style={[styles.savedItem,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+      submissionError?<Text accessibilityRole="alert" style={[styles.submissionError,{color:theme.muted}]}>{submissionError}</Text>:
+      displayed.length>0?
+      <View style={styles.savedList}>{displayed.map(item=><View key={item.id} style={[styles.savedItem,{backgroundColor:theme.surface,borderColor:theme.line}]}>
         <View style={[styles.savedIcon,{backgroundColor:theme.accentSoft}]}><Feather name={config.icon} color={theme.accent} size={19}/></View>
-        <View style={{flex:1}}>
-          <Text style={[styles.savedTitle,{color:theme.text}]} numberOfLines={2}>{item.title||item.name||item.body||'Pulse moment'}</Text>
+        <View style={{flex:1,gap:5}}>
+          <Text style={[styles.savedTitle,{color:theme.text}]} numberOfLines={2}>{item.title||item.name||item.body||'Campus activity'}</Text>
           <Text style={[styles.savedMeta,{color:theme.muted}]}>{item.category?item.category+' · ':''}{new Date(item.created_at).toLocaleDateString()}</Text>
+          {!!item.description&&<Text numberOfLines={3} style={[styles.savedMeta,{color:theme.text}]}>{item.description}</Text>}
+          {kind==='Hangs'&&!!item.starts_at&&<Text style={[styles.savedMeta,{color:theme.muted}]}>Starts: {new Date(item.starts_at).toLocaleString()}</Text>}
+          {!!item.location_hint&&<Text style={[styles.savedMeta,{color:theme.muted}]}>{item.location_hint}</Text>}
+          {kind==='Gigs'&&item.pay_amount!=null&&<Text style={[styles.savedMeta,{color:theme.text}]}>{item.pay_currency||''} {item.pay_amount} {item.pay_unit?'/ '+item.pay_unit:''}</Text>}
         </View>
-        <View style={[styles.pendingBadge,{borderColor:theme.line}]}><Text style={[styles.pendingBadgeText,{color:theme.muted}]}>{item.moderation_status==='pending'?'Pending':item.moderation_status==='approved'?'Approved':'Not approved'}</Text></View>
-      </View>)}</View>}
-    <View style={[styles.empty,{backgroundColor:theme.surface,borderColor:theme.line}]}>
-      <View style={[styles.emptyBadge,{backgroundColor:theme.accentSoft}]}>
-        <Feather name="clock" color={theme.accent} size={22}/>
-      </View>
-      {/* Heading-free empty state shared by Hangs, Gigs, Crews and Pulse. */}
-      <Text style={[styles.emptyText,{color:theme.muted}]}>{config.emptyText}</Text>
-      <View style={[styles.pending,{borderColor:theme.line,backgroundColor:theme.surface2}]}>
-        <Feather name="lock" color={theme.muted} size={14}/>
-        <Text style={[styles.pendingText,{color:theme.muted}]}>{config.action} · Available after launch</Text>
-      </View>
-    </View>
+      </View>)}</View>:
+      <View style={[styles.empty,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+        <View style={[styles.emptyBadge,{backgroundColor:theme.accentSoft}]}>
+          <Feather name="clock" color={theme.accent} size={22}/>
+        </View>
+        <Text style={[styles.emptyText,{color:theme.muted}]}>
+          {isBrowse?(kind==='Hangs'
+            ?'No eligible Hangs from other students are available yet. New campus Hangs appear here automatically.'
+            :'No eligible Gigs from other students are available yet. New opportunities appear here automatically.')
+            :config.emptyText}
+        </Text>
+      </View>}
     {canDiscover&&kind!=='Pulse'&&<Pressable
       accessibilityRole="button"
       onPress={onDiscover}
