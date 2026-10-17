@@ -22,6 +22,9 @@ import FeatureLandingScreen from './screens/FeatureLandingScreen';
 import FreshersJourneyScreen from './screens/FreshersJourneyScreen';
 import CrewsHQScreen from './screens/CrewsHQScreen';
 import HangDetailsScreen from './screens/HangDetailsScreen';
+import GigDetailsScreen from './screens/GigDetailsScreen';
+import EmployerPortalScreen from './screens/EmployerPortalScreen';
+import MyGigApplicationsScreen from './screens/MyGigApplicationsScreen';
 
 const LOGO_DARK=require('../assets/studenthood-logo.png');
 const LOGO_LIGHT=require('../assets/studenthood-logo-light.png');
@@ -110,6 +113,10 @@ export default function MainApp({theme}){
           onOpenScene={sceneId=>openSharedLink('studenthood://scene/'+sceneId)}
         />;
       case 'experience':
+        if(page.kind==='gigs_applications')return <MyGigApplicationsScreen theme={theme} onBack={goBack}
+          onOpenGig={gig=>showPage({type:'gig-details',gig})}/>;
+        if(page.kind==='gigs_plus')return <EmployerPortalScreen theme={theme} onBack={goBack}
+          onOpenGig={gig=>showPage({type:'gig-details',gig})}/>;
         if(page.kind==='crews_hq') return <CrewsHQScreen theme={theme} profile={profile} onBack={goBack}
           onHangs={()=>selectTab('Hangs')}/>;
         if(page.kind==='freshers') return <FreshersJourneyScreen theme={theme} onBack={goBack}
@@ -119,7 +126,9 @@ export default function MainApp({theme}){
         return null;
       case 'feature':
         return <FeatureLandingScreen kind={page.kind} theme={theme} profile={profile} reloadKey={reloadKey} onBack={goBack} onDiscover={()=>showPage({type:'hub',kind:'Discover'})}
-          onOpenItem={(kind,item)=>kind==='Hangs'&&showPage({type:'hang-details',hang:item})}/>;
+          onOpenItem={(kind,item)=>showPage(kind==='Hangs'?{type:'hang-details',hang:item}:{type:'gig-details',gig:item})}/>;
+      case 'gig-details':
+        return <GigDetailsScreen gig={page.gig} theme={theme} onBack={goBack}/>;
       case 'hang-details':
         return <HangDetailsScreen hang={page.hang} theme={theme} onBack={goBack}/>;
       case 'student-profile':
@@ -137,7 +146,7 @@ export default function MainApp({theme}){
           profile={profile}
           safety={safety}
           onBack={goBack}
-          onNavigate={section=>showPage(section==='moderation'?{type:'moderation'}:(section==='freshers'||section==='crews_hq')?{type:'experience',kind:section}:{type:'profile-menu',section})}
+          onNavigate={section=>showPage(section==='moderation'?{type:'moderation'}:(section==='freshers'||section==='crews_hq'||section==='gigs_plus'||section==='gigs_applications')?{type:'experience',kind:section}:{type:'profile-menu',section})}
           onDrops={()=>showPage({type:'hub',kind:'Drops'})}
         />;
       case 'moderation':
@@ -199,7 +208,7 @@ export default function MainApp({theme}){
     />}
 
     {tab==='Hangs'&&<FeatureLandingScreen kind="Hangs" theme={theme} profile={profile} reloadKey={reloadKey} onDiscover={()=>showPage({type:'hub',kind:'Discover'})} onOpenItem={(kind,item)=>showPage({type:'hang-details',hang:item})}/>}
-    {tab==='Gigs'&&<FeatureLandingScreen kind="Gigs" theme={theme} profile={profile} reloadKey={reloadKey} onDiscover={()=>showPage({type:'hub',kind:'Discover'})} />}
+    {tab==='Gigs'&&<FeatureLandingScreen kind="Gigs" theme={theme} profile={profile} reloadKey={reloadKey} onDiscover={()=>showPage({type:'hub',kind:'Discover'})} onOpenItem={(kind,item)=>showPage({type:'gig-details',gig:item})}/>}
     <BottomDial theme={theme} tab={tab} onTab={selectTab} onCreate={()=>showPage({type:'create-options'})} isTablet={isTablet} screenWidth={width}/>
     {tab==='Scenes'&&<CampusStatusSlider theme={theme} profile={profile} onSaved={afterProfileSaved}/>}
 

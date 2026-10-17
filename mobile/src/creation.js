@@ -69,7 +69,8 @@ function validate(kind,values,asset){
       description:requireText(values.description,'Description',20,2500),
       location_hint:requireText(values.locationHint,'Work location',2,120),
       category:values.category,
-      pay_amount:Number(pay),pay_currency:currency,pay_unit:values.payUnit
+      pay_amount:Number(pay),pay_currency:currency,pay_unit:values.payUnit,
+      ...(values.employerOrgId?{employer_org_id:values.employerOrgId}:{})
     };
   }
   throw new Error('Unknown creation type.');

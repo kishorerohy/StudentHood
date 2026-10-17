@@ -92,6 +92,20 @@ export default function ProfileMenuScreen({page='menu',theme,profile,safety,onBa
         <Text style={[styles.rowCopy,{color:theme.muted}]}>Manage your permitted Crew memberships and requests</Text></View>
         <Feather name="chevron-right" size={19} color={theme.muted}/>
       </Pressable>}
+      {page==='menu'&&experienceFlags.gigs_plus&&<Pressable accessibilityRole="button" accessibilityLabel="Open verified employer tools"
+        onPress={()=>onNavigate('gigs_plus')} style={[styles.row,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+        <View style={[styles.rowIcon,{backgroundColor:theme.accentSoft}]}><Feather name="briefcase" color={theme.accent} size={19}/></View>
+        <View style={{flex:1}}><Text style={[styles.rowTitle,{color:theme.text}]}>Employer verification</Text>
+        <Text style={[styles.rowCopy,{color:theme.muted}]}>Verification requests and your real Gig applications</Text></View>
+        <Feather name="chevron-right" size={19} color={theme.muted}/>
+      </Pressable>}
+      {page==='menu'&&experienceFlags.gigs_plus&&<Pressable accessibilityRole="button" accessibilityLabel="Open My Applications"
+        onPress={()=>onNavigate('gigs_applications')} style={[styles.row,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+        <View style={[styles.rowIcon,{backgroundColor:theme.accentSoft}]}><Feather name="file-text" color={theme.accent} size={19}/></View>
+        <View style={{flex:1}}><Text style={[styles.rowTitle,{color:theme.text}]}>My Applications</Text>
+        <Text style={[styles.rowCopy,{color:theme.muted}]}>Your private Gig application history and decisions</Text></View>
+        <Feather name="chevron-right" size={19} color={theme.muted}/>
+      </Pressable>}
       {page==='menu'&&canSeeModeration&&<Pressable onPress={()=>onNavigate('moderation')} accessibilityRole="button" accessibilityLabel="Scene moderation queue" style={[styles.row,{backgroundColor:theme.surface,borderColor:theme.line}]}>
         <View style={[styles.rowIcon,{backgroundColor:theme.accentSoft}]}><Feather name="shield" size={19} color={theme.accent}/></View>
         <View style={{flex:1}}><Text style={[styles.rowTitle,{color:theme.text}]}>Scene review</Text><Text style={[styles.rowCopy,{color:theme.muted}]}>Review pending Scenes with verified adult moderator access</Text></View>
