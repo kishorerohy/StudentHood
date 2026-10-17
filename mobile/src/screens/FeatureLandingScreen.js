@@ -120,6 +120,9 @@ export default function FeatureLandingScreen({kind,theme,profile,onDiscover,onBa
           </Pressable>}
           {!!item.location_hint&&<Text style={[styles.savedMeta,{color:theme.muted}]}>{item.location_hint}</Text>}
           {kind==='Gigs'&&item.pay_amount!=null&&<Text style={[styles.savedMeta,{color:theme.text}]}>{item.pay_currency||''} {item.pay_amount} {item.pay_unit?'/ '+item.pay_unit:''}</Text>}
+          {kind==='Gigs'&&onOpenItem&&<Pressable onPress={()=>onOpenItem(kind,item)} accessibilityRole="button" accessibilityLabel="View Gig details" style={{paddingVertical:9}}>
+            <Text style={{color:theme.accent,fontWeight:'800'}}>View Gig details</Text>
+          </Pressable>
         </View>
       </View>)}</View>:
       <View style={[styles.empty,{backgroundColor:theme.surface,borderColor:theme.line}]}>
