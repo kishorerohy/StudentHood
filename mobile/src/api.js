@@ -404,6 +404,24 @@ export async function getActivePeepsPulses({limit=16}={}){
   }));
 }
 
+// Discover search is server-side, per-viewer permission checked, and does not
+// depend on a truncated campus list. Only permitted student data is returned.
+export async function searchDiscoverableStudents(query,{limit=30,offset=0}={}){
+  const needle=String(query||'').trim().slice(0,64);
+  if(needle.length<2)return [];
+  const {data,error}=await supabase.rpc('studenthood_search_discoverable_students',{
+    p_query:needle,
+    p_limit:Math.max(1,Math.min(50,Math.floor(Number(limit)||30))),
+    p_offset:Math.max(0,Math.min(500,Math.floor(Number(offset)||0)))
+  });
+  if(error)throw error;
+  const rows=Array.isArray(data)?data:[];
+  return Promise.all(rows.map(async item=>({
+    ...item,
+    avatar_url:await getAvatarDisplayUrl(item.avatar_url)
+  })));
+}
+
 export async function getCampusPeeps({limit=100,offset=0}={}){
   const {data,error}=await supabase.rpc('studenthood_campus_peeps',{
     p_limit:limit,
