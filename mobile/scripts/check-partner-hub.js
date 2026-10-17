@@ -1,0 +1,24 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const sql=read('../supabase/migrations/20261018_studenthood_partner_hub.sql');
+const api=read('src/partnerHub.js'),ui=read('src/screens/PartnerHubScreen.js');
+const main=read('src/MainApp.js'),menu=read('src/screens/ProfileMenuScreen.js');
+assert(sql.includes("verification_status text not null default 'pending'"),'Approval cannot be self-granted');
+assert(sql.includes("approval_status text not null default 'draft'"),'Campaigns must start as drafts');
+assert(sql.includes("approval_status='draft'"),'No organization may create approved sponsored campaigns');
+assert(sql.includes('quote_amount is null'),'Client never invents or assigns a charge');
+assert(sql.includes('sponsored is true'),'Disclosure is never optional');
+assert(sql.includes('verification_status=\'verified\''),'Only approved partners may submit');
+assert(sql.includes('public.studenthood_access_policy()'),'Server enforces age/guardian restrictions');
+assert(sql.includes('adult_access_verified'),'Commercial tools require adult assurance');
+assert(sql.includes('studenthood_partner_campaign_daily_metrics'),'Only aggregates, no person-level event rows');
+assert((sql.match(/enable row level security/g)||[]).length>=3,'All partner tables have RLS');
+assert(!sql.includes('grant update on public.studenthood_partner_campaigns'),'Clients cannot approve own campaigns');
+assert(!sql.includes('create policy "Public sponsored campaign feed"'),'No uncontrolled ad delivery');
+assert(!/stripe|charge|payout|credit_card/i.test(api),'No payment gateway or wallets');
+assert(ui.includes('requestPartnerVerification')&&ui.includes('createPartnerCampaign')
+ &&ui.includes('changePartnerCampaign'),'Real private campaigns/actions');
+assert(ui.includes('No campaign metrics recorded yet.'),'Do not invent impressions');
+assert(ui.includes('Submitting this request')===false||ui.includes('human'),'No fraudulent instant verification');
+assert(main.includes("page.kind==='partner_hub'")&&menu.includes('experienceFlags.partner_hub&&'),'Restricted menu only');
+console.log('PASS: adult partner verification, draft and campaign approval separation, no payments or tracking.');
