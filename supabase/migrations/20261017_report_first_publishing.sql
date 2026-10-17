@@ -79,12 +79,16 @@ FOR EACH ROW EXECUTE FUNCTION public.studenthood_comment_publish_defaults();
 
 -- Existing unpublished posts have no legacy Scene reports (checked before
 -- this migration). Preserve any legacy pending items with a linked report.
+-- The new security trigger intentionally prevents non-moderator status updates;
+-- disable that ONE trigger only during the data backfill, inside this transaction.
+ALTER TABLE public.scenes DISABLE TRIGGER scenes_apply_safety_defaults;
 UPDATE public.scenes SET moderation_status='approved'
 WHERE moderation_status='pending'
   AND NOT EXISTS (
     SELECT 1 FROM public.support_requests support
     WHERE support.category='report' AND support.message LIKE '%'||public.scenes.id::text||'%'
   );
+ALTER TABLE public.scenes ENABLE TRIGGER scenes_apply_safety_defaults;
 UPDATE public.scene_comments SET moderation_status='approved'
 WHERE moderation_status='pending';
 UPDATE public.pulse_entries SET moderation_status='approved'
