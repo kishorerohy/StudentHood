@@ -1,9 +1,10 @@
-import React from 'react';
+import React,{useEffect,useState} from 'react';
 import {Alert,Linking,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {Feather} from '@expo/vector-icons';
 import {signOut} from '../auth';
 import {LEGAL_URLS} from '../config';
 import {useSession} from '../session';
+import {getExperienceFlags} from '../experiences';
 
 const NAV={
  menu:[
@@ -23,6 +24,13 @@ const NAV={
 
 export default function ProfileMenuScreen({page='menu',theme,profile,safety,onBack,onNavigate,onDrops}){
   const {session}=useSession();
+  const [experienceFlags,setExperienceFlags]=useState({});
+  useEffect(()=>{
+    if(page!=='menu')return;
+    let active=true;
+    getExperienceFlags().then(data=>{if(active)setExperienceFlags(data)}).catch(()=>{});
+    return()=>{active=false};
+  },[page]);
   const canSeeModeration=session?.user?.app_metadata?.studenthood_moderator===true;
   const titleMap={menu:'Profile menu',privacy:'Privacy',safety:'Safety',notifications:'Notifications',account:'Account & security',platform:'Platform age signal',legal:'Legal documents'};
   const label=titleMap[page]||'Profile settings';
@@ -69,6 +77,14 @@ export default function ProfileMenuScreen({page='menu',theme,profile,safety,onBa
           <Feather name="chevron-right" size={19} color={theme.muted}/>
         </Pressable>
       )}
+      {page==='menu'&&experienceFlags.freshers&&<Pressable accessibilityRole="button"
+        accessibilityLabel="Freshers Journey settings" onPress={()=>onNavigate('freshers')}
+        style={[styles.row,{backgroundColor:theme.surface,borderColor:theme.line}]}>
+        <View style={[styles.rowIcon,{backgroundColor:theme.accentSoft}]}><Feather name="compass" color={theme.accent} size={19}/></View>
+        <View style={{flex:1}}><Text style={[styles.rowTitle,{color:theme.text}]}>Freshers Journey</Text>
+        <Text style={[styles.rowCopy,{color:theme.muted}]}>Your private campus introduction and preferences</Text></View>
+        <Feather name="chevron-right" size={19} color={theme.muted}/>
+      </Pressable>}
       {page==='menu'&&canSeeModeration&&<Pressable onPress={()=>onNavigate('moderation')} accessibilityRole="button" accessibilityLabel="Scene moderation queue" style={[styles.row,{backgroundColor:theme.surface,borderColor:theme.line}]}>
         <View style={[styles.rowIcon,{backgroundColor:theme.accentSoft}]}><Feather name="shield" size={19} color={theme.accent}/></View>
         <View style={{flex:1}}><Text style={[styles.rowTitle,{color:theme.text}]}>Scene review</Text><Text style={[styles.rowCopy,{color:theme.muted}]}>Review pending Scenes with verified adult moderator access</Text></View>
