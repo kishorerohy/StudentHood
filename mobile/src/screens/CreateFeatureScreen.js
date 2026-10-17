@@ -93,7 +93,7 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
       <Pressable accessibilityRole="button" accessibilityLabel="Back to Create" onPress={onBack} style={styles.back}>
         <Feather name="arrow-left" size={21} color={theme.text}/>
       </Pressable>
-      <Text style={[styles.headerTitle,{color:theme.text}]}>{config.heading}</Text>
+      <View style={{flex:1}} accessibilityLabel={config.heading}/>
       <View style={{width:43}}/>
     </View>
     <ScrollView ref={scrollRef} onLayout={onScrollLayout} onScroll={onScroll} scrollEventThrottle={16} automaticallyAdjustKeyboardInsets={Platform.OS==='ios'} contentContainerStyle={[styles.content,{paddingBottom:200+keyboardPadding}]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS==='ios'?'interactive':'none'} showsVerticalScrollIndicator={false}>
@@ -106,8 +106,6 @@ export default function CreateFeatureScreen({kind,theme,profile,onBack,onSaved})
         </Pressable>
       </View>:
       <>
-        <Text style={[styles.eyebrow,{color:theme.accent}]}>STUDENTHOOD · CREATE</Text>
-        <Text style={[styles.intro,{color:theme.muted}]}>{config.subheading}</Text>
         {!!profile?.campus_name&&<View style={[styles.campus,{backgroundColor:theme.surface,borderColor:theme.line}]}>
           <Feather name="book-open" color={theme.accent} size={16}/>
           <View style={{flex:1}}>
