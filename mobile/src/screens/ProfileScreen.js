@@ -1,6 +1,6 @@
 import React,{useEffect,useState} from 'react';
 import {ActivityIndicator,View} from 'react-native';
-import {getAvatarDisplayUrl,getMyPeepCount,getMySceneCount,getVisibleProfileScenes} from '../api';
+import {getAvatarDisplayUrl,getMyPeepCount,getMySceneCount,getVisibleProfileScenes,shareOwnSceneWithCurrentCampus} from '../api';
 import StudentProfileView from '../components/StudentProfileView';
 
 // The owner's profile uses the same premium full-screen layout seen by other
@@ -12,6 +12,7 @@ export default function ProfileScreen({theme,profile,onMenu,onEdit,onEditPicture
   const [coverUrl,setCoverUrl]=useState(null);
   const [scenes,setScenes]=useState([]);
   const [loading,setLoading]=useState(false);
+  const [sceneRevision,setSceneRevision]=useState(0);
 
   useEffect(()=>{
     let live=true;
@@ -30,7 +31,7 @@ export default function ProfileScreen({theme,profile,onMenu,onEdit,onEditPicture
       if(visible.status==='fulfilled')setScenes(visible.value);
     }).finally(()=>{if(live)setLoading(false)});
     return()=>{live=false};
-  },[profile?.id,reloadKey]);
+  },[profile?.id,reloadKey,sceneRevision]);
   useEffect(()=>{
     let live=true;
     getAvatarDisplayUrl(profile?.avatar_url).then(url=>{if(live)setAvatarUrl(url)}).catch(()=>{if(live)setAvatarUrl(null)});
@@ -42,6 +43,11 @@ export default function ProfileScreen({theme,profile,onMenu,onEdit,onEditPicture
     getAvatarDisplayUrl(profile?.cover_url).then(url=>{if(active)setCoverUrl(url)}).catch(()=>{if(active)setCoverUrl(null)});
     return()=>{active=false};
   },[profile?.cover_url,reloadKey]);
+
+  async function moveSceneToCurrentCampus(sceneId){
+    await shareOwnSceneWithCurrentCampus(sceneId);
+    setSceneRevision(value=>value+1);
+  }
 
   if(!profile)return <View style={{flex:1,alignItems:'center',justifyContent:'center',backgroundColor:theme.bg}}>
     <ActivityIndicator color={theme.accent}/>
@@ -57,5 +63,6 @@ export default function ProfileScreen({theme,profile,onMenu,onEdit,onEditPicture
     onMenu={onMenu}
     onEdit={onEdit}
     onEditPhoto={onEditPicture}
+    onMoveScene={moveSceneToCurrentCampus}
   />;
 }
